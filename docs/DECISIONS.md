@@ -1,184 +1,79 @@
-# Design decisions
+# Design notes
 
-Each entry records what was decided and why.
-
----
-
-## 1. Schema-grounded SQL generation
-
-**Decision:** the model writes SQL against an injected schema config;
-a deterministic validator decides whether it runs.
-
-**Rationale:** operational questions are open-ended, and generated
-SQL covers that range directly. The safety properties — no raw SQL
-trust, whitelisted tables, read-only execution — are enforced by the
-validator. Query correctness (aggregation choice, date boundaries,
-join targets) is verified by running golden-set queries against
-seeded data and comparing result rows.
+A short summary of how the main parts of the project work.
 
 ---
 
-## 2. Two ingestion lanes
+## Answering questions
 
-**Decision:** rows and JSON are *synced* as-is. Only documents are
-*ingested*.
+- **One assistant for every question.** Vehicle questions and
+  business questions go through the same assistant. A question can
+  be about both.
+- **It works in rounds.** After each lookup, the assistant checks
+  whether it has enough to answer. If not, it looks again with a
+  narrower question, up to 3 rounds.
+- **It stops when there is nothing more to find.** If a search has
+  already come back empty, it doesn't repeat it.
+- **Maths is done by code.** Comparisons such as "36% above normal"
+  are calculated by the program, not guessed by the AI.
+- **Answers point to their sources.** Each point in an answer links
+  to the data it came from, and gaps are stated clearly.
 
-**Rationale:** a row is usable the moment it lands; there is nothing
-to chunk or embed. Documents need parsing, chunking and embedding.
-Each lane does only the work its data requires.
+## Data
 
----
+- **Two kinds of data.** Database records (vehicles, readings,
+  sales) are used as they are. Documents (bulletins, manuals) are
+  split into sections and indexed so they can be searched.
+- **Tables stay whole.** When documents are split up, tables are
+  kept in one piece so they still make sense.
+- **Error codes go into the database.** Error-code tables found in
+  documents are stored as database rows, so a code can be looked up
+  exactly.
+- **No duplicates.** A document that has already been added is
+  recognised and skipped.
 
-## 3. Tools behind an MCP server
+## Search
 
-**Decision:** tools run in a separate MCP server process.
+- **Two search methods combined.** Keyword search finds exact terms
+  and codes; meaning-based search finds related wording. A second
+  step then puts the best results first.
+- **Weak matches are left out.** Only results that are clearly
+  relevant are used.
+- **Typos are handled.** A mistyped vehicle ID is matched to the
+  closest real one before searching.
 
-**Rationale:** database credentials live in the server, not the
-agent, so the agent can request a tool call but never holds
-credentials. The server is a single point for authorization and
-audit, and a second client can reuse the same tools and contract
-without duplicating either.
+## Database safety
 
----
+- **Every query is checked before it runs.** Only read-only queries
+  on known tables and columns are allowed.
+- **Expensive queries are stopped.** The database estimates the
+  cost of a query first, and queries that are too expensive don't
+  run.
+- **Read-only access.** The assistant connects with an account that
+  can only read data, and each query has a time limit.
+- **Separate tool service.** Database access runs in its own service
+  (an MCP server), so the passwords stay there and never reach the
+  AI.
 
-## 4. The reflection loop
+## AI models
 
-**Decision:** Plan → Execute → Observe → Reflect, cycling up to 3
-times, with Reflect deciding whether to continue.
+- **Two model sizes.** A small, fast model handles quick decisions;
+  a larger model plans lookups and writes the answer. This keeps the
+  project within the free usage limits.
 
-**Rationale:** a diagnostic question needs several facts that only
-become identifiable after seeing earlier results. "Current draw is
-36% high" does not say whether the cause is payload or cell
-degradation; that takes another query, chosen in light of the first
-answer. Reflect runs on the cheap model tier and is skipped for
-lookups, and the loop stops as soon as a lap adds nothing new.
+## Quality
 
----
+- **Sample questions.** A set of questions with known answers is run
+  regularly to measure quality.
+- **Automatic answer checks.** Each answer is checked to confirm its
+  numbers and references come from the data.
+- **User feedback.** Ratings on answers are collected and used to
+  add new sample questions.
 
-## 5. Lap count is determined by the question
+## Settings
 
-**Decision:** no lap budget is set in advance. Reflect decomposes
-what the question requires and stops when it has it.
-
-**Rationale:** the requirement is a property of the question. A
-lookup needs a measurement, so it exits after lap 1. A causal
-question needs measurement + baseline + mechanism, so it continues.
-A hard iteration cap and a no-new-evidence check bound the loop.
-
----
-
-## 6. Reflect judges reachability
-
-**Decision:** step 3 of the Reflect prompt asks whether a missing
-component is *obtainable*.
-
-**Rationale:** if a tool has already returned nothing for a
-component, another lap will return nothing again. That resolves to
-`exhausted`, and the agent answers with what it has instead of
-repeating the same retrieval.
-
----
-
-## 7. Empty and failed results are evidence
-
-**Decision:** a tool that fails or returns nothing produces an
-`Evidence` entry with an explicit status.
-
-**Rationale:** an absence the agent can see is reportable. This is
-what makes "telemetry is available but no documentation covers this
-model" a possible answer.
-
----
-
-## 8. Comparisons computed in code
-
-**Decision:** `delta_pct` and `verdict` are calculated in `observe`.
-
-**Rationale:** arithmetic is exact in code, and a computed verdict
-lets Reflect check "do I have a verdict for this component"
-deterministically. Baselines come from `vehicle_baseline_specs`,
-which the seed script populates.
-
----
-
-## 9. EXPLAIN cost gate
-
-**Decision:** every query is planned before it is executed and
-rejected above a cost budget.
-
-**Rationale:** AST rules check structure; the planner knows cost. A
-structurally valid query can still plan a full scan over a very
-large table, and asking the planner first catches that before
-execution. The budget is set in `config/app_config.yaml`.
-
----
-
-## 10. LIMIT only on the outermost non-aggregate SELECT
-
-**Decision:** LIMIT injection is conditional.
-
-**Rationale:** a LIMIT does not reduce the work an aggregate does,
-and injecting one into a nested CTE would change the result.
-Aggregates are bounded by the EXPLAIN gate and the statement
-timeout.
-
----
-
-## 11. Error codes promoted to SQL rows
-
-**Decision:** error-code tables are parsed into `error_codes` at
-ingestion.
-
-**Rationale:** `ERR_401` is an exact key, so it is looked up with an
-equality match. Tables that do not match the expected shape remain
-searchable as document chunks.
-
----
-
-## 12. Entity id boosts, domain filters
-
-**Decision:** domain is a hard filter; entity id adjusts ranking.
-
-**Rationale:** most service documentation is model-specific rather
-than VIN-specific, so boosting on the VIN keeps those documents in
-the candidate set while ranking vehicle-specific material first.
-Entity resolution runs before search, so typos are corrected
-against real rows.
-
----
-
-## 13. Tiered groundedness
-
-**Decision:** three deterministic tiers, with an LLM check only when
-one of them flags a claim.
-
-**Rationale:** unresolvable citations, numbers that appear in no
-evidence, and causal language attached to an empty result are all
-mechanically detectable. Entailment-level checks — including trap
-cases for knowledge the model already has — run in offline
-evaluation.
-
----
-
-## 14. Schema config: generated structure, curated meaning
-
-**Decision:** structure comes from `information_schema`;
-descriptions are hand-written and merged back in.
-
-**Rationale:** the generator keeps tables and columns in sync with
-the database, and curated descriptions give the model meaning —
-`pdc` becomes "Payload Design Capacity, in kg". The generator flags
-new columns that need a description. At larger scale the same
-retrieval pattern used for documents can select the relevant schema
-subset per query.
-
----
-
-## 15. Drift changes go through review
-
-**Decision:** detected schema or unit drift blocks queries on the
-affected column and proposes a config change for review.
-
-**Rationale:** the schema config defines what the model believes
-about the data, so changes to it go through the same review as any
-other change.
+- All settings live in `config/app_config.yaml`.
+- All AI instructions live in `config/prompts/`.
+- The database description in `config/schema_config.yaml` is
+  generated automatically, with plain-English descriptions added by
+  hand.

@@ -1,116 +1,127 @@
 # EV Ops Copilot
 
-An agentic assistant for electric-vehicle operations teams. Ask it
-why a vehicle is underperforming, or how sales are tracking, and it
-reasons over telemetry and service documentation to answer —
-citing what it used, and saying so when it does not know.
+An AI assistant for teams that run electric vehicles.
 
-Vendor-neutral. Point it at your own schema and documents.
+You ask it a question in plain English. It looks at your vehicle
+data and your service documents, works out the answer, and tells
+you where each part of the answer came from.
 
 ---
 
-## What makes it an agent
+## What you can ask it
 
-Most "AI assistants" are pipelines: classify the question, fetch
-something, answer. This one runs a loop.
+**Vehicle questions**
+- "Why did range drop on VIN-1042 last week?"
+- "What does error code ERR_401 mean?"
+
+**Business questions**
+- "How are sales tracking this quarter?"
+- "Which region sold the most last month?"
+
+Some questions are both, and it handles those too.
+
+---
+
+## How it works
+
+It works the way a person investigating a problem would: look at
+something, think about what it shows, and decide whether to dig
+further.
 
 ```
-                    ┌──────────────────────────┐
-                    │                          │
-   question ──► router ──► PLAN ──► EXECUTE ──► OBSERVE ──► REFLECT
-                            ▲                                  │
-                            └────── not enough ────────────────┘
-                                                               │
-                                              enough ──────────┘
-                                                  │
-                                                  ▼
-                                    SYNTHESIZE ──► answer
+question ─► understand ─► plan ─► look it up ─► review ─┐
+                           ▲                            │
+                           └──── need more? ────────────┘
+                                                        │
+                                          got enough ───┘
+                                               │
+                                               ▼
+                                   write answer ─► check answer
 ```
 
-After every tool call it asks itself whether it can actually answer
-yet. If not, it works out what is missing and goes again — up to
-three laps.
+1. **Understand** — work out what kind of question it is and which
+   vehicle, model or region it is about.
+2. **Plan** — decide what to look up: numbers from the database,
+   information from documents, or both.
+3. **Look it up** — fetch the data.
+4. **Review** — check whether there is enough to answer. If not,
+   go around again with a more focused question (up to 3 times).
+5. **Write the answer** — explain what it found, pointing to the
+   data behind each point.
+6. **Check the answer** — make sure every number and reference in
+   the answer really came from the data.
 
-**Why that matters.** Asked "why did range drop on this vehicle?":
+### Example
 
-| Lap | What it does | What it finds | What it decides |
-|---|---|---|---|
-| 1 | current draw vs. rated baseline | 36% above nominal | consumption is high — but that is not a cause |
-| 2 | check overload and cell health | payload 92kg vs 75kg rated; cells normal at 97% | overload implicated, degradation ruled out |
-| 3 | retrieve service documentation | bulletin: sustained overload raises drive current | enough to answer |
+*"Why did range drop on this vehicle?"*
 
-A single-shot system stops at lap 1 with *"current draw is high"* —
-a reading, not a diagnosis.
-
----
-
-## Design decisions
-
-**Structured and unstructured data, one agent.** A "why" question
-needs a number *and* an explanation. Two tools — SQL over telemetry,
-hybrid retrieval over documents — and the agent decides which, often
-both.
-
-**Generated SQL is never trusted.** The model writes it; a
-deterministic validator decides whether it runs. AST parsing
-(single statement, SELECT-only, table and column whitelist, joins
-must carry an ON clause, time filter required on large tables),
-then an `EXPLAIN` cost gate that rejects expensive-but-valid queries
-before execution. Underneath: a read-only role on a read replica
-with a 5s statement timeout.
-
-**It says when it does not know.** If retrieval finds nothing above
-the confidence threshold, that is recorded as evidence — so the
-answer reports the measurements it has, names what it could not
-establish, and points at the strongest signal without asserting it
-as the cause. A knowledge-base gap gets flagged rather than
-papered over.
-
-**Exact lookups are not semantic search.** Error-code tables are
-promoted out of the documents into real database rows at ingestion.
-`ERR_401` is a SQL match, not a similarity score.
-
-**Tables are never split.** Structure-aware chunking keeps tables
-whole and emits one chunk per row for lookup tables. Recursive
-character splitting shreds a table into fragments that answer
-nothing.
-
-**Every claim cites its evidence.** Groundedness checking is tiered:
-citation ids must resolve, numbers must trace to a returned value,
-and causal language is blocked on claims whose only support is an
-empty result. Most of that is plain code, so it costs nothing.
-
----
-
-## Stack
-
-| Layer | Choice | Why |
+| Round | What it checks | What it finds |
 |---|---|---|
-| Orchestration | LangGraph | explicit state machine; the loop is a conditional edge |
-| LLM | Groq (OpenAI-compatible) | free tier, genuinely fast |
-| Tools | MCP server, separate process | credentials isolated from the agent; reusable by other clients |
-| Store | Postgres + pgvector | relational, JSONB and vectors in one place |
-| Embeddings | `BAAI/bge-small-en-v1.5` | 384-dim, CPU, no API cost |
-| Reranking | `BAAI/bge-reranker-base` | cross-encoder on a 50-candidate shortlist |
-| SQL safety | sqlglot | real AST parsing, not regex |
-| Tracing | Langfuse | per-node, per-lap, with prompt-version hashes |
-| Serving | FastAPI + SSE | streaming answers |
+| 1 | Battery usage vs. normal | Using 36% more power than normal |
+| 2 | Load and battery health | Carrying 92 kg (rated for 75 kg); battery is healthy |
+| 3 | Service documents | A bulletin explains that overloading increases power use |
 
-Model tiering is deliberate: a small model runs classification
-(router, reflect), a larger one runs generation (plan, synthesize).
-On a free tier this is not just cheaper — it is what keeps the
-system inside the quota.
+**Answer:** the vehicle is regularly overloaded, which increases
+power use and reduces range.
 
 ---
 
-## Quick start
+## What it uses
+
+| Source | Examples |
+|---|---|
+| **Database** | vehicle details, sensor readings, normal values for each model, service history, sales |
+| **Documents** | service bulletins, manuals, help articles |
+
+Error-code tables inside documents are copied into the database
+when a document is added, so looking up a code is quick and exact.
+
+---
+
+## Key features
+
+- **Checks its own progress** — decides for itself whether it needs
+  to look further before answering.
+- **Shows its sources** — every point in the answer links to the
+  data it came from.
+- **Clear about gaps** — if something can't be found, the answer
+  says so.
+- **Safe database access** — database queries are checked
+  automatically before they run, and the assistant can only read
+  data, never change it.
+- **Handles typos** — a mistyped vehicle ID is matched to the
+  closest real one.
+- **Streams answers** — the reply appears word by word as it is
+  written.
+- **Tested** — a set of sample questions with known answers is used
+  to measure quality over time.
+- **Works with your own data** — no company-specific setup; point it
+  at your own database and documents.
+
+---
+
+## Built with
+
+| Part | Tool |
+|---|---|
+| Agent workflow | LangGraph |
+| AI models | Groq (free tier) — a small model for quick decisions, a larger one for writing |
+| Database | PostgreSQL with pgvector |
+| Document search | keyword + meaning-based search, then re-ranking |
+| Tool access | MCP server (a separate service that holds the database connection) |
+| Query checking | sqlglot |
+| Tracing | Langfuse |
+| API | FastAPI |
+
+---
+
+## Getting started
 
 ```bash
 git clone <your-repo-url> && cd ev-ops-copilot
 
 cp .env.example .env
-# Paste a free Groq key from https://console.groq.com/keys
-# Nothing else needs changing to run locally.
+# Add a free Groq API key from https://console.groq.com/keys
 
 docker compose up --build
 ```
@@ -118,22 +129,22 @@ docker compose up --build
 Then:
 
 ```bash
-# health
+# check it is running
 curl localhost:8000/health
 
-# seed a realistic dataset
+# load sample data
 docker compose exec api python scripts/seed_synthetic_data.py
 
-# ingest documents
+# add a document
 curl -X POST localhost:8000/ingest -F "file=@docs/sample_bulletin.md"
 
-# ask something
+# ask a question
 curl -X POST localhost:8000/chat \
   -H 'Content-Type: application/json' \
   -d '{"question": "Why did range drop on VIN-1042 last week?"}'
 ```
 
-### Running locally without Docker
+### Without Docker
 
 ```bash
 python -m venv .venv && source .venv/bin/activate
@@ -142,91 +153,67 @@ export PYTHONPATH=src
 uvicorn ops_copilot.main:app --reload
 ```
 
-Embedding and reranking models download on first use (~600MB
-combined) and are cached.
-
 ---
 
 ## API
 
-| Endpoint | Purpose |
+| Endpoint | What it does |
 |---|---|
-| `POST /chat` | ask a question; streams the answer |
-| `POST /ingest` | ingest a document (hash-checked, chunked, embedded) |
-| `POST /eval` | run the golden set, return a regression report |
-| `POST /feedback` | rate an answer by `turn_id` |
-| `GET /health` | liveness |
-
-`/eval` never runs inside a request path. LLM-as-judge is offline,
-by design.
+| `POST /chat` | ask a question |
+| `POST /ingest` | add a document |
+| `POST /eval` | run the sample questions and report quality |
+| `POST /feedback` | rate an answer |
+| `GET /health` | check the service is running |
 
 ---
 
 ## Configuration
 
-Two files, deliberately separate from `.env`:
-
-**`config/app_config.yaml`** — every runtime threshold: iteration
-cap, rerank confidence, EXPLAIN cost budget, join limits, model
-tiers. Versioned in git so a change shows up in review.
-
-**`config/schema_config.yaml`** — what the model is told about your
-database. Structure is generated from `information_schema`;
-descriptions, units and expected ranges are hand-written and merged
-back in. The model never sees a bare column name — `pdc` means
-nothing, *"Payload Design Capacity, in kg"* does.
-
-```bash
-python scripts/generate_schema_config.py
-```
-
-At 200+ tables the relevant subset is retrieved per query rather
-than injected in full — the same retrieval pattern, pointed at the
-schema.
-
-**`config/prompts/*.md`** — every prompt, versioned and hashed into
-each trace, so a past failure can be checked for reproducibility
-after a prompt change.
+| File | What it holds |
+|---|---|
+| `.env` | API keys and passwords |
+| `config/app_config.yaml` | settings such as how many rounds to allow and search limits |
+| `config/schema_config.yaml` | plain-English descriptions of the database, so the AI understands it |
+| `config/prompts/` | the instructions given to the AI at each step |
 
 ---
 
-## Evaluation
+## Project layout
 
-```bash
-python scripts/run_eval.py
+```
+config/            settings, database descriptions, AI instructions
+src/ops_copilot/
+  agent/           the question-answering workflow
+  sql/             database query checking
+  rag/             document processing and search
+  mcp_server/      tool service
+  mcp_client/      connects the agent to the tool service
+  llm/             AI model access
+  db/              database setup
+  api/             web endpoints
+  observability/   tracing
+  evaluation/      quality testing
+  feedback/        user ratings
+scripts/           setup and test scripts
+tests/             automated tests
+docs/              design notes
 ```
 
-Golden set mixes synthetic cases with known ground truth,
-hand-written adversarial cases, and cases promoted from real
-failures. Deliberately includes questions whose *correct* answer is
-a partial one or an abstention.
-
-Checks split by what they actually need:
-
-- **Deterministic** (no LLM): routing, tool selection F1, tool
-  arguments, iteration count, numeric facts, citation resolution
-- **LLM-as-judge** (calibrated): completeness, correctness, hedging —
-  temperature 0, anchored rubric, compared against a reference to
-  neutralise verbosity bias, with judge-human agreement measured on
-  a hand-labelled subset
-
-**Trap cases** are questions answerable from an LLM's pretrained
-knowledge but deliberately absent from the knowledge base. Correct
-behaviour is abstention. The resulting *ungrounded-truth rate* is
-reported alongside accuracy — it catches the failure that citation
-checking cannot, where the answer is right for the wrong reason.
-
 ---
+
+## Status
+
+Under active development. The database setup, query checking,
+workflow structure and configuration are in place; the remaining
+steps are being built next.
 
 ## Roadmap
 
-- **Voice interface**
-- **Multi-tenant isolation** — token-derived tenant + Postgres RLS
-- **Cost and latency dashboards** — building on the token and
-  latency metrics Langfuse already records
-- **Schema-drift detection** — nightly profiling against the
-  expected ranges in the schema config
-- **Semantic caching**
+- Voice input
+- Separate data per customer
+- Usage and cost dashboards
+- Automatic detection of database changes
+- Answer caching
 
 ---
 
