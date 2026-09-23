@@ -1,7 +1,6 @@
 """Lane B — document ingestion. Rows and JSON do not come through here.
 
-This is the distinction that causes the most confusion, so it is
-worth being explicit: there are TWO pipelines, not two stages of one.
+There are TWO pipelines, not two stages of one.
 
   Lane A  rows and JSON. Synced/replicated from the source database
           as-is. No chunking, no embedding, nothing to process — a

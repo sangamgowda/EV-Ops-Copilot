@@ -44,7 +44,7 @@ a reading, not a diagnosis.
 
 ---
 
-## Design decisions worth knowing
+## Design decisions
 
 **Structured and unstructured data, one agent.** A "why" question
 needs a number *and* an explanation. Two tools — SQL over telemetry,
@@ -166,10 +166,9 @@ by design.
 
 Two files, deliberately separate from `.env`:
 
-**`config/app_config.yaml`** — every threshold someone might ask you
-to justify: iteration cap, rerank confidence, EXPLAIN cost budget,
-join limits, model tiers. Versioned in git so a change shows up in
-review.
+**`config/app_config.yaml`** — every runtime threshold: iteration
+cap, rerank confidence, EXPLAIN cost budget, join limits, model
+tiers. Versioned in git so a change shows up in review.
 
 **`config/schema_config.yaml`** — what the model is told about your
 database. Structure is generated from `information_schema`;
@@ -181,9 +180,9 @@ nothing, *"Payload Design Capacity, in kg"* does.
 python scripts/generate_schema_config.py
 ```
 
-At 200+ tables you would retrieve the relevant subset per query
-rather than injecting all of it — the same retrieval pattern,
-pointed at the schema. Not needed at smaller scale.
+At 200+ tables the relevant subset is retrieved per query rather
+than injected in full — the same retrieval pattern, pointed at the
+schema.
 
 **`config/prompts/*.md`** — every prompt, versioned and hashed into
 each trace, so a past failure can be checked for reproducibility
@@ -219,19 +218,15 @@ checking cannot, where the answer is right for the wrong reason.
 
 ---
 
-## Not implemented
+## Roadmap
 
-Stated plainly rather than faked:
-
-- **Voice interface** — interface contract designed, not built
+- **Voice interface**
 - **Multi-tenant isolation** — token-derived tenant + Postgres RLS
-  designed; one tenant to test against
-- **Monitoring / autoscaling / cost dashboards** — token and latency
-  metrics already come from Langfuse; a separate stack is not
-  warranted at this scale
-- **Schema-drift detection** — expected ranges are in the config;
-  the nightly profiling job is designed, not built
-- **Semantic caching** — real optimisation, wrong priority
+- **Cost and latency dashboards** — building on the token and
+  latency metrics Langfuse already records
+- **Schema-drift detection** — nightly profiling against the
+  expected ranges in the schema config
+- **Semantic caching**
 
 ---
 

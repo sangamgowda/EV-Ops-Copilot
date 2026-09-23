@@ -8,8 +8,7 @@ Four endpoints, one job each:
   /feedback  capture a rating against a turn_id
 
 /eval is deliberately an endpoint and not part of any request path.
-LLM-as-judge runs there, offline, never live. Keeping the two
-separate is itself a design decision worth defending.
+LLM-as-judge runs there, offline, never live.
 
 TODO(build): wire routers, lifespan (warm the embedding model on
 startup so the first request does not pay for the download), CORS,

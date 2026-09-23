@@ -1,8 +1,7 @@
 """MCP server. Runs as its own process.
 
-Why MCP rather than plain LangChain tools — the honest version:
+Why MCP rather than in-process tools:
 
-  WHAT IT BUYS
   Process isolation. The database credentials live HERE, not in the
   agent. A prompt-injected agent cannot exfiltrate them; it can only
   request a tool call, which still passes validation.
@@ -10,16 +9,7 @@ Why MCP rather than plain LangChain tools — the honest version:
   Framework independence — swap LangGraph out, tools untouched.
   Multi-consumer reuse — a second internal agent becomes another
   client against the same contract, not a second copy of the
-  credentials.
-
-  WHAT IT COSTS
-  A network/IPC hop per tool call. One more service to deploy and
-  monitor. Contract versioning discipline.
-
-  WHEN IT IS NOT WORTH IT
-  Single agent, single team, no sharing. Then LangChain tools are
-  simpler and the right call. It is worth it here because the
-  system is meant to serve several internal teams.
+  credentials. The system is meant to serve several internal teams.
 
 Transport: stdio by default (server spawned as a subprocess, one
 less thing to run). Set MCP_TRANSPORT=http to run standalone.

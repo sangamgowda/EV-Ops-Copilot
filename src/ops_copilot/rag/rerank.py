@@ -10,8 +10,7 @@ Pull 50 candidates with hybrid search (cheap), rerank to 5
 scales with list length and sequence length.
 
 Latency in proportion: ~200ms here against 2-4s for a full lap
-dominated by LLM calls. It is not the bottleneck, and optimising it
-first would be solving the wrong problem. Two controls exist anyway:
+dominated by LLM calls. Two controls keep it low:
 truncate candidates before scoring, and skip reranking entirely when
 the top hybrid hit leads the runner-up by rerank_skip_margin.
 

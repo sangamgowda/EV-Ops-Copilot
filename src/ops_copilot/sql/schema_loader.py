@@ -17,8 +17,6 @@ prompt. Past ~30 tables you switch to retrieving the relevant
 subset per query — embed each table description once, search it at
 query time, inject the top matches plus anything joined by foreign
 key. Same RAG pattern, pointed at the schema instead of documents.
-Not needed now; injecting everything is correct at this scale and
-retrieval would be solving a problem that does not exist yet.
 
 TODO(build): implement load(), merge(), to_prompt_block().
 """

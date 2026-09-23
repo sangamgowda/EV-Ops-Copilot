@@ -8,7 +8,7 @@ table.column so hand-written meaning survives.
 New columns appear with an empty description and are printed as a
 warning, so the gap is visible rather than silent.
 
-Two accelerants worth knowing about:
+Two ways to speed up curation:
   - Postgres COMMENT ON COLUMN can hold descriptions in the
     database itself, making it the source of truth
   - an LLM can draft descriptions from column names plus sample
