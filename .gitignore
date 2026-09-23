@@ -1,0 +1,53 @@
+# Secrets — never commit
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+venv/
+.venv/
+env/
+
+# Tooling
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Model cache (large — re-downloaded on demand)
+.cache/
+models/
+*.onnx
+*.safetensors
+
+# Data
+data/raw/
+data/processed/
+*.db
+*.sqlite3
+
+# Eval output
+evaluation_runs/
+*.eval.json
+
+# Editors / OS
+.idea/
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
