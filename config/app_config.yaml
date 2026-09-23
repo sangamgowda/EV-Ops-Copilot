@@ -1,10 +1,8 @@
 # ─────────────────────────────────────────────────────────────
 # Runtime knobs.
 #
-# Everything here is a number someone will eventually ask you to
-# justify. Keeping them in a file means the answer is "measured on
-# the golden set, and it's a config change" rather than "it's
-# hardcoded in a prompt somewhere".
+# Every threshold lives here rather than inline in code or
+# prompts, so tuning against the golden set is a config change.
 # ─────────────────────────────────────────────────────────────
 
 agent:

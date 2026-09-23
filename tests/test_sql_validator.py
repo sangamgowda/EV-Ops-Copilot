@@ -1,5 +1,4 @@
-"""Validator tests. Write these FIRST — pure functions, no deps,
-and this is the module most likely to be interrogated line by line.
+"""Validator tests. Pure functions, no external dependencies.
 
 Each case below maps to a specific attack or failure mode.
 """

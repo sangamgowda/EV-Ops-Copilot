@@ -9,7 +9,7 @@ If retrieval quality ever does become the bottleneck, the upgrade
 path is Qwen3-Embedding-0.6B — but only after an eval says so, and
 switching means re-embedding the whole corpus.
 
-One gotcha: BGE models want a query prefix for retrieval
+Note: BGE models want a query prefix for retrieval
 ("Represent this sentence for searching relevant passages: ") but
 NOT for documents. Getting this backwards quietly degrades recall.
 
