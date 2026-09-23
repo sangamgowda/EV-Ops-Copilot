@@ -37,6 +37,8 @@ services:
       # Persist the HuggingFace model cache so bge-small and
       # bge-reranker-base download once, not on every rebuild.
       - hfcache:/app/.cache/huggingface
+      # Reference catalogue and documents for the seed script.
+      - ./data:/app/data
     restart: unless-stopped
 
   # MCP runs as its own service on purpose. It is the only thing

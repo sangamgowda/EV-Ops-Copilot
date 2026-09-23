@@ -55,9 +55,17 @@ tables:
           - state_of_charge
           - range_estimate
           - motor_temp
+          - cell_health
       metric_value:
         type: double precision
-        description: The measured value. Unit depends on metric_name.
+        description: >
+          The measured value. Unit depends on metric_name.
+          range_estimate is the projected range on a full charge at
+          the consumption of the trip just finished (one row per
+          trip). payload is total load (rider, pillion, cargo), one
+          row per trip. cell_health is battery state of health, one
+          row per day. The other metrics are sampled every few
+          minutes while the vehicle is moving.
       unit:
         type: text
         description: Unit of metric_value.
@@ -75,7 +83,7 @@ tables:
     columns:
       vehicle_id:
         type: text
-        description: Vehicle identifier, e.g. "KA-05-1234".
+        description: Vehicle identifier, e.g. "VIN-1042".
       model_code:
         type: text
         description: Model this vehicle is. Joins to vehicle_baseline_specs.
@@ -97,7 +105,8 @@ tables:
         json_keys:
           battery_pack: Pack variant fitted, e.g. "3.7kWh" or "5kWh".
           features: Object of optional feature flags.
-          firmware_version: Currently installed firmware.
+          firmware_version: Currently installed firmware, e.g. "2.6.0".
+          usage: '"private" or "fleet".'
 
   vehicle_baseline_specs:
     description: >
@@ -191,11 +200,23 @@ tables:
         type: bigint
       vehicle_id:
         type: text
-        description: Unit sold. Joins to vehicles.vehicle_id.
+        description: >
+          Unit sold, when it is a tracked vehicle. NULL for most
+          rows. Joins to vehicles.vehicle_id.
       sold_on:
         type: date
       region:
         type: text
+        description: Sales zone.
+        allowed_values: ["south", "west", "north", "east"]
+      city:
+        type: text
+        description: City of sale.
+      model_code:
+        type: text
+        description: >
+          Model sold. Set on every row, including sales not linked
+          to a tracked vehicle.
       channel:
         type: text
         allowed_values: ["showroom", "online", "fleet", "partner"]

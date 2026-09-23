@@ -57,8 +57,8 @@ question ─► understand ─► plan ─► look it up ─► review ─┐
 
 | Round | What it checks | What it finds |
 |---|---|---|
-| 1 | Battery usage vs. normal | Using 36% more power than normal |
-| 2 | Load and battery health | Carrying 92 kg (rated for 75 kg); battery is healthy |
+| 1 | Battery usage vs. normal | Using 33% more power than normal |
+| 2 | Load and battery health | Carrying about 190 kg (rated for 150 kg); battery is healthy |
 | 3 | Service documents | A bulletin explains that overloading increases power use |
 
 **Answer:** the vehicle is regularly overloaded, which increases
@@ -100,6 +100,85 @@ when a document is added, so looking up a code is quick and exact.
 
 ---
 
+## Data
+
+The project ships with a realistic **made-up** dataset, so it can be
+run and tested without any real company data.
+
+### Load it
+
+```bash
+# into the database started by docker compose
+docker compose exec api python scripts/seed_synthetic_data.py --reset
+
+# or from your own machine (Postgres on localhost:5432)
+python scripts/seed_synthetic_data.py --reset
+
+# bigger or smaller
+python scripts/seed_synthetic_data.py --vehicles 300 --days 90 --reset
+
+# CSV files only, no database needed
+python scripts/seed_synthetic_data.py --no-db --csv-dir data/processed
+```
+
+The same settings always produce the same data (`--seed` changes
+it). A ready-made copy of the default dataset is in `data/sample/`
+as compressed CSV files.
+
+### What is in it
+
+With the default 50 vehicles and 30 days:
+
+| Table | Rows | What it holds |
+|---|---|---|
+| vehicles | 50 | four scooter models, eight cities, private and fleet use |
+| vehicle_baseline_specs | 84 | normal values for each model and riding mode |
+| vehicle_telemetry | ~200,000 | speed, power draw, battery, temperature and load, every 5 minutes while riding |
+| service_events | ~140 | service visits and customer complaints over 12 months |
+| sales_transactions | ~19,600 | two years of sales across four regions |
+| error_codes | 14 | trouble codes, read from the service manual |
+
+Model specs and monthly sales volumes follow publicly reported
+figures for electric scooters in India, with brand names replaced by
+neutral codes (`data/reference/ev_models.yaml`).
+
+### Built-in test cases
+
+Some vehicles have a known problem planted in their data, so answers
+can be checked:
+
+| Vehicle | Problem | Explained by |
+|---|---|---|
+| VIN-1042, VIN-1007, VIN-1029 | overloaded: power use up ~33%, range down ~25% | SB-114 |
+| VIN-1017, VIN-1036 | battery wearing out: health falling from 92% to 84% | SB-121 |
+| vehicles on firmware 2.6.0 | motor runs ~12 °C hotter in sport mode | SB-127 |
+| VIN-1023 | power use up ~30% on a model with no documents | nothing — the right answer says so |
+
+Full details, with measured numbers, are written to
+`data/seed_manifest.json` each time the data is loaded.
+
+### Documents
+
+`data/documents/` holds made-up service bulletins, manuals, a help
+article and business reports, ready to add with `POST /ingest`.
+
+### Collecting web pages
+
+`scripts/collect_web_data.py` downloads public pages you list (spec
+sheets, reviews, sales reports), pulls out their text, tables and
+key numbers, and can turn each page into a document for
+`POST /ingest`. It follows each site's robots.txt rules and waits
+between requests. An optional find-and-replace file swaps real names
+for neutral ones.
+
+```bash
+cp data/sources.example.yaml data/sources.yaml          # list your pages
+cp data/anonymize.example.yaml data/anonymize.local.yaml  # optional
+make collect
+```
+
+---
+
 ## Built with
 
 | Part | Tool |
@@ -133,10 +212,10 @@ Then:
 curl localhost:8000/health
 
 # load sample data
-docker compose exec api python scripts/seed_synthetic_data.py
+docker compose exec api python scripts/seed_synthetic_data.py --reset
 
 # add a document
-curl -X POST localhost:8000/ingest -F "file=@docs/sample_bulletin.md"
+curl -X POST localhost:8000/ingest -F "file=@data/documents/SB-114_sustained_overload.md"
 
 # ask a question
 curl -X POST localhost:8000/chat \
@@ -194,7 +273,8 @@ src/ops_copilot/
   observability/   tracing
   evaluation/      quality testing
   feedback/        user ratings
-scripts/           setup and test scripts
+data/              reference figures, sample documents, sample dataset
+scripts/           data generation, web collection, setup and test scripts
 tests/             automated tests
 docs/              design notes
 ```

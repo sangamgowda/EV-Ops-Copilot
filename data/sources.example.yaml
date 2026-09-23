@@ -1,0 +1,22 @@
+# Pages for scripts/collect_web_data.py. Copy to data/sources.yaml
+# and add your own: spec sheets, review sites, sales reports.
+# Sites that block crawlers in robots.txt are skipped automatically.
+
+- url: https://en.wikipedia.org/wiki/Electric_motorcycles_and_scooters
+  tags: [background]
+  domain: diagnostic
+- url: https://en.wikipedia.org/wiki/Electric_vehicle_battery
+  tags: [battery]
+  domain: diagnostic
+- url: https://en.wikipedia.org/wiki/Lithium-ion_battery
+  tags: [battery]
+  domain: diagnostic
+- url: https://en.wikipedia.org/wiki/Battery_management_system
+  tags: [battery, bms]
+  domain: diagnostic
+- url: https://en.wikipedia.org/wiki/Regenerative_braking
+  tags: [braking]
+  domain: diagnostic
+- url: https://en.wikipedia.org/wiki/Electric_vehicle_industry_in_India
+  tags: [market, sales]
+  domain: business

@@ -36,6 +36,9 @@ models/
 # Data
 data/raw/
 data/processed/
+# Local collector inputs; may contain real brand names or URLs.
+data/sources.yaml
+data/anonymize.local.yaml
 *.db
 *.sqlite3
 
