@@ -1,0 +1,9 @@
+# Find-and-replace applied to collected pages (case-insensitive,
+# longest match first). Copy to data/anonymize.local.yaml, which is
+# git-ignored, and fill in real names there so they never enter the
+# repo.
+
+"Brand Model One Gen 2": "SC-F50"
+"Brand Model One": "SC-F50G1"
+"Brand Compact": "SC-C37"
+"Brand": "the manufacturer"

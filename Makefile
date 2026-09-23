@@ -1,11 +1,13 @@
-.PHONY: help setup up down logs seed ingest eval test lint fmt clean
+.PHONY: help setup up down logs seed seed-local collect ingest eval test lint fmt clean
 
 help:
 	@echo "setup   create venv and install dev deps"
 	@echo "up      docker compose up --build"
 	@echo "down    stop and remove containers"
 	@echo "logs    follow api logs"
-	@echo "seed    load synthetic data"
+	@echo "seed    load synthetic data (inside docker)"
+	@echo "seed-local  load synthetic data from this machine into localhost:5432"
+	@echo "collect fetch web pages listed in data/sources.yaml"
 	@echo "eval    run the golden set"
 	@echo "test    pytest"
 	@echo "lint    ruff + mypy"
@@ -27,7 +29,14 @@ logs:
 	docker compose logs -f api
 
 seed:
-	docker compose exec api python scripts/seed_synthetic_data.py
+	docker compose exec api python scripts/seed_synthetic_data.py --reset
+
+seed-local:
+	POSTGRES_HOST=localhost python scripts/seed_synthetic_data.py --reset
+
+collect:
+	python scripts/collect_web_data.py --sources data/sources.yaml \
+		--anonymize data/anonymize.local.yaml --to-markdown data/raw/docs
 
 eval:
 	docker compose exec api python scripts/run_eval.py
