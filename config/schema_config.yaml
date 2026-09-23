@@ -1,0 +1,287 @@
+# ─────────────────────────────────────────────────────────────
+# Schema grounding — what the model is told about the database.
+#
+# This file has two halves and they are maintained differently:
+#
+#   GENERATED  table names, column names, types, foreign keys.
+#              Pulled from information_schema by
+#              scripts/generate_schema_config.py. Never hand-edit —
+#              it is overwritten on every run.
+#
+#   CURATED    description, unit, expected_range, allowed_values.
+#              Hand-written once per column, preserved across
+#              regeneration by merging on table.column.
+#
+# The model never sees a column name alone. `pdc` means nothing to
+# an LLM; "Payload Design Capacity — rated maximum payload in kg"
+# does. Meaning lives in the description, not the name — which is
+# why cryptic production column names are not a problem.
+#
+# At this scale the whole file is injected into the Plan prompt.
+# Past roughly 30 tables you would switch to retrieving the
+# relevant subset per query — same RAG pattern, pointed at the
+# schema instead of at documents. See docs/DECISIONS.md.
+# ─────────────────────────────────────────────────────────────
+
+version: 1
+
+tables:
+
+  vehicle_telemetry:
+    description: >
+      Time-series sensor readings per vehicle. One row per metric
+      per timestamp. This is the largest table by far — queries
+      against it must carry a time predicate.
+    primary_key: [id]
+    columns:
+      id:
+        type: bigint
+        description: Surrogate row id.
+      vehicle_id:
+        type: text
+        description: Vehicle identifier. Joins to vehicles.vehicle_id.
+      recorded_at:
+        type: timestamptz
+        description: When the reading was taken. Always filter on this.
+      metric_name:
+        type: text
+        description: Which quantity this row records.
+        allowed_values:
+          - current_draw
+          - pack_voltage
+          - payload
+          - speed
+          - ambient_temp
+          - state_of_charge
+          - range_estimate
+          - motor_temp
+      metric_value:
+        type: double precision
+        description: The measured value. Unit depends on metric_name.
+      unit:
+        type: text
+        description: Unit of metric_value.
+        allowed_values: ["A", "V", "kg", "kmph", "C", "pct", "km"]
+      drive_mode:
+        type: text
+        description: Drive mode active when the reading was taken.
+        allowed_values: ["eco", "city", "sport"]
+
+  vehicles:
+    description: >
+      One row per vehicle. Registry plus configuration. The config
+      column is JSONB because optional features vary by unit.
+    primary_key: [vehicle_id]
+    columns:
+      vehicle_id:
+        type: text
+        description: Vehicle identifier, e.g. "KA-05-1234".
+      model_code:
+        type: text
+        description: Model this vehicle is. Joins to vehicle_baseline_specs.
+      manufactured_on:
+        type: date
+        description: Date of manufacture.
+      registered_region:
+        type: text
+        description: Region or city the vehicle is registered in.
+      odometer_km:
+        type: double precision
+        description: Lifetime distance travelled.
+        unit: km
+      config:
+        type: jsonb
+        description: >
+          Per-vehicle optional configuration. Keys vary by unit.
+          Query with the JSONB operators, e.g. config->>'battery_pack'.
+        json_keys:
+          battery_pack: Pack variant fitted, e.g. "3.7kWh" or "5kWh".
+          features: Object of optional feature flags.
+          firmware_version: Currently installed firmware.
+
+  vehicle_baseline_specs:
+    description: >
+      Rated / nominal values per model and drive mode. This is the
+      reference a diagnostic question compares actual telemetry
+      against. Without a baseline there is no delta, and without a
+      delta there is no diagnosis — only a reading.
+    primary_key: [model_code, drive_mode, metric_name]
+    columns:
+      model_code:
+        type: text
+        description: Model these baselines apply to.
+      drive_mode:
+        type: text
+        description: Drive mode the baseline is rated for.
+        allowed_values: ["eco", "city", "sport"]
+      metric_name:
+        type: text
+        description: Which metric this baseline is for.
+      nominal_value:
+        type: double precision
+        description: Expected value under rated conditions.
+      tolerance_pct:
+        type: double precision
+        description: >
+          Percentage deviation still considered normal. Beyond
+          this, the reading is flagged as above or below normal.
+      rated_payload_kg:
+        type: double precision
+        description: Payload the nominal value assumes.
+        unit: kg
+
+  error_codes:
+    description: >
+      Diagnostic trouble codes with their meaning and recommended
+      action. Promoted out of the service documents into real rows
+      at ingestion — an exact code lookup should be a SQL match,
+      not a similarity search. Semantic search is the wrong tool
+      for an exact key.
+    primary_key: [code]
+    columns:
+      code:
+        type: text
+        description: The trouble code, e.g. "ERR_401".
+      subsystem:
+        type: text
+        description: Which subsystem raises it.
+      meaning:
+        type: text
+        description: What the code indicates.
+      recommended_action:
+        type: text
+        description: First-line action for a technician.
+      severity:
+        type: text
+        allowed_values: ["info", "warning", "critical"]
+      source_document:
+        type: text
+        description: Document this row was extracted from.
+
+  service_events:
+    description: One row per service visit or workshop job.
+    primary_key: [id]
+    columns:
+      id:
+        type: bigint
+      vehicle_id:
+        type: text
+        description: Vehicle serviced.
+      occurred_on:
+        type: date
+      event_type:
+        type: text
+        allowed_values: ["scheduled", "complaint", "recall", "inspection"]
+      reported_issue:
+        type: text
+        description: Free text as reported by the customer or technician.
+      error_code:
+        type: text
+        description: Trouble code recorded, if any. Joins to error_codes.code.
+      resolution:
+        type: text
+
+  sales_transactions:
+    description: >
+      One row per unit sold. Backs the business domain — volume,
+      revenue, regional and period comparisons.
+    primary_key: [id]
+    columns:
+      id:
+        type: bigint
+      vehicle_id:
+        type: text
+        description: Unit sold. Joins to vehicles.vehicle_id.
+      sold_on:
+        type: date
+      region:
+        type: text
+      channel:
+        type: text
+        allowed_values: ["showroom", "online", "fleet", "partner"]
+      unit_price:
+        type: numeric
+        description: Sale price of the unit.
+        unit: INR
+      dealer_code:
+        type: text
+      deal_metadata:
+        type: jsonb
+        description: >
+          Deal-specific detail. Keys vary — fleet deals carry
+          different fields from retail sales.
+        json_keys:
+          fleet_size: Number of units, fleet deals only.
+          discount_pct: Discount applied.
+          finance_partner: Financing partner, if financed.
+
+  documents:
+    description: >
+      Ingestion ledger. One row per ingested document, keyed by a
+      hash of its normalised content. This is what makes
+      re-ingestion idempotent — a document whose hash is already
+      here is skipped before any chunking or embedding happens.
+    primary_key: [doc_id]
+    columns:
+      doc_id:
+        type: text
+      content_hash:
+        type: text
+        description: SHA-256 of normalised document text. Unique.
+      title:
+        type: text
+      doc_type:
+        type: text
+        allowed_values: ["service_bulletin", "manual", "kb_article", "success_story", "policy"]
+      domain:
+        type: text
+        allowed_values: ["diagnostic", "business"]
+      applies_to_models:
+        type: text[]
+        description: Model codes this document covers.
+      effective_date:
+        type: date
+      ingested_at:
+        type: timestamptz
+
+  document_chunks:
+    description: >
+      Chunked, embedded document content. Searched by the RAG
+      tool, never queried directly by the SQL tool.
+    primary_key: [chunk_id]
+    columns:
+      chunk_id:
+        type: bigint
+      doc_id:
+        type: text
+      chunk_type:
+        type: text
+        description: >
+          How this chunk was produced. Tables are never split, so a
+          table chunk holds a whole table; a row chunk holds one
+          row of a lookup table with headers repeated.
+        allowed_values: ["prose", "table", "table_row", "list"]
+      section_path:
+        type: text
+        description: Heading trail, e.g. "Battery > Charging > Faults".
+      content:
+        type: text
+      embedding:
+        type: vector
+        description: Dense vector. Not selectable by the SQL tool.
+
+# Columns the SQL tool may never reference, whatever it generates.
+# Enforced by the AST validator, not by asking the model nicely.
+denied_columns:
+  - document_chunks.embedding
+
+# Declared join keys. The validator requires every join to carry
+# an ON predicate referencing one of these — which is what rejects
+# a CROSS JOIN while leaving legitimate joins alone.
+join_keys:
+  - [vehicles.vehicle_id, vehicle_telemetry.vehicle_id]
+  - [vehicles.vehicle_id, sales_transactions.vehicle_id]
+  - [vehicles.vehicle_id, service_events.vehicle_id]
+  - [vehicles.model_code, vehicle_baseline_specs.model_code]
+  - [service_events.error_code, error_codes.code]
+  - [documents.doc_id, document_chunks.doc_id]

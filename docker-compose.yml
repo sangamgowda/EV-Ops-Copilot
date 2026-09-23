@@ -1,0 +1,67 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: opscopilot-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-opscopilot}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_me_locally}
+      POSTGRES_DB: ${POSTGRES_DB:-opscopilot}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # Migrations run in filename order on first boot.
+      - ./src/ops_copilot/db/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-opscopilot} -d ${POSTGRES_DB:-opscopilot}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: opscopilot-api
+    env_file: .env
+    environment:
+      POSTGRES_HOST: postgres
+      MCP_SERVER_HOST: mcp-server
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      # Persist the HuggingFace model cache so bge-small and
+      # bge-reranker-base download once, not on every rebuild.
+      - hfcache:/app/.cache/huggingface
+    restart: unless-stopped
+
+  # MCP runs as its own service on purpose. It is the only thing
+  # holding database credentials — the agent process never does.
+  # Set MCP_TRANSPORT=stdio in .env to skip this and have the API
+  # spawn the server as a subprocess instead.
+  mcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: opscopilot-mcp
+    command: ["python", "-m", "ops_copilot.mcp_server.server", "--transport", "http"]
+    env_file: .env
+    environment:
+      POSTGRES_HOST: postgres
+    ports:
+      - "8765:8765"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - hfcache:/app/.cache/huggingface
+    profiles: ["http-mcp"]
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  hfcache:

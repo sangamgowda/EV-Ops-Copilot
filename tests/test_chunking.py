@@ -1,0 +1,23 @@
+"""Chunking tests. The table cases are the point of this module.
+
+TODO(build): implement alongside rag/chunking.py.
+"""
+
+from __future__ import annotations
+
+import pytest
+
+
+@pytest.mark.skip(reason="TODO: implement with rag/chunking.py")
+class TestTablesAreNeverSplit:
+    def test_wide_table_stays_one_chunk(self): ...
+    def test_lookup_table_emits_row_chunks(self): ...
+    def test_row_chunk_repeats_headers(self): ...
+    def test_error_codes_extracted_for_promotion(self): ...
+
+
+@pytest.mark.skip(reason="TODO: implement with rag/chunking.py")
+class TestProse:
+    def test_never_spans_a_heading(self): ...
+    def test_overlap_applied(self): ...
+    def test_context_header_prepended(self): ...
