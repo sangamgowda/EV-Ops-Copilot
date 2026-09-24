@@ -318,3 +318,52 @@ class TestNodeFailures:
         state = await run()
         assert state["domains"] == ["diagnostic", "business"]
         assert state["answer"]
+
+
+class TestTracing:
+    async def test_real_loop_is_recorded_lap_by_lap(self, wire, monkeypatch):
+        from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
+            InMemorySpanExporter,
+        )
+
+        from ops_copilot.observability import tracing
+
+        exporter = InMemorySpanExporter()
+        otel = tracing.make_otel(exporter, batch=False)
+        monkeypatch.setattr(tracing, "_otel", lambda: otel)
+        s = Script(
+            router=[routed("explain")],
+            plan=[PlanOutput(reasoning="measure first", tool_calls=[sql(1)]),
+                  PlanOutput(reasoning="then the documents", tool_calls=[rag("overload")])],
+            reflect=[ReflectOutput(sufficient=False, missing=["mechanism"], next_question="why?"),
+                     ReflectOutput(sufficient=True)],
+            synthesize=[answer("Current draw is 32.8% above baseline [e1] due to overload [e2].")],
+        )
+        run = wire(s, FakeMCP(lambda n, a: COMPARISON if n == "structured_query_tool" else DOC))
+        with tracing.turn_trace("0" * 31 + "1", "s1", "q"):
+            await run()
+
+        spans = list(exporter.get_finished_spans())
+        by_id = {sp.context.span_id: sp for sp in spans}
+
+        def parent(sp):
+            return by_id[sp.parent.span_id].name if sp.parent else None
+
+        laps = [sp for sp in spans if sp.name.startswith("lap ")]
+        assert sorted(sp.name for sp in laps) == ["lap 1", "lap 2"]
+        for name in ("plan", "execute", "observe", "reflect"):
+            assert sorted(parent(sp) for sp in spans if sp.name == name) == ["lap 1", "lap 2"], name
+        assert {sp.name for sp in spans if parent(sp) == "turn"} == {
+            "router", "lap 1", "lap 2", "synthesize", "grounding"}
+
+        def out(sp):
+            return json.loads(sp.attributes["langfuse.observation.output"])
+
+        reflects = sorted((sp for sp in spans if sp.name == "reflect"), key=lambda sp: parent(sp))
+        assert out(reflects[0])["open_gaps"] == ["mechanism"]
+        assert out(reflects[1])["stop_reason"] == "complete"
+        observed = sorted((sp for sp in spans if sp.name == "observe"), key=lambda sp: parent(sp))
+        assert out(observed[0])["evidence"][0]["verdict"] == "above_normal"
+        assert out(observed[1])["evidence"][0]["rerank_score"] == 0.91
+        grounding = next(sp for sp in spans if sp.name == "grounding")
+        assert out(grounding)["groundedness"]["passed"] is True     # recorded, not empty

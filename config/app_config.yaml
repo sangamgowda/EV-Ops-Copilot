@@ -246,6 +246,16 @@ evaluation:
   # not retrieval.
   max_question_chunk_overlap: 0.6
 
+observability:
+  # Successes sent to Langfuse. Start at 1.0 (trace everything); lower
+  # it at volume. Failures are ALWAYS sent, whatever this says.
+  success_sample_rate: 1.0
+  # A turn counts as a failure — always kept — when it ends like this,
+  # or is partial, ungrounded, or had a node fall back after an error.
+  failure_stop_reasons: [cap_reached, timeout, no_new_evidence]
+  # Longest string kept in any trace field. Summaries, not payloads.
+  max_field_chars: 2000
+
 feedback:
   # A user rephrasing within this window counts as an implicit
   # negative. There are far more of these than explicit

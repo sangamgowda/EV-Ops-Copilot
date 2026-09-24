@@ -25,6 +25,7 @@ from collections.abc import Awaitable, Callable
 from typing import Any
 
 from ops_copilot.agent.state import Evidence, EvidenceStatus, ToolCall
+from ops_copilot.observability.tracing import record_node_error
 from ops_copilot.settings import get_config
 
 Emit = Callable[[str, dict[str, Any]], Any]
@@ -58,6 +59,7 @@ def guarded(name: str, fallback: Callable[[Any, Exception], dict[str, Any]]) -> 
                 return await fn(state, config)
             except Exception as exc:
                 log.exception("%s failed; using fallback", name)
+                record_node_error(name, exc)
                 await emit(config, "node_error", {"node": name,
                                                   "error": f"{type(exc).__name__}: {exc}"[:300]})
                 return fallback(state, exc)

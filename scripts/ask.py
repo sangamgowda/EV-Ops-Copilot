@@ -22,9 +22,9 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from ops_copilot.agent.graph import build_graph  # noqa: E402
-from ops_copilot.agent.state import new_state  # noqa: E402
+from ops_copilot.agent.turn import run_turn  # noqa: E402
 from ops_copilot.mcp_client.client import get_client  # noqa: E402
+from ops_copilot.observability import tracing  # noqa: E402
 
 
 def show(event: str, data: dict[str, Any]) -> None:
@@ -57,12 +57,10 @@ def show(event: str, data: dict[str, Any]) -> None:
 async def main(question: str) -> None:
     started = time.perf_counter()
     try:
-        state = await build_graph().ainvoke(
-            new_state(question, "ask-cli", uuid.uuid4().hex),
-            config={"configurable": {"emit": show}, "recursion_limit": 60},
-        )
+        state = await run_turn(question, "ask-cli", turn_id=uuid.uuid4().hex, emit=show)
     finally:
         await get_client().close()
+        tracing.shutdown()
     print(f"\nANSWER ({state.get('confidence')} confidence, {state.get('iteration')} lap(s), "
           f"stop: {state.get('stop_reason')}, {state.get('llm_calls')} LLM calls, "
           f"{time.perf_counter() - started:.1f}s)\n")

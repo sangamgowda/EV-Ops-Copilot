@@ -220,7 +220,7 @@ def _hedge(answer: str, g: GroundednessResult) -> str:
             "the gathered evidence and should be treated as unconfirmed: " + "; ".join(items) + ".")
 
 
-@traced("groundedness")
+@traced("grounding")
 async def groundedness_node(state: AgentState, config: Any = None) -> dict:
     cfg = get_config()["groundedness"]
     result = check(state)

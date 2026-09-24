@@ -23,8 +23,8 @@ behind it is worse than no health check, because it is believed.
 from __future__ import annotations
 
 import asyncio
-import mimetypes
 import logging
+import mimetypes
 import sys
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
@@ -37,6 +37,7 @@ from sqlalchemy import text
 from ops_copilot.api import routes_chat, routes_eval, routes_feedback, routes_ingest
 from ops_copilot.db.engine import dispose_all, owner_engine
 from ops_copilot.mcp_client.client import get_client
+from ops_copilot.observability import tracing
 from ops_copilot.settings import ROOT, get_settings
 
 log = logging.getLogger("ops_copilot")
@@ -64,6 +65,7 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     yield
     await get_client().close()
     await dispose_all()
+    tracing.shutdown()     # send any traces the client still holds
 
 
 app = FastAPI(

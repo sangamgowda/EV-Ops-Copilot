@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any, Literal, cast
 
 import yaml
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -55,7 +56,9 @@ class Settings(BaseSettings):
     # Observability
     langfuse_public_key: str = ""
     langfuse_secret_key: str = ""
-    langfuse_host: str = "https://cloud.langfuse.com"
+    # .env.example names this LANGFUSE_BASE_URL; LANGFUSE_HOST also works.
+    langfuse_host: str = Field(default="https://cloud.langfuse.com",
+                               validation_alias=AliasChoices("langfuse_base_url", "langfuse_host"))
     tracing_enabled: bool = True
 
     # App
