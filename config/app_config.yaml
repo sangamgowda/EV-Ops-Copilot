@@ -97,6 +97,22 @@ chunking:
   # on a small precise chunk.
   emit_row_chunks_for_lookup_tables: true
   prepend_context_header: true
+  # A paragraph directly above a table is its caption only if it is
+  # short; a long one is prose that happens to precede the table.
+  max_caption_chars: 300
+  # What an error code looks like in text. Tagged on every chunk so
+  # retrieval and promotion agree on the same definition.
+  error_code_pattern: '\b[A-Z]{2,5}_\d{2,4}\b'
+  # A table is a lookup table when every first-column value looks
+  # like a key (ERR_401, SB-114, SC-F50) and none repeat.
+  lookup_key_pattern: '^[A-Z][A-Z0-9]*(?:[-_][A-Z0-9]+)+$'
+
+embeddings:
+  # Chunks per model call. Bounded so a large folder cannot exhaust
+  # memory in one pass.
+  batch_size: 32
+  # Query embeddings repeat across laps of the same turn; cache them.
+  query_cache_size: 256
 
 db:
   owner_pool_size: 5

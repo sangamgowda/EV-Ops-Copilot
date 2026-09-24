@@ -8,7 +8,8 @@ Normalisation matters more than the hash function. Without it,
 trailing whitespace or a line-ending change produces a different
 digest and the same document gets ingested twice.
 
-TODO(build): implement normalise() and content_hash().
+Case is NOT folded: "ERR_401" and "err_401" are different content,
+and an edit that only changes case should still re-ingest.
 """
 
 from __future__ import annotations
@@ -18,7 +19,7 @@ import re
 
 
 def normalise(text: str) -> str:
-    """Collapse whitespace, strip, normalise line endings, casefold."""
+    """Normalise line endings, collapse runs of spaces and blank lines, strip."""
     text = text.replace("\r\n", "\n").replace("\r", "\n")
     text = re.sub(r"[ \t]+", " ", text)
     text = re.sub(r"\n{3,}", "\n\n", text)
