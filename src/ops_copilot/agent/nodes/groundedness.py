@@ -76,7 +76,15 @@ def unresolved_citations(answer: str, citations: list[Citation], evidence_ids: s
 
 # ── tier 2 ───────────────────────────────────────────────────
 
+# Models write IDs and ranges with typographic dashes as often as with
+# "-": "VIN‑1042" (U+2011), "25–40%" (U+2013), "−3.1%" (U+2212). Unless
+# they are folded to ASCII first, the ID pattern misses them and the
+# digits inside an ID get flagged as an invented number.
+_DASHES = str.maketrans({c: "-" for c in "‐‑‒–—―−﹘﹣－"})
+
+
 def _strip_non_claims(text: str) -> str:
+    text = text.translate(_DASHES)
     for pat in (_TAG, _DATE, _VERSION, _IDENT):
         text = pat.sub(" ", text)
     return text

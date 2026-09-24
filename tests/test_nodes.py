@@ -173,3 +173,20 @@ class TestDocumentCoverage:
         assert "does NOT" not in _coverage(chunk, {"entity_id": "VIN-1042"})
         # No vehicle asked about: nothing to flag.
         assert "does NOT" not in _coverage({"applies_to_models": [], "boosted": False}, {})
+
+
+class TestTypographicDashes:
+    def test_ids_with_unicode_hyphens_are_not_numbers(self):
+        """Seen live: the model wrote "VIN\u20111042" (non-breaking hyphen)
+        and grounding flagged 1042 as an invented number."""
+        from ops_copilot.agent.nodes.groundedness import extract_numbers, untraceable_numbers
+
+        for dash in "\u2010\u2011\u2012\u2013\u2014\u2212":
+            text = f"VIN{dash}1042 and SB{dash}114 and ERR_401"
+            assert extract_numbers(text) == [], dash
+        assert untraceable_numbers("No bulletin applies to VIN\u20111042\u2019s model.", []) == []
+
+    def test_unicode_minus_is_still_a_number(self):
+        from ops_copilot.agent.nodes.groundedness import extract_numbers
+
+        assert [v for _, v in extract_numbers("payload \u22123.1% vs baseline")] == [-3.1]
