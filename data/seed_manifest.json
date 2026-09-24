@@ -1,21 +1,21 @@
 {
   "generated_with": {
-    "vehicles": 50,
-    "days": 30,
+    "vehicles": 200,
+    "days": 90,
     "seed": 42,
     "interval_minutes": 5,
     "sales_scale": 1.0
   },
   "telemetry_window": {
-    "start": "2026-08-25",
-    "end": "2026-09-23"
+    "start": "2026-06-27",
+    "end": "2026-09-24"
   },
   "row_counts": {
     "error_codes": 14,
     "vehicle_baseline_specs": 84,
-    "vehicles": 50,
-    "vehicle_telemetry": 203842,
-    "service_events": 138,
+    "vehicles": 200,
+    "vehicle_telemetry": 2041714,
+    "service_events": 584,
     "sales_transactions": 19595
   },
   "scenarios": [
@@ -23,7 +23,7 @@
       "scenario": "overload",
       "vehicle_id": "VIN-1007",
       "model_code": "SC-F50",
-      "onset": "2026-09-14",
+      "onset": "2026-09-15",
       "finding": "Current draw well above baseline; payload above rated; cell health normal",
       "cause": "Sustained overload",
       "documents": [
@@ -33,34 +33,34 @@
         "ERR_601"
       ],
       "measured_since_onset": {
-        "range_estimate": {
-          "actual": 126.7,
-          "baseline": 169.4,
-          "delta_pct": -25.2
-        },
-        "payload": {
-          "actual": 189.0,
-          "baseline": 95.0,
-          "delta_pct": 98.9
+        "current_draw": {
+          "actual": 32.1,
+          "baseline": 24.1,
+          "delta_pct": 33.3
         },
         "motor_temp": {
-          "actual": 56.3,
-          "baseline": 50.1,
-          "delta_pct": 12.4
+          "actual": 55.8,
+          "baseline": 49.8,
+          "delta_pct": 12.1
         },
-        "current_draw": {
-          "actual": 33.2,
-          "baseline": 25.0,
-          "delta_pct": 33.2
+        "payload": {
+          "actual": 187.5,
+          "baseline": 95.0,
+          "delta_pct": 97.3
         },
-        "cell_health_latest": 98.16
+        "range_estimate": {
+          "actual": 126.5,
+          "baseline": 169.3,
+          "delta_pct": -25.3
+        },
+        "cell_health_latest": 97.46
       }
     },
     {
       "scenario": "cell_wear",
       "vehicle_id": "VIN-1017",
       "model_code": "SC-F50G1",
-      "onset": "2026-08-25",
+      "onset": "2026-06-27",
       "finding": "Cell health falling ~2% per week; current draw near baseline",
       "cause": "Cell imbalance / capacity loss",
       "documents": [
@@ -71,67 +71,67 @@
         "ERR_403"
       ],
       "measured_since_onset": {
-        "range_estimate": {
-          "actual": 133.8,
-          "baseline": 147.2,
-          "delta_pct": -9.1
-        },
-        "payload": {
-          "actual": 93.6,
-          "baseline": 95.0,
-          "delta_pct": -1.5
+        "current_draw": {
+          "actual": 30.3,
+          "baseline": 30.6,
+          "delta_pct": -0.9
         },
         "motor_temp": {
-          "actual": 53.7,
-          "baseline": 52.5,
-          "delta_pct": 2.3
+          "actual": 54.1,
+          "baseline": 53.2,
+          "delta_pct": 1.6
         },
-        "current_draw": {
-          "actual": 29.7,
-          "baseline": 29.5,
-          "delta_pct": 0.8
+        "payload": {
+          "actual": 91.8,
+          "baseline": 95.0,
+          "delta_pct": -3.4
         },
-        "cell_health_latest": 84.17
+        "range_estimate": {
+          "actual": 131.3,
+          "baseline": 144.9,
+          "delta_pct": -9.4
+        },
+        "cell_health_latest": 84.0
       }
     },
     {
       "scenario": "undocumented",
       "vehicle_id": "VIN-1023",
       "model_code": "SC-C37",
-      "onset": "2026-09-14",
+      "onset": "2026-09-15",
       "finding": "Current draw ~30% above baseline; payload and cell health normal",
       "cause": null,
       "documents": [],
       "note": "No service documents cover this model; the correct answer is partial.",
       "measured_since_onset": {
-        "range_estimate": {
-          "actual": 104.2,
-          "baseline": 135.4,
-          "delta_pct": -23.1
-        },
-        "payload": {
-          "actual": 92.1,
-          "baseline": 95.0,
-          "delta_pct": -3.1
+        "current_draw": {
+          "actual": 24.0,
+          "baseline": 18.2,
+          "delta_pct": 31.9
         },
         "motor_temp": {
-          "actual": 52.4,
-          "baseline": 51.0,
-          "delta_pct": 2.9
+          "actual": 48.8,
+          "baseline": 46.7,
+          "delta_pct": 4.5
         },
-        "current_draw": {
-          "actual": 32.2,
-          "baseline": 24.2,
-          "delta_pct": 32.9
+        "payload": {
+          "actual": 95.4,
+          "baseline": 95.0,
+          "delta_pct": 0.5
         },
-        "cell_health_latest": 97.93
+        "range_estimate": {
+          "actual": 118.8,
+          "baseline": 152.0,
+          "delta_pct": -21.8
+        },
+        "cell_health_latest": 98.09
       }
     },
     {
       "scenario": "overload",
       "vehicle_id": "VIN-1029",
-      "model_code": "SC-F50",
-      "onset": "2026-09-14",
+      "model_code": "SC-F45",
+      "onset": "2026-09-15",
       "finding": "Current draw well above baseline; payload above rated; cell health normal",
       "cause": "Sustained overload",
       "documents": [
@@ -141,34 +141,34 @@
         "ERR_601"
       ],
       "measured_since_onset": {
-        "range_estimate": {
-          "actual": 128.0,
-          "baseline": 168.4,
-          "delta_pct": -24.0
-        },
-        "payload": {
-          "actual": 188.7,
-          "baseline": 95.0,
-          "delta_pct": 98.6
+        "current_draw": {
+          "actual": 29.2,
+          "baseline": 21.4,
+          "delta_pct": 36.3
         },
         "motor_temp": {
-          "actual": 54.3,
-          "baseline": 50.2,
+          "actual": 53.4,
+          "baseline": 49.4,
           "delta_pct": 8.2
         },
-        "current_draw": {
-          "actual": 33.2,
-          "baseline": 24.8,
-          "delta_pct": 33.8
+        "payload": {
+          "actual": 190.1,
+          "baseline": 95.0,
+          "delta_pct": 100.1
         },
-        "cell_health_latest": 98.49
+        "range_estimate": {
+          "actual": 120.5,
+          "baseline": 163.0,
+          "delta_pct": -26.1
+        },
+        "cell_health_latest": 97.7
       }
     },
     {
       "scenario": "cell_wear",
       "vehicle_id": "VIN-1036",
       "model_code": "SC-F50G1",
-      "onset": "2026-08-25",
+      "onset": "2026-06-27",
       "finding": "Cell health falling ~2% per week; current draw near baseline",
       "cause": "Cell imbalance / capacity loss",
       "documents": [
@@ -179,34 +179,34 @@
         "ERR_403"
       ],
       "measured_since_onset": {
-        "range_estimate": {
-          "actual": 138.7,
-          "baseline": 153.6,
-          "delta_pct": -9.7
-        },
-        "payload": {
-          "actual": 93.2,
-          "baseline": 95.0,
-          "delta_pct": -1.9
+        "current_draw": {
+          "actual": 25.8,
+          "baseline": 25.8,
+          "delta_pct": 0.0
         },
         "motor_temp": {
-          "actual": 55.7,
-          "baseline": 51.5,
-          "delta_pct": 8.1
+          "actual": 51.4,
+          "baseline": 50.3,
+          "delta_pct": 2.0
         },
-        "current_draw": {
-          "actual": 28.1,
-          "baseline": 27.8,
-          "delta_pct": 1.1
+        "payload": {
+          "actual": 93.3,
+          "baseline": 95.0,
+          "delta_pct": -1.8
         },
-        "cell_health_latest": 84.17
+        "range_estimate": {
+          "actual": 143.9,
+          "baseline": 158.4,
+          "delta_pct": -9.1
+        },
+        "cell_health_latest": 84.0
       }
     },
     {
       "scenario": "overload",
       "vehicle_id": "VIN-1042",
       "model_code": "SC-F50",
-      "onset": "2026-09-14",
+      "onset": "2026-09-15",
       "finding": "Current draw well above baseline; payload above rated; cell health normal",
       "cause": "Sustained overload",
       "documents": [
@@ -216,45 +216,78 @@
         "ERR_601"
       ],
       "measured_since_onset": {
-        "range_estimate": {
-          "actual": 126.5,
-          "baseline": 165.9,
-          "delta_pct": -23.8
-        },
-        "payload": {
-          "actual": 187.3,
-          "baseline": 95.0,
-          "delta_pct": 97.1
+        "current_draw": {
+          "actual": 32.3,
+          "baseline": 24.0,
+          "delta_pct": 34.4
         },
         "motor_temp": {
-          "actual": 55.5,
-          "baseline": 50.1,
-          "delta_pct": 10.8
+          "actual": 53.6,
+          "baseline": 49.7,
+          "delta_pct": 8.0
         },
-        "current_draw": {
-          "actual": 32.7,
-          "baseline": 24.6,
-          "delta_pct": 33.2
+        "payload": {
+          "actual": 189.3,
+          "baseline": 95.0,
+          "delta_pct": 99.2
         },
-        "cell_health_latest": 98.84
+        "range_estimate": {
+          "actual": 126.4,
+          "baseline": 169.5,
+          "delta_pct": -25.4
+        },
+        "cell_health_latest": 97.64
       }
     },
     {
       "scenario": "firmware",
       "vehicle_ids": [
         "VIN-1001",
-        "VIN-1002",
+        "VIN-1004",
+        "VIN-1006",
+        "VIN-1011",
+        "VIN-1013",
         "VIN-1019",
         "VIN-1021",
-        "VIN-1025",
-        "VIN-1026",
-        "VIN-1028",
+        "VIN-1024",
+        "VIN-1030",
         "VIN-1031",
-        "VIN-1032",
-        "VIN-1033",
-        "VIN-1038",
-        "VIN-1043",
-        "VIN-1050"
+        "VIN-1041",
+        "VIN-1044",
+        "VIN-1046",
+        "VIN-1059",
+        "VIN-1071",
+        "VIN-1086",
+        "VIN-1087",
+        "VIN-1101",
+        "VIN-1105",
+        "VIN-1107",
+        "VIN-1111",
+        "VIN-1113",
+        "VIN-1115",
+        "VIN-1120",
+        "VIN-1126",
+        "VIN-1127",
+        "VIN-1129",
+        "VIN-1137",
+        "VIN-1139",
+        "VIN-1140",
+        "VIN-1147",
+        "VIN-1150",
+        "VIN-1157",
+        "VIN-1159",
+        "VIN-1160",
+        "VIN-1161",
+        "VIN-1163",
+        "VIN-1176",
+        "VIN-1181",
+        "VIN-1184",
+        "VIN-1187",
+        "VIN-1190",
+        "VIN-1191",
+        "VIN-1195",
+        "VIN-1198",
+        "VIN-1199"
       ],
       "finding": "Motor temperature ~12 C above baseline in sport mode after the 2.6.0 update",
       "cause": "Firmware 2.6.0 throttle map",

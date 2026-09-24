@@ -29,7 +29,7 @@ logs:
 	docker compose logs -f api
 
 seed:
-	docker compose exec api python scripts/seed_synthetic_data.py --reset
+	docker compose exec api python scripts/seed_synthetic_data.py --reset --vehicles 200 --days 90
 
 seed-local:
 	POSTGRES_HOST=localhost python scripts/seed_synthetic_data.py --reset

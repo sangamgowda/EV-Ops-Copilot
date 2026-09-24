@@ -199,6 +199,10 @@ class Vehicle:
     onset: Optional[date] = None
     odometer_km: float = 0.0
     config: dict[str, Any] = field(default_factory=dict)
+    # Data-quality flaws, assigned by add_real_world_flaws().
+    offline_days: set[date] = field(default_factory=set)
+    reports_odometer: bool = True
+    reports_region: bool = True
 
 
 def vin(n: int, total: int) -> str:
@@ -301,10 +305,12 @@ def ambient(zone_c: float, when: datetime, rng: random.Random) -> float:
     return zone_c + diurnal + rng.gauss(0, 0.8)
 
 
-def cell_health_on(v: Vehicle, day: date, start: date) -> float:
+def cell_health_on(v: Vehicle, day: date, start: date, days: int) -> float:
     elapsed = (day - start).days
     if v.scenario == "cell_wear":
-        return v.health_start - elapsed * 0.27     # ~92 → ~84 over 30 days
+        # ~92 → ~84 across the window whatever its length, so the story
+        # (and SB-121's thresholds) hold at 30 days and at 90.
+        return v.health_start - elapsed * 8.0 / max(days - 1, 1)
     return v.health_start - elapsed * 0.006
 
 
@@ -322,7 +328,7 @@ def telemetry_for(
 
     for d in range(days):
         day = start + timedelta(days=d)
-        health = cell_health_on(v, day, start)
+        health = cell_health_on(v, day, start, days)
         soc = rng.uniform(88, 100)
         yield (v.vehicle_id, datetime.combine(day, time(6, 0), IST), "cell_health", round(health, 2), None)
 
@@ -377,6 +383,69 @@ def telemetry_for(
             yield (v.vehicle_id, end_ts, "range_estimate", round(projected, 1), mode)
             if soc < 25:
                 soc = rng.uniform(85, 100)           # midday top-up
+
+
+# ── real-world flaws ─────────────────────────────────────────
+#
+# Clean data never tests anything. Real telemetry drops readings,
+# goes silent when a vehicle loses connectivity, and occasionally
+# reports nonsense — a current spike, a sensor reading zero, a
+# temperature probe stuck at -40. An AVG over that is wrong in ways a
+# query written against clean data never has to handle.
+#
+# metric_value is NOT NULL, so missing sensor data shows up the way it
+# does in a real feed: as absent rows. Real NULLs are seeded where the
+# schema allows them — vehicles that never reported an odometer or a
+# registered region.
+#
+# Flaws draw from their OWN random stream, so the clean story (which
+# vehicle has which fault, and its magnitude) is identical with or
+# without them.
+
+DROP_RATE = 0.01          # a single reading lost in transit
+GLITCH_RATE = 0.0005      # a reading that is simply wrong
+OFFLINE_SHARE = 0.15      # vehicles that go silent for 1-3 days
+NO_ODOMETER_SHARE = 0.03
+NO_REGION_SHARE = 0.02
+FLAWED_METRICS = {"speed", "current_draw", "pack_voltage", "motor_temp"}
+
+
+def add_real_world_flaws(vehicles: list[Vehicle], start: date, end: date,
+                         rng: random.Random) -> None:
+    span = (end - start).days
+    for v in vehicles:
+        # Planted-scenario vehicles keep continuous data: a demo whose
+        # evidence happens to fall in an outage demonstrates nothing.
+        if v.scenario is None and rng.random() < OFFLINE_SHARE and span > 3:
+            for _ in range(rng.randint(1, 3)):
+                first = start + timedelta(days=rng.randrange(span))
+                v.offline_days.update(first + timedelta(days=k) for k in range(rng.randint(1, 3)))
+        v.reports_odometer = rng.random() >= NO_ODOMETER_SHARE
+        v.reports_region = rng.random() >= NO_REGION_SHARE
+
+
+def glitch(metric: str, value: float, rng: random.Random) -> float:
+    if metric == "motor_temp":
+        return -40.0                                  # probe fault sentinel
+    if metric == "current_draw" and rng.random() < 0.5:
+        return round(value * rng.uniform(3, 6), 2)    # spike
+    return 0.0                                        # dropout reads zero
+
+
+def with_flaws(v: Vehicle, rows: Iterable[tuple], rng: random.Random,
+               tally: dict[str, int]) -> Iterable[tuple]:
+    for vid, ts, metric, value, mode in rows:
+        if ts.date() in v.offline_days:
+            tally["offline"] += 1
+            continue
+        if metric in FLAWED_METRICS:
+            if rng.random() < DROP_RATE:
+                tally["dropped"] += 1
+                continue
+            if rng.random() < GLITCH_RATE:
+                value = glitch(metric, value, rng)
+                tally["glitched"] += 1
+        yield vid, ts, metric, value, mode
 
 
 # ── service events ───────────────────────────────────────────
@@ -679,6 +748,8 @@ def main() -> None:
     p.add_argument("--reset", action="store_true", help="truncate seeded tables first")
     p.add_argument("--csv-dir", type=Path, help="also write every table as CSV here")
     p.add_argument("--no-db", action="store_true", help="CSV only; do not connect")
+    p.add_argument("--clean", action="store_true",
+                   help="no glitches, gaps or missing values (default: realistic flaws)")
     args = p.parse_args()
 
     if args.no_db and not args.csv_dir:
@@ -711,12 +782,20 @@ def main() -> None:
     )
 
     vehicles = build_vehicles(ref, args.vehicles, start, end, rng)
+    flaw_rng = random.Random(args.seed + 1)
+    if not args.clean:
+        add_real_world_flaws(vehicles, start, end, flaw_rng)
+    flaws = {"offline": 0, "dropped": 0, "glitched": 0}
 
     vehicle_cols = ["vehicle_id", "model_code", "manufactured_on", "registered_region", "odometer_km", "config"]
 
+    def odometer(x: Vehicle) -> Optional[float]:
+        return round(x.odometer_km, 1) if x.reports_odometer else None
+
     def vehicle_rows() -> list[tuple]:
-        return [(x.vehicle_id, x.model_code, x.manufactured_on, x.city,
-                 round(x.odometer_km, 1), json.dumps(x.config)) for x in vehicles]
+        return [(x.vehicle_id, x.model_code, x.manufactured_on,
+                 x.city if x.reports_region else None,
+                 odometer(x), json.dumps(x.config)) for x in vehicles]
 
     # Rows must exist before telemetry references them; odometer is
     # final only after telemetry, so it is updated (DB) or written
@@ -726,9 +805,12 @@ def main() -> None:
     telemetry_rows = 0
     tele_cols = ["vehicle_id", "recorded_at", "metric_name", "metric_value", "unit", "drive_mode"]
     for v in vehicles:
+        readings = telemetry_for(v, ref, start, args.days, args.interval_minutes, rng)
+        if not args.clean:
+            readings = with_flaws(v, readings, flaw_rng, flaws)
         batch = [
             (vid, ts, metric, value, UNITS[metric], mode)
-            for vid, ts, metric, value, mode in telemetry_for(v, ref, start, args.days, args.interval_minutes, rng)
+            for vid, ts, metric, value, mode in readings
         ]
         telemetry_rows += sink.write("vehicle_telemetry", tele_cols, batch)
         print(f"  {v.vehicle_id} {v.model_code:<9} {v.scenario or '':<12} {len(batch):>7} readings", flush=True)
@@ -738,8 +820,14 @@ def main() -> None:
         with conn.cursor() as cur:
             cur.executemany(
                 "UPDATE vehicles SET odometer_km = %s WHERE vehicle_id = %s",
-                [(round(v.odometer_km, 1), v.vehicle_id) for v in vehicles],
+                [(odometer(v), v.vehicle_id) for v in vehicles],
             )
+    if not args.clean:
+        print(f"  real-world flaws: {flaws['glitched']} glitched readings, "
+              f"{flaws['dropped']} dropped, {flaws['offline']} lost to offline days "
+              f"({sum(bool(v.offline_days) for v in vehicles)} vehicles), "
+              f"{sum(not v.reports_odometer for v in vehicles)} vehicles with no odometer, "
+              f"{sum(not v.reports_region for v in vehicles)} with no region", flush=True)
     counts["vehicles"] = sink.write("vehicles", vehicle_cols, vehicle_rows(), db=False) or counts["vehicles"]
 
     counts["service_events"] = sink.write(
