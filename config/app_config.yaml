@@ -126,6 +126,16 @@ embeddings:
   # Query embeddings repeat across laps of the same turn; cache them.
   query_cache_size: 256
 
+mcp:
+  # Every tool call has a deadline; a hung tool must not hang the turn.
+  # Generous, because a cold server may still be loading its models.
+  # A slow query is stopped earlier, by statement_timeout.
+  call_timeout_seconds: 45
+  # Transport errors only. A timeout is never retried as-is: the same
+  # query would time out again.
+  transport_retries: 2
+  retry_backoff_seconds: 0.5
+
 db:
   owner_pool_size: 5
   owner_max_overflow: 5

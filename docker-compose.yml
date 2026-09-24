@@ -33,11 +33,21 @@ services:
     environment:
       POSTGRES_HOST: postgres
       MCP_SERVER_HOST: mcp-server
+      # The agent reaches the database only through the MCP server.
+      # Blanking the read-only credentials here makes that structural:
+      # a prompt-injected agent has no connection string to misuse.
+      # (The owner URL stays: the API writes its own records and runs
+      # ingestion, and no agent code is given an owner engine.)
+      MCP_TRANSPORT: http
+      DATABASE_URL_READONLY: ""
+      DB_READONLY_PASSWORD: ""
     ports:
       - "8000:8000"
     depends_on:
       postgres:
         condition: service_healthy
+      mcp-server:
+        condition: service_started
     volumes:
       # Persist the HuggingFace model cache so bge-small and
       # bge-reranker-base download once, not on every rebuild.
@@ -46,10 +56,10 @@ services:
       - ./data:/app/data
     restart: unless-stopped
 
-  # MCP runs as its own service on purpose. It is the only thing
-  # holding database credentials — the agent process never does.
-  # Set MCP_TRANSPORT=stdio in .env to skip this and have the API
-  # spawn the server as a subprocess instead.
+  # MCP runs as its own service on purpose. It holds the read-only
+  # database credentials; the agent's container does not. It loads
+  # the embedding and reranker models at startup, so the first
+  # question does not pay for them.
   mcp-server:
     build:
       context: .
@@ -59,14 +69,24 @@ services:
     env_file: .env
     environment:
       POSTGRES_HOST: postgres
+      # Tools only read. The owner credentials have no business here.
+      DATABASE_URL: ""
+      POSTGRES_PASSWORD: ""
     ports:
       - "8765:8765"
+    # The image's HEALTHCHECK probes the API on :8000, which this
+    # service does not serve. Check that the MCP port accepts connections.
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('localhost', 8765), 3)"]
+      interval: 30s
+      timeout: 5s
+      start_period: 60s
+      retries: 3
     depends_on:
       postgres:
         condition: service_healthy
     volumes:
       - hfcache:/app/.cache/huggingface
-    profiles: ["http-mcp"]
     restart: unless-stopped
 
 volumes:

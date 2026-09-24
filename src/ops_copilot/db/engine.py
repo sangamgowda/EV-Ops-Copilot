@@ -26,12 +26,13 @@ from __future__ import annotations
 
 import functools
 
+from psycopg_pool import ConnectionPool
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
 from ops_copilot.settings import get_config, get_settings
 
 
-class DatabaseNotConfigured(RuntimeError):
+class DatabaseNotConfiguredError(RuntimeError):
     pass
 
 
@@ -39,7 +40,7 @@ def _require(url: str, name: str) -> str:
     # An unset URL, or one whose ${...} placeholders were never filled
     # in, would otherwise fail on connect with a confusing DNS error.
     if not url or "${" in url:
-        raise DatabaseNotConfigured(f"{name} is not set (check .env)")
+        raise DatabaseNotConfiguredError(f"{name} is not set (check .env)")
     return url
 
 
@@ -77,8 +78,34 @@ def readonly_engine() -> AsyncEngine:
     return make_readonly_engine()
 
 
+@functools.lru_cache(maxsize=1)
+def readonly_sql_pool() -> ConnectionPool:
+    """Plain psycopg pool, same read-only role, for the SQL tool.
+
+    The validator's EXPLAIN gate works on a DB-API cursor, and EXPLAIN
+    and the query itself must run on the SAME connection so the cost
+    check describes what actually executes. A synchronous pool, used
+    from a worker thread, guarantees both.
+    """
+    cfg = get_config()
+    timeout_ms = cfg["sql_validation"]["statement_timeout_ms"]
+    url = _require(get_settings().database_url_readonly, "DATABASE_URL_READONLY")
+    return ConnectionPool(
+        url.replace("postgresql+psycopg://", "postgresql://"),
+        min_size=1,
+        max_size=cfg["db"]["readonly_pool_size"],
+        kwargs={
+            "options": f"-c statement_timeout={timeout_ms} -c default_transaction_read_only=on",
+            "autocommit": True,
+        },
+        open=True,
+    )
+
+
 async def dispose_all() -> None:
-    """Close both pools. Called once, at application shutdown."""
+    """Close every pool. Called once, at shutdown."""
     for factory in (owner_engine, readonly_engine):
         if factory.cache_info().currsize:
             await factory().dispose()
+    if readonly_sql_pool.cache_info().currsize:
+        readonly_sql_pool().close()

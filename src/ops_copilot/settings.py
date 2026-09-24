@@ -49,6 +49,9 @@ class Settings(BaseSettings):
     mcp_transport: Literal["stdio", "http"] = "stdio"
     mcp_server_host: str = "localhost"
     mcp_server_port: int = 8765
+    # Load embedding + reranker models when the tool server starts, so
+    # the first question does not pay for it. Off in tests.
+    mcp_warm_models: bool = True
 
     # Observability
     langfuse_public_key: str = ""
