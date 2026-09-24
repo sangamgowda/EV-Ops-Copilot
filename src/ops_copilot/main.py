@@ -23,6 +23,7 @@ behind it is worse than no health check, because it is believed.
 from __future__ import annotations
 
 import asyncio
+import mimetypes
 import logging
 import sys
 from collections.abc import AsyncGenerator
@@ -98,6 +99,9 @@ def _mount_ui() -> None:
     """
     dist = ROOT / "ui" / "dist"
     if dist.is_dir():
+        # Slim images have no mapping for .woff2 and would serve the UI's
+        # fonts as text/plain, which strict browsers and proxies refuse.
+        mimetypes.add_type("font/woff2", ".woff2")
         app.mount("/", StaticFiles(directory=dist, html=True), name="ui")
 
 

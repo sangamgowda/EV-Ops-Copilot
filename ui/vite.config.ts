@@ -17,5 +17,7 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     setupFiles: "./src/test-setup.ts",
+    // Browser layout tests belong to Playwright (npm run test:e2e).
+    exclude: ["e2e/**", "node_modules/**"],
   },
 });

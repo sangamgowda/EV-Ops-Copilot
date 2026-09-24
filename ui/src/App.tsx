@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ChatError, streamChat } from "./api";
 import { AssistantBubble } from "./components/AssistantBubble";
+import { ArrowUp, Plus } from "./components/icons";
 import { isNearBottom } from "./scroll";
 import type { AssistantMessage, Message } from "./types";
 
@@ -104,10 +105,15 @@ export default function App() {
   return (
     <div className="app">
       <header className="topbar">
-        <h1 className="topbar__title">Ops Copilot</h1>
+        <h1 className="topbar__title">
+          <span className="topbar__mark" aria-hidden="true" />
+          Ops Copilot
+        </h1>
         {messages.length > 0 && (
-          <button type="button" className="topbar__new" onClick={newConversation}>
-            New conversation
+          <button type="button" className="topbar__new" onClick={newConversation}
+            aria-label="New conversation">
+            <Plus />
+            <span className="topbar__new-text">New conversation</span>
           </button>
         )}
       </header>
@@ -121,6 +127,7 @@ export default function App() {
       >
         {messages.length === 0 ? (
           <section className="empty">
+            <h2 className="empty__title">What would you like to know?</h2>
             <p className="empty__lead">Ask about a vehicle, an error code, or how sales are going.</p>
             <div className="empty__examples">
               {EXAMPLES.map((q) => (
@@ -163,7 +170,7 @@ export default function App() {
           onKeyDown={onKeyDown}
         />
         <button type="submit" disabled={busy || !input.trim()} aria-label="Send">
-          Send
+          <ArrowUp />
         </button>
       </form>
     </div>

@@ -252,7 +252,15 @@ question, or click one of the examples.
 
 To work on the interface itself: `cd ui`, `npm install`, then `npm run dev`
 and open http://localhost:5173 (the API must be running on port 8000).
-`npm test` runs its tests.
+`npm test` runs its behaviour tests; `npm run test:e2e` checks the layout
+in a real browser at phone and tablet widths (first time:
+`npx playwright install chromium`).
+
+The interface uses the Satoshi typeface by Indian Type Foundry, free under
+the [ITF Free Font License](https://www.fontshare.com/licenses/itf-ffl).
+The licence does not allow the font files to be redistributed from a public
+repository, so they are not in git: `npm run dev` and `npm run build`
+download them from Fontshare the first time.
 
 ## API
 

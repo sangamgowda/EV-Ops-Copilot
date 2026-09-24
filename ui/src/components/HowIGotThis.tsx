@@ -12,8 +12,12 @@ export function HowIGotThis({ done, onCite }: { done: Done; onCite(id: string): 
       <summary>
         How I got this · {laps} {laps === 1 ? "lap" : "laps"}
         {done.grounded !== null && (
-          <span className={`how__check${done.grounded ? "" : " how__check--warn"}`}>
-            {done.grounded ? "checked against the evidence" : "could not be fully checked"}
+          <span
+            className={`how__check${done.grounded ? "" : " how__check--warn"}`}
+            title={done.grounded ? "Every number and citation was checked against the evidence"
+                                 : "Parts of this answer could not be checked against the evidence"}
+          >
+            {done.grounded ? "Checked" : "Not fully checked"}
           </span>
         )}
       </summary>

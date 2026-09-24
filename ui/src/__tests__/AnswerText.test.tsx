@@ -14,6 +14,15 @@ describe("AnswerText", () => {
     expect(screen.getByText(/See also \[e9\]/)).toBeInTheDocument();
   });
 
+  it("keeps a chip with the word before it and the punctuation after it", () => {
+    const { container } = render(
+      <AnswerText text="Payload averaged 189.7 kg [e2]. Next." knownIds={null} openId={null} onCite={noop} />,
+    );
+    const glued = container.querySelector(".chip-wrap");
+    expect(glued?.textContent).toBe("kg e2.");
+    expect(container.textContent).toBe("Payload averaged 189.7 kg e2. Next.");
+  });
+
   it("renders a half-written tag as text while streaming", () => {
     render(<AnswerText text="Payload was 190 kg [e" knownIds={null} openId={null} onCite={noop} />);
     expect(screen.getByText("Payload was 190 kg [e")).toBeInTheDocument();

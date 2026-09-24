@@ -8,7 +8,9 @@ interface Props {
   onCite(id: string): void;
 }
 
-const TAG = /\[(e\d+)\]/g;
+// The tag plus any punctuation straight after it, so the two can be kept
+// on one line — otherwise ". Battery…" can wrap onto a new line alone.
+const TAG = /\[(e\d+)\]([.,;:!?)]*)/g;
 
 /** The answer as paragraphs and bullet lists, with each [eN] tag turned
  *  into a citation chip. Text is rendered as text — React escapes it —
@@ -57,21 +59,31 @@ function inline(
   for (const m of line.matchAll(TAG)) {
     const id = m[1];
     const at = m.index ?? 0;
-    if (at > last) out.push(line.slice(last, at));
+    const before = line.slice(last, at);
     if (knownIds === null || knownIds.has(id)) {
+      // Keep the word before the chip with it ("kg [e2]."), so a chip is
+      // never stranded at the start of a line on a narrow screen.
+      const split = before.search(/\S+\s*$/);
+      const head = split > 0 ? before.slice(0, split) : split === 0 ? "" : before;
+      const lastWord = split >= 0 ? before.slice(split) : "";
+      if (head) out.push(head);
       out.push(
-        <button
-          key={`${id}-${at}`}
-          type="button"
-          className={`chip${openId === id ? " chip--open" : ""}`}
-          aria-expanded={openId === id}
-          aria-label={`Source ${id}`}
-          onClick={() => onCite(id)}
-        >
-          {id}
-        </button>,
+        <span key={`${id}-${at}`} className="chip-wrap">
+          {lastWord}
+          <button
+            type="button"
+            className={`chip${openId === id ? " chip--open" : ""}`}
+            aria-expanded={openId === id}
+            aria-label={`Source ${id}`}
+            onClick={() => onCite(id)}
+          >
+            {id}
+          </button>
+          {m[2]}
+        </span>,
       );
     } else {
+      if (before) out.push(before);
       out.push(m[0]);
     }
     last = at + m[0].length;

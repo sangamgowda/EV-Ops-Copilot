@@ -58,6 +58,12 @@ logs/
 # UI
 ui/node_modules/
 ui/dist/
+# Satoshi is fetched at build time: its licence forbids redistributing the
+# files from a public repository (see ui/scripts/fetch-fonts.mjs).
+ui/public/fonts/
+# Playwright output
+ui/test-results/
+ui/playwright-report/
 
 # Scratch request bodies for curl
 question.json

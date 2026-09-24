@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { sendFeedback } from "../api";
 import type { Rating } from "../types";
+import { ThumbDown, ThumbUp } from "./icons";
 
 /** One click to rate. A comment box appears only after thumbs-down, and
  *  sending it updates the same rating rather than adding a second one. */
@@ -39,12 +40,12 @@ export function FeedbackBar({ turnId }: { turnId: string }) {
         <button type="button" aria-pressed={rating === "up"} aria-label="Helpful"
           className={`feedback__btn${rating === "up" ? " feedback__btn--on" : ""}`}
           onClick={() => rate("up")}>
-          👍
+          <ThumbUp />
         </button>
         <button type="button" aria-pressed={rating === "down"} aria-label="Not helpful"
           className={`feedback__btn${rating === "down" ? " feedback__btn--on" : ""}`}
           onClick={() => rate("down")}>
-          👎
+          <ThumbDown />
         </button>
         {rating === "up" && <span className="feedback__thanks">Thanks</span>}
       </div>

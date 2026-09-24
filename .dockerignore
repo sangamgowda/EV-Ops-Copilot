@@ -22,3 +22,7 @@ evaluation_runs/
 # UI: dependencies are installed and the bundle built inside the image.
 ui/node_modules/
 ui/dist/
+# Fonts are fetched fresh inside the build (licence: never redistributed).
+ui/public/fonts/
+ui/test-results/
+ui/playwright-report/
