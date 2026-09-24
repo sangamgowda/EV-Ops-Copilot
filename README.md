@@ -86,9 +86,15 @@ when a document is added, so looking up a code is quick and exact.
   data it came from.
 - **Clear about gaps** — if something can't be found, the answer
   says so.
-- **Safe database access** — database queries are checked
-  automatically before they run, and the assistant can only read
-  data, never change it.
+- **Safe database access** — every query the model writes passes
+  three independent checks: its structure is inspected (only reads,
+  only allowed tables and columns, bounded time ranges); the database
+  estimates its cost and expensive ones are refused; and it runs as a
+  database role that can only read, cannot see restricted columns, and
+  is stopped after 5 seconds. The cost limit is measured on real data
+  volume (`scripts/calibrate_cost_budget.py`), not guessed. In
+  production the read-only connection should point at a read replica;
+  this demo uses a single database.
 - **Handles typos** — a mistyped vehicle ID is matched to the
   closest real one.
 - **Streams answers** — the reply appears word by word as it is

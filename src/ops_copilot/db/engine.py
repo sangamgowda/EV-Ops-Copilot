@@ -95,7 +95,8 @@ def readonly_sql_pool() -> ConnectionPool:
         min_size=1,
         max_size=cfg["db"]["readonly_pool_size"],
         kwargs={
-            "options": f"-c statement_timeout={timeout_ms} -c default_transaction_read_only=on",
+            "options": (f"-c statement_timeout={timeout_ms} -c default_transaction_read_only=on "
+                        f"-c role={cfg['db']['sql_tool_role']}"),
             "autocommit": True,
         },
         open=True,

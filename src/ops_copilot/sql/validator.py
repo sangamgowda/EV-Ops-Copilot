@@ -8,19 +8,28 @@ gives it no reason to write a DROP. A poisoned document retrieved
 earlier in the same turn can steer generation. So every query is
 treated as hostile, regardless of where it came from.
 
-Two layers, in order:
+Three layers, in order:
 
   1. AST checks (this module, sqlglot). Structural. Fast. Catches
-     the whole class of "this query should not exist".
+     the whole class of "this query should not exist". Never regex:
+     regex fails on comments, nested quotes and odd whitespace, and
+     is not a security control.
 
-  2. EXPLAIN cost gate. Catches the class AST rules cannot reason
-     about — queries that are structurally perfect and ruinously
-     expensive. This is the check that actually protects the
-     database.
+  2. EXPLAIN cost gate (`explain_gate`). Catches the class AST rules
+     cannot reason about — queries that are structurally perfect and
+     ruinously expensive. The planner already knows; we ask it.
 
-Beneath both: a read-only role on a read replica with a statement
-timeout. If something gets past layers 1 and 2, it still cannot
-write, and it still cannot run for more than five seconds.
+  3. The database itself: a role that can only read, cannot see the
+     denied column, and dies at a statement timeout, reached through
+     a small pool. If something gets past layers 1 and 2, it still
+     cannot write and still cannot run for long.
+
+Every column is resolved to the REAL table it reads before it is
+checked, using sqlglot's scope analysis. Checking names as written
+is the most common bug in hand-written validators: an alias
+(`FROM document_chunks vehicles`), a `*`, or a CTE wrapper
+(`WITH x AS (SELECT * FROM document_chunks) SELECT x.embedding ...`)
+each walk a denied column straight past a name-based check.
 """
 
 from __future__ import annotations
@@ -28,29 +37,52 @@ from __future__ import annotations
 import logging
 import re
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any
 
 import sqlglot
 from sqlglot import exp
+from sqlglot.errors import OptimizeError, SqlglotError
+from sqlglot.optimizer.qualify import qualify
+from sqlglot.optimizer.scope import Scope, traverse_scope
 
 log = logging.getLogger(__name__)
 
 # Node types that must never appear anywhere in the tree — not at
-# the root, not inside a CTE, not inside a subquery.
-FORBIDDEN_NODES: tuple[type[exp.Expression], ...] = (
-    exp.Insert, exp.Update, exp.Delete, exp.Drop, exp.Alter,
-    exp.Create, exp.TruncateTable, exp.Grant, exp.Command,
-    exp.Transaction, exp.Commit, exp.Rollback, exp.Set,
+# the root, not inside a CTE, not inside a subquery. Into is
+# SELECT ... INTO (creates a table); Lock is FOR UPDATE / FOR SHARE
+# (takes row locks on the primary). Command is sqlglot's fallback
+# for statements it does not model (DO, CALL, EXPLAIN ANALYZE).
+FORBIDDEN_NODES: tuple[type[exp.Expression], ...] = tuple(
+    t for t in (
+        exp.Insert, exp.Update, exp.Delete, exp.Merge, exp.Drop, exp.Alter,
+        exp.Create, exp.TruncateTable, exp.Grant, exp.Command, exp.Transaction,
+        exp.Commit, exp.Rollback, exp.Set, exp.Into, exp.Lock,
+        getattr(exp, "Copy", None), getattr(exp, "Use", None),
+    ) if t is not None
 )
 
 # Functions that read files, sleep, or reach outside the database.
-# Blocked by name regardless of the allowlist.
+# Named separately from the allowlist so the rejection says why; the
+# allowlist would refuse them anyway.
 ALWAYS_BLOCKED_FUNCTIONS = {
-    "pg_sleep", "pg_read_file", "pg_read_binary_file", "pg_ls_dir",
-    "lo_import", "lo_export", "dblink", "dblink_exec",
-    "pg_terminate_backend", "pg_cancel_backend", "set_config",
-    "current_setting", "pg_reload_conf", "copy",
+    "pg_sleep", "pg_sleep_for", "pg_sleep_until", "pg_read_file",
+    "pg_read_binary_file", "pg_ls_dir", "pg_stat_file", "lo_import", "lo_export",
+    "lo_get", "dblink", "dblink_exec", "dblink_connect", "pg_terminate_backend",
+    "pg_cancel_backend", "set_config", "current_setting", "pg_reload_conf",
+    "query_to_xml", "pg_advisory_lock", "txid_current", "nextval", "setval", "copy",
 }
+
+# sqlglot models some SQL syntax as function nodes that render
+# without a call: CASE, CURRENT_TIMESTAMP, `->>`, `^`. These are
+# operators, not callable functions, and are allowed. Any OTHER node
+# that renders without a name is unfamiliar and refused.
+_SYNTAX_NODES = {
+    "Case", "If", "CurrentTimestamp", "CurrentDate", "CurrentTime", "Pow",
+    "JSONExtract", "JSONExtractScalar", "JSONBExtract", "JSONBExtractScalar",
+}
+_CALL_NAME = re.compile(r"\s*([A-Za-z_][A-Za-z0-9_]*)\s*\(")
+
+_TIME_TYPES = ("timestamp", "timestamptz", "date")
 
 
 class ValidationError(Exception):
@@ -64,8 +96,23 @@ class ValidationResult:
     sql: str                      # possibly rewritten (LIMIT injected)
     reasons: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
-    explain_cost: Optional[float] = None
-    explain_rows: Optional[float] = None
+    explain_cost: float | None = None
+    explain_rows: float | None = None
+
+
+def _conjuncts(node: exp.Expression | None) -> list[exp.Expression]:
+    """Top-level AND terms. A predicate buried under an OR does not
+    constrain anything: `key = key OR true` joins everything."""
+    if node is None:
+        return []
+    node = node.unnest()
+    if isinstance(node, exp.And):
+        return [t for side in (node.left, node.right) for t in _conjuncts(side)]
+    return [node]
+
+
+def _is_constant(node: exp.Expression) -> bool:
+    return node.find(exp.Column, exp.Subquery, exp.Select) is None
 
 
 class SQLValidator:
@@ -82,18 +129,19 @@ class SQLValidator:
         self.explain_cost_budget: float = cfg["explain_cost_budget"]
         self.explain_max_rows: float = cfg["explain_max_rows"]
         self.require_time_filter_on: set[str] = set(cfg["require_time_filter_on"])
-        self.allowed_functions: set[str] = {
-            f.lower() for f in cfg["allowed_functions"]
-        }
+        self.allowed_functions: set[str] = {f.lower() for f in cfg["allowed_functions"]}
 
         tables = schema_config.get("tables", {})
         self.allowed_tables: set[str] = set(tables.keys())
         self.allowed_columns: dict[str, set[str]] = {
             t: set(meta.get("columns", {}).keys()) for t, meta in tables.items()
         }
-        self.denied_columns: set[str] = {
-            c.lower() for c in schema_config.get("denied_columns", [])
+        self.column_types: dict[str, dict[str, str]] = {
+            t: {c: str(m.get("type", "text")).split("(")[0].strip()
+                for c, m in meta.get("columns", {}).items()}
+            for t, meta in tables.items()
         }
+        self.denied_columns: set[str] = {c.lower() for c in schema_config.get("denied_columns", [])}
         self.join_keys: set[frozenset[str]] = {
             frozenset(pair) for pair in schema_config.get("join_keys", [])
         }
@@ -106,230 +154,205 @@ class SQLValidator:
         Does NOT run EXPLAIN — that needs a live connection and is
         done by `explain_gate` in the tool, right before execution.
         """
-        reasons: list[str] = []
-        warnings: list[str] = []
-
         # ── 1. exactly one statement ─────────────────────────
         # Catches stacked-statement injection before any other
-        # analysis. "DROP TABLE x; SELECT * FROM y" dies here.
+        # analysis. "SELECT 1; DROP TABLE x" dies here, comments and
+        # all, because the parser — not a regex — finds the boundary.
         try:
-            statements = sqlglot.parse(sql, read="postgres")
-        except Exception as e:
-            return ValidationResult(False, sql, [f"unparseable SQL: {e}"])
-
-        statements = [s for s in statements if s is not None]
-        if len(statements) == 0:
-            return ValidationResult(False, sql, ["empty query"])
+            statements = [s for s in sqlglot.parse(sql, read="postgres") if s is not None]
+        except SqlglotError as e:
+            return self._reject(sql, f"unparseable SQL: {str(e).splitlines()[0]}")
+        if not statements:
+            return self._reject(sql, "empty query")
         if len(statements) > 1:
-            return ValidationResult(
-                False, sql,
-                [f"expected exactly 1 statement, found {len(statements)}"],
-            )
-
+            return self._reject(sql, f"expected exactly 1 statement, found {len(statements)}")
         tree = statements[0]
 
         # ── 2. root must be a SELECT ─────────────────────────
-        if not isinstance(tree, (exp.Select, exp.Union, exp.With)):
-            return ValidationResult(
-                False, sql,
-                [f"root expression is {type(tree).__name__}, expected SELECT"],
-            )
+        if not isinstance(tree, exp.Select | exp.Union):
+            return self._reject(sql, f"root expression is {type(tree).__name__}, expected SELECT")
 
         # ── 3. no destructive node anywhere in the tree ──────
-        for node_type in FORBIDDEN_NODES:
-            found = list(tree.find_all(node_type))
-            if found:
-                return ValidationResult(
-                    False, sql,
-                    [f"forbidden statement type in query tree: {node_type.__name__}"],
-                )
+        for node in tree.walk():
+            if isinstance(node, FORBIDDEN_NODES):
+                return self._reject(sql, f"forbidden construct in query tree: {type(node).__name__}")
+            if isinstance(node, exp.With) and node.args.get("recursive"):
+                # A recursive CTE is a loop the planner cannot cost.
+                return self._reject(sql, "WITH RECURSIVE is not allowed")
+            if isinstance(node, exp.Lateral):
+                return self._reject(sql, "LATERAL is not allowed")
+            if isinstance(node, exp.Join) and (node.method or "").upper() == "NATURAL":
+                # Joins on whatever columns happen to share a name.
+                return self._reject(sql, "NATURAL JOIN is not allowed — every join needs an ON condition")
 
         # ── 4. table whitelist ───────────────────────────────
-        cte_names = {cte.alias_or_name.lower() for cte in tree.find_all(exp.CTE)}
-        referenced = self._referenced_tables(tree)
-        unknown = {
-            t for t in referenced
-            if t not in self.allowed_tables and t not in cte_names
-        }
-        if unknown:
-            reasons.append(f"unknown table(s): {sorted(unknown)}")
+        # Tables first: scope analysis below needs a schema for every
+        # table it meets, and an unknown table is reason enough.
+        reasons = self._check_tables(tree)
+        # ── 5. function allowlist ────────────────────────────
+        reasons += self._check_functions(tree)
+        if reasons:
+            return self._reject(sql, *reasons)
 
-        # ── 5. column whitelist + denied columns ─────────────
-        col_reasons = self._check_columns(tree, referenced, cte_names)
-        reasons.extend(col_reasons)
+        # ── 6-9. checks that need every column resolved ──────
+        try:
+            resolved = qualify(tree.copy(), schema=self.column_types, dialect="postgres",
+                               validate_qualify_columns=True, quote_identifiers=False)
+            scopes = traverse_scope(resolved)
+        except (OptimizeError, SqlglotError) as e:
+            # Unknown or ambiguous columns land here: the query
+            # names something the schema does not have.
+            return self._reject(sql, f"column check failed: {str(e).splitlines()[0]}")
 
-        # ── 6. joins must carry an ON predicate ──────────────
-        # This is what rejects CROSS JOIN. A cross join has no ON
-        # clause by definition, so it fails here without needing a
-        # rule that names it specifically.
-        join_reasons, join_count = self._check_joins(tree)
-        reasons.extend(join_reasons)
+        reasons += self._check_columns(scopes)         # 6. columns, after alias resolution
+        join_reasons, join_count = self._check_joins(scopes)
+        reasons += join_reasons                         # 7. every join on a declared key
         if join_count > self.max_joins:
             reasons.append(f"{join_count} joins exceeds max_joins={self.max_joins}")
-
-        # ── 7. subquery depth ────────────────────────────────
-        depth = self._subquery_depth(tree)
+        depth = self._subquery_depth(tree)              # 8. nesting depth
         if depth > self.max_subquery_depth:
-            reasons.append(
-                f"subquery depth {depth} exceeds max={self.max_subquery_depth}"
-            )
-
-        # ── 8. function allowlist ────────────────────────────
-        reasons.extend(self._check_functions(tree))
-
-        # ── 9. time filter on large tables ───────────────────
-        # An unbounded scan of the telemetry table is the realistic
-        # way to hurt the database with a valid SELECT.
-        reasons.extend(self._check_time_filter(tree, referenced))
-
+            reasons.append(f"subquery depth {depth} exceeds max={self.max_subquery_depth}")
+        reasons += self._check_time_filter(scopes)      # 9. bounded scans on big tables
         if reasons:
-            return ValidationResult(False, sql, reasons, warnings)
+            return self._reject(sql, *reasons)
 
-        # ── 10. LIMIT injection ──────────────────────────────
-        # Only on the outermost non-aggregate SELECT. Injecting into
-        # a CTE or an aggregate silently changes the answer, which is
-        # worse than being slow.
-        rewritten, limit_note = self._ensure_limit(tree)
-        if limit_note:
-            warnings.append(limit_note)
+        # ── 10. LIMIT ────────────────────────────────────────
+        return self._ensure_limit(sql, tree)
 
-        return ValidationResult(True, rewritten, [], warnings)
+    @staticmethod
+    def _reject(sql: str, *reasons: str) -> ValidationResult:
+        return ValidationResult(False, sql, list(dict.fromkeys(reasons)))
 
-    # ── AST helpers ──────────────────────────────────────────
+    # ── tables and functions (raw tree) ──────────────────────
 
-    def _referenced_tables(self, tree: exp.Expression) -> set[str]:
-        return {
-            t.name.lower() for t in tree.find_all(exp.Table) if t.name
-        }
-
-    def _alias_map(self, tree: exp.Expression) -> dict[str, str]:
-        """alias -> real table name.
-
-        Without this, every table-qualified check is bypassable by
-        aliasing: `SELECT dc.embedding FROM document_chunks dc`
-        reads as table "dc", which is on no list, so the denied
-        column slips through. Join-key checking has the same
-        problem in reverse — a legitimate join written with aliases
-        looks undeclared.
-
-        Aliases resolve to themselves too, so lookups are uniform.
-        """
-        mapping: dict[str, str] = {}
-        for table in tree.find_all(exp.Table):
-            real = (table.name or "").lower()
-            if not real:
-                continue
-            mapping[real] = real
-            alias = (table.alias or "").lower()
-            if alias:
-                mapping[alias] = real
-        return mapping
-
-    def _resolve(self, ref: str, aliases: dict[str, str]) -> str:
-        return aliases.get(ref.lower(), ref.lower())
-
-    def _check_columns(
-        self, tree: exp.Expression, referenced: set[str], cte_names: set[str]
-    ) -> list[str]:
+    def _check_tables(self, tree: exp.Expression) -> list[str]:
+        cte_names = {cte.alias_or_name.lower() for cte in tree.find_all(exp.CTE)}
         reasons: list[str] = []
-        aliases = self._alias_map(tree)
-        known = set()
-        for t in referenced:
-            known |= {f"{t}.{c}" for c in self.allowed_columns.get(t, set())}
-
-        bare_columns: set[str] = set()
-        for t in referenced:
-            bare_columns |= self.allowed_columns.get(t, set())
-
-        for col in tree.find_all(exp.Column):
-            name = (col.name or "").lower()
-            raw_table = (col.table or "").lower()
-            # Resolve the alias before any check, or all of them are
-            # bypassable by aliasing the table.
-            table = self._resolve(raw_table, aliases) if raw_table else ""
-
-            if not name or name == "*":
+        for table in tree.find_all(exp.Table):
+            name = (table.name or "").lower()
+            if not name:
+                # FROM generate_series(...) and other table functions.
+                reasons.append(f"table functions are not allowed: {table.sql(dialect='postgres')[:60]}")
                 continue
-
-            # Denied columns are configured qualified
-            # ("document_chunks.embedding"), but a query can
-            # reference them bare when only one table is in scope.
-            # Check both forms, or the whole rule is bypassable by
-            # dropping the table prefix.
-            if table:
-                if f"{table}.{name}" in self.denied_columns:
-                    reasons.append(f"denied column: {table}.{name}")
-                    continue
-            else:
-                bare_denied = {d.split(".")[-1] for d in self.denied_columns}
-                if name in bare_denied:
-                    owning = {
-                        d for d in self.denied_columns
-                        if d.split(".")[-1] == name
-                        and d.split(".")[0] in referenced
-                    }
-                    if owning:
-                        reasons.append(f"denied column: {sorted(owning)[0]}")
-                        continue
-
-            # Skip CTE-qualified references; their shape is defined
-            # inside the query, not by our schema.
-            if raw_table and raw_table in cte_names:
-                continue
-
-            if table:
-                if table in self.allowed_tables:
-                    if name not in self.allowed_columns.get(table, set()):
-                        reasons.append(f"unknown column: {table}.{name}")
-            else:
-                # Unqualified — accept if any referenced table has it.
-                if bare_columns and name not in bare_columns:
-                    reasons.append(f"unknown column: {name}")
-
+            if table.catalog or (table.db and table.db.lower() != "public"):
+                # secret.vehicles passes a bare-name check; only the
+                # public schema holds the whitelisted tables.
+                reasons.append(f"schema-qualified table not allowed: {table.sql(dialect='postgres')}")
+            elif name not in self.allowed_tables and not (name in cte_names and not table.db):
+                reasons.append(f"unknown table: {name}")
         return reasons
 
-    def _check_joins(self, tree: exp.Expression) -> tuple[list[str], int]:
+    def _function_name(self, fn: exp.Func) -> str | None:
+        """The name Postgres will call, or None for syntax nodes.
+
+        sqlglot's own names are dialect-neutral (TIMESTAMP_TRUNC for
+        date_trunc), so the node is rendered as Postgres and the call
+        name read back — the allowlist is written in Postgres terms.
+        """
+        if isinstance(fn, exp.Anonymous):
+            return (fn.name or "").lower()
+        m = _CALL_NAME.match(fn.sql(dialect="postgres"))
+        return m.group(1).lower() if m else None
+
+    def _check_functions(self, tree: exp.Expression) -> list[str]:
         reasons: list[str] = []
-        aliases = self._alias_map(tree)
-        joins = list(tree.find_all(exp.Join))
-
-        for join in joins:
-            kind = (join.side or "") + (join.kind or "")
-            on = join.args.get("on")
-            using = join.args.get("using")
-
-            if on is None and not using:
-                reasons.append(
-                    "join without an ON condition "
-                    f"({kind.strip() or 'JOIN'}) — cross joins are not allowed"
-                )
+        for fn in tree.find_all(exp.Func):
+            name = self._function_name(fn)
+            if name is None:
+                if type(fn).__name__ not in _SYNTAX_NODES:
+                    reasons.append(f"expression not allowed: {type(fn).__name__}")
                 continue
+            if isinstance(fn.parent, exp.Dot):
+                # pg_catalog.pg_sleep(...) — no qualified calls.
+                reasons.append(f"schema-qualified function not allowed: {name}")
+            elif name in ALWAYS_BLOCKED_FUNCTIONS:
+                reasons.append(f"blocked function: {name}")
+            elif name not in self.allowed_functions:
+                reasons.append(f"function not on allowlist: {name}")
+        return reasons
 
-            if on is not None and not self._join_uses_declared_key(on, aliases):
-                # A warning-level concern in practice; treated as a
-                # rejection here because an undeclared join key is
-                # usually the model inventing a relationship.
-                reasons.append(
-                    "join predicate does not reference a declared join key"
-                )
+    # ── resolution (qualified tree) ──────────────────────────
 
-        return reasons, len(joins)
+    @staticmethod
+    def _source(scope: Scope, alias: str) -> tuple[Scope, Any] | None:
+        """Find what an alias refers to, walking out through enclosing
+        scopes for correlated references."""
+        s: Scope | None = scope
+        while s is not None:
+            if alias in s.sources:
+                return s, s.sources[alias]
+            s = s.parent
+        return None
 
-    def _join_uses_declared_key(
-        self, on: exp.Expression, aliases: dict[str, str]
-    ) -> bool:
-        if not self.join_keys:
-            return True
-        pairs: set[frozenset[str]] = set()
-        for eq in on.find_all(exp.EQ):
-            left, right = eq.this, eq.expression
-            if isinstance(left, exp.Column) and isinstance(right, exp.Column):
-                lt = (f"{self._resolve(left.table or '', aliases)}"
-                      f".{(left.name or '').lower()}")
-                rt = (f"{self._resolve(right.table or '', aliases)}"
-                      f".{(right.name or '').lower()}")
-                pairs.add(frozenset({lt, rt}))
-        return any(p in self.join_keys for p in pairs)
+    def _real_column(self, scope: Scope, col: exp.Column, _depth: int = 0) -> tuple[str, str] | None:
+        """(real_table, column) this column reads, followed through
+        CTEs and derived tables. None when it is computed."""
+        found = self._source(scope, col.table)
+        if found is None or _depth > 10:
+            return None
+        _, source = found
+        if isinstance(source, exp.Table):
+            return source.name.lower(), col.name.lower()
+        if isinstance(source, Scope):
+            for proj in source.expression.selects:
+                if proj.alias_or_name.lower() == col.name.lower():
+                    inner = proj.unalias()
+                    if isinstance(inner, exp.Column):
+                        return self._real_column(source, inner, _depth + 1)
+                    return None
+        return None
+
+    def _check_columns(self, scopes: list[Scope]) -> list[str]:
+        reasons: list[str] = []
+        for scope in scopes:
+            for col in scope.columns:
+                found = self._source(scope, col.table)
+                if found is None or not isinstance(found[1], exp.Table):
+                    # Reads a CTE or derived table: that scope's own
+                    # columns are checked where they read real tables.
+                    continue
+                table, name = found[1].name.lower(), col.name.lower()
+                if f"{table}.{name}" in self.denied_columns:
+                    reasons.append(f"denied column: {table}.{name}")
+                elif name not in self.allowed_columns.get(table, set()):
+                    reasons.append(f"unknown column: {table}.{name}")
+            # A star that survived qualification could not be expanded
+            # and would hide what it reads.
+            for proj in scope.expression.selects if isinstance(scope.expression, exp.Select) else []:
+                if isinstance(proj, exp.Star) or (isinstance(proj, exp.Column) and proj.is_star):
+                    reasons.append("SELECT * over an unresolved source is not allowed")
+        return reasons
+
+    def _check_joins(self, scopes: list[Scope]) -> tuple[list[str], int]:
+        reasons: list[str] = []
+        count = 0
+        for scope in scopes:
+            if not isinstance(scope.expression, exp.Select):
+                continue
+            for join in scope.expression.args.get("joins") or []:
+                count += 1
+                on = join.args.get("on")
+                if on is None or (join.method or "").upper() == "NATURAL":
+                    # This is what rejects CROSS JOIN, comma joins and
+                    # NATURAL JOIN, without a rule naming any of them.
+                    reasons.append("every join needs an ON condition — cross joins are not allowed")
+                    continue
+                if self.join_keys and not self._joins_on_declared_key(scope, on):
+                    reasons.append(
+                        "join condition must equate a declared join key "
+                        "(as its own AND term, not under an OR)"
+                    )
+        return reasons, count
+
+    def _joins_on_declared_key(self, scope: Scope, on: exp.Expression) -> bool:
+        for term in _conjuncts(on):
+            if isinstance(term, exp.EQ) and isinstance(term.left, exp.Column) \
+                    and isinstance(term.right, exp.Column):
+                left = self._real_column(scope, term.left)
+                right = self._real_column(scope, term.right)
+                if left and right and frozenset({".".join(left), ".".join(right)}) in self.join_keys:
+                    return True
+        return False
 
     def _subquery_depth(self, tree: exp.Expression) -> int:
         def depth(node: exp.Expression, current: int = 0) -> int:
@@ -341,92 +364,108 @@ class SQLValidator:
             return best
         return depth(tree)
 
-    def _check_functions(self, tree: exp.Expression) -> list[str]:
-        reasons: list[str] = []
-        for fn in tree.find_all(exp.Anonymous, exp.Func):
-            name = (
-                fn.name if hasattr(fn, "name") and fn.name
-                else type(fn).__name__
-            ).lower()
-            if not name:
-                continue
-            if name in ALWAYS_BLOCKED_FUNCTIONS:
-                reasons.append(f"blocked function: {name}")
-            elif isinstance(fn, exp.Anonymous) and name not in self.allowed_functions:
-                reasons.append(f"function not on allowlist: {name}")
-        return reasons
-
-    def _check_time_filter(
-        self, tree: exp.Expression, referenced: set[str]
-    ) -> list[str]:
-        reasons: list[str] = []
-        for table in referenced & self.require_time_filter_on:
-            time_cols = self._time_columns(table)
-            if not time_cols:
-                continue
-            where_clauses = list(tree.find_all(exp.Where))
-            found = False
-            for where in where_clauses:
-                for col in where.find_all(exp.Column):
-                    if (col.name or "").lower() in time_cols:
-                        found = True
-                        break
-            if not found:
-                reasons.append(
-                    f"query against {table} must filter on a time column "
-                    f"({sorted(time_cols)}) — unbounded scans are rejected"
-                )
-        return reasons
-
     def _time_columns(self, table: str) -> set[str]:
-        cols = self.schema.get("tables", {}).get(table, {}).get("columns", {})
-        return {
-            name for name, meta in cols.items()
-            if str(meta.get("type", "")).lower().startswith(
-                ("timestamp", "date", "timestamptz")
-            )
-        }
+        return {c for c, t in self.column_types.get(table, {}).items()
+                if t.lower().startswith(_TIME_TYPES)}
 
-    def _ensure_limit(self, tree: exp.Expression) -> tuple[str, Optional[str]]:
+    def _check_time_filter(self, scopes: list[Scope]) -> list[str]:
+        """Every scope that reads a large table must bound its time
+        column from below, as a top-level AND term, against a value
+        computed from constants.
+
+        `recorded_at IS NOT NULL`, `... OR true`, and a filter that
+        sits in a different subquery all mention the column without
+        bounding the scan. How wide the window is, is the EXPLAIN
+        gate's call: a static rule cannot know what "too old" means
+        for this data, the planner can.
+        """
+        reasons: list[str] = []
+        for scope in scopes:
+            if not isinstance(scope.expression, exp.Select):
+                continue
+            terms = _conjuncts(scope.expression.args.get("where") and scope.expression.args["where"].this)
+            for join in scope.expression.args.get("joins") or []:
+                terms += _conjuncts(join.args.get("on"))
+            for alias, source in scope.selected_sources.items():
+                node = source[1] if isinstance(source, tuple) else source
+                if not isinstance(node, exp.Table) or node.name.lower() not in self.require_time_filter_on:
+                    continue
+                table = node.name.lower()
+                time_cols = self._time_columns(table)
+                if time_cols and not any(self._lower_bound(t, alias, time_cols) for t in terms):
+                    reasons.append(
+                        f"query against {table} must bound {sorted(time_cols)} from below "
+                        "(e.g. recorded_at >= now() - interval '7 days') as its own AND term"
+                    )
+        return reasons
+
+    @staticmethod
+    def _lower_bound(term: exp.Expression, alias: str, time_cols: set[str]) -> bool:
+        def is_time_col(node: exp.Expression) -> bool:
+            return isinstance(node, exp.Column) and node.table == alias and node.name in time_cols
+
+        if isinstance(term, exp.GT | exp.GTE):
+            return is_time_col(term.left) and _is_constant(term.right)
+        if isinstance(term, exp.LT | exp.LTE):
+            return is_time_col(term.right) and _is_constant(term.left)
+        if isinstance(term, exp.Between):
+            return is_time_col(term.this) and _is_constant(term.args["low"])
+        return False
+
+    # ── LIMIT ────────────────────────────────────────────────
+
+    def _ensure_limit(self, sql: str, tree: exp.Expression) -> ValidationResult:
         """Inject or clamp LIMIT on the outermost SELECT only.
 
         Skipped for aggregate queries: a LIMIT does not reduce the
-        work an aggregate does (it still scans everything), and it
-        can change the result. Cost control for those is the EXPLAIN
-        gate, not a limit.
+        work an aggregate does (it still scans everything), and
+        putting one inside a CTE or subquery silently changes the
+        answer. Being wrong is worse than being slow. Cost control
+        for those is the EXPLAIN gate.
         """
-        outer = tree
-        if isinstance(tree, exp.With):
-            outer = tree.this
-
-        if self._is_aggregate(outer):
-            return tree.sql(dialect="postgres"), None
-
-        existing = outer.args.get("limit")
+        warnings: list[str] = []
+        existing = tree.args.get("limit")
         if existing is not None:
-            try:
-                value = int(existing.expression.name)
-            except Exception:
-                return tree.sql(dialect="postgres"), None
+            value = self._literal_limit(existing)
+            if value is None:
+                # LIMIT NULL, LIMIT ALL, LIMIT (SELECT ...), FETCH FIRST:
+                # each can mean "no limit". Only a plain integer is
+                # something this check can reason about.
+                return self._reject(sql, "LIMIT must be a plain integer, e.g. LIMIT 100")
             if value > self.max_limit:
-                outer.set("limit", exp.Limit(expression=exp.Literal.number(self.max_limit)))
-                return (
-                    tree.sql(dialect="postgres"),
-                    f"LIMIT clamped from {value} to {self.max_limit}",
-                )
-            return tree.sql(dialect="postgres"), None
+                tree.set("limit", exp.Limit(expression=exp.Literal.number(self.max_limit)))
+                warnings.append(f"LIMIT clamped from {value} to {self.max_limit}")
+        elif not self._is_aggregate(tree):
+            tree.set("limit", exp.Limit(expression=exp.Literal.number(self.default_limit)))
+            warnings.append(f"LIMIT {self.default_limit} injected")
+        # Comments are dropped from what runs: they carry no meaning
+        # to Postgres and could carry text into traces and prompts.
+        return ValidationResult(True, tree.sql(dialect="postgres", comments=False), [], warnings)
 
-        outer.set("limit", exp.Limit(expression=exp.Literal.number(self.default_limit)))
-        return (
-            tree.sql(dialect="postgres"),
-            f"LIMIT {self.default_limit} injected",
-        )
+    @staticmethod
+    def _literal_limit(node: exp.Expression) -> int | None:
+        if not isinstance(node, exp.Limit):
+            return None
+        value = node.expression
+        if isinstance(value, exp.Literal) and value.is_int:
+            return int(value.name)
+        return None
 
     def _is_aggregate(self, node: exp.Expression) -> bool:
-        if list(node.find_all(exp.Group)):
+        """Aggregate at THIS level — not in a subquery, not a window.
+
+        A plain SELECT filtered by `value > (SELECT avg(...))` returns
+        every matching row; treating it as an aggregate would ship it
+        unlimited. `count(*) OVER ()` keeps every row too.
+        """
+        if isinstance(node, exp.Union):
+            return self._is_aggregate(node.left) and self._is_aggregate(node.right)
+        if not isinstance(node, exp.Select):
+            return False
+        if node.args.get("group") or node.args.get("having"):
             return True
-        agg = (exp.Sum, exp.Avg, exp.Count, exp.Min, exp.Max)
-        return any(list(node.find_all(a)) for a in agg)
+        return any(agg.find_ancestor(exp.Window, exp.Subquery) is None
+                   for proj in node.selects for agg in proj.find_all(exp.AggFunc))
 
     # ── layer 2: cost gate ───────────────────────────────────
 
@@ -434,16 +473,16 @@ class SQLValidator:
         """Ask the planner what this will cost, before running it.
 
         This is the check that AST rules cannot replace. A query can
-        reference only whitelisted tables, join correctly, and still
-        plan a sequential scan over a hundred million rows. The
-        planner already knows that; we just have to ask.
+        reference only whitelisted tables, join correctly, bound its
+        time column, and still plan a sequential scan over years of
+        telemetry. The planner already knows that; we just have to ask.
         """
         try:
             with conn.cursor() as cur:
                 cur.execute(f"EXPLAIN (FORMAT JSON) {sql}")
                 row = cur.fetchone()
         except Exception as e:
-            return ValidationResult(False, sql, [f"EXPLAIN failed: {e}"])
+            return ValidationResult(False, sql, [f"EXPLAIN failed: {str(e).strip().splitlines()[0]}"])
 
         plan = row[0][0]["Plan"] if row else {}
         cost = float(plan.get("Total Cost", 0.0))

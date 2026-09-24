@@ -180,6 +180,10 @@ db:
   # connections the rest of the system needs.
   readonly_pool_size: 3
   readonly_max_overflow: 0
+  # The SQL tool runs model-written SQL as this narrower role
+  # (migration 005): it cannot read document_chunks.embedding even
+  # if the validator missed it. Retrieval keeps the wider role.
+  sql_tool_role: copilot_sql
 
 sql_validation:
   max_joins: 3
@@ -190,7 +194,13 @@ sql_validation:
   # Planner cost ceiling, checked via EXPLAIN before execution.
   # This is the check that actually protects the database — AST
   # rules cannot reason about how expensive a valid query is.
-  explain_cost_budget: 500000
+  #
+  # Measured, not guessed: scripts/calibrate_cost_budget.py asks the
+  # planner on the loaded data (2M telemetry rows). Heaviest legitimate
+  # query ~29k, cheapest full telemetry scan ~46k. The old 500000 let
+  # every full scan through. Re-run the script when volume changes by
+  # an order of magnitude — cost grows with table size.
+  explain_cost_budget: 40000
   explain_max_rows: 1000000
 
   statement_timeout_ms: 5000
@@ -201,20 +211,54 @@ sql_validation:
   require_time_filter_on:
     - vehicle_telemetry
 
+  # Written as Postgres spells them. Anything not listed is refused,
+  # including built-ins sqlglot recognises: generate_series and repeat
+  # are harmless-looking ways to make a tiny query enormous, and
+  # row_to_json / string_agg re-package whole rows past column checks.
   allowed_functions:
+    # aggregates
     - avg
     - sum
     - count
     - min
     - max
+    - stddev
+    - var_samp
+    - percentile_cont
+    - percentile_disc
+    - bool_or
+    - bool_and
+    # window
+    - rank
+    - dense_rank
+    - row_number
+    - lag
+    - lead
+    - first_value
+    - last_value
+    # numeric
     - round
     - abs
+    - floor
+    - ceil
+    - greatest
+    - least
+    # null handling and types
     - coalesce
+    - nullif
+    - cast
+    # time
     - date_trunc
     - extract
-    - now
-    - percentile_cont
-    - stddev
+    - date
+    - to_char
+    - age
+    # text
+    - lower
+    - upper
+    - length
+    - trim
+    - substring
 
 groundedness:
   # Tier 1-3 are code. Tier 4 is an LLM call that only fires when
