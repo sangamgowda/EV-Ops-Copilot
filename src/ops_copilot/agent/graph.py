@@ -106,7 +106,10 @@ def build_graph():
     g.add_node("observe", observe_node)
     g.add_node("reflect", reflect_node)
     g.add_node("synthesize", synthesize_node)
-    g.add_node("groundedness", groundedness_node)
+    # Node id "grounding", not "groundedness": LangGraph forbids a node
+    # sharing a name with a state key, and the state already holds the
+    # `groundedness` result.
+    g.add_node("grounding", groundedness_node)
 
     g.set_entry_point("router")
 
@@ -127,9 +130,9 @@ def build_graph():
         },
     )
 
-    g.add_edge("synthesize", "groundedness")
+    g.add_edge("synthesize", "grounding")
     g.add_conditional_edges(
-        "groundedness",
+        "grounding",
         route_after_groundedness,
         {"synthesize": "synthesize", END: END},
     )

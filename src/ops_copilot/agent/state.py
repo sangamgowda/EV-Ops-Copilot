@@ -222,12 +222,20 @@ class AgentState(TypedDict, total=False):
     plan_reasoning: Optional[str]
     pending_tool_calls: list[ToolCall]
 
+    # Execute -> Observe hand-off. Replaced every lap, never
+    # accumulated: only the Evidence built from it persists.
+    raw_results: list[dict[str, Any]]
+
     # Output
     answer: Optional[str]
     citations: list[Citation]
     confidence: Optional[str]
     gaps: list[str]
     groundedness: Optional[GroundednessResult]
+    # Set by synthesize when it is rewriting after a failed grounding
+    # check; graph.route_after_groundedness reads it to allow exactly
+    # one retry. Without a writer the retry path loops forever.
+    _grounding_retried: bool
 
     # Bookkeeping
     prompt_versions: dict[str, str]  # node -> prompt hash, into the trace
@@ -251,6 +259,9 @@ def new_state(question: str, session_id: str, turn_id: str) -> AgentState:
         prompt_versions={},
         llm_calls=0,
         partial=False,
+        pending_tool_calls=[],
+        raw_results=[],
+        _grounding_retried=False,
         started_at=datetime.now(timezone.utc),
     )
 

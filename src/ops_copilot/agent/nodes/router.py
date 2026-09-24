@@ -19,8 +19,23 @@ TODO(build): implement.
 
 from __future__ import annotations
 
+import logging
+
 from ops_copilot.agent.state import AgentState
 
+log = logging.getLogger(__name__)
 
+
+# PHASE 3 SKELETON — a fixed stand-in that proves the loop's shape.
+# Replaced with the real logic described above in a later phase.
 async def router_node(state: AgentState) -> dict:
-    raise NotImplementedError("see module docstring")
+    log.info("router: fixed classification (skeleton, no LLM)")
+    return {
+        "domains": ["diagnostic"],
+        "query_type": "explain",
+        "complexity_hint": "explain",
+        "entities": {"vehicle_id": "VIN-1042"},
+        "resolved_entities": {"vehicle_id": "VIN-1042"},
+        "entity_notes": [],
+        "hypothesis_to_test": None,
+    }

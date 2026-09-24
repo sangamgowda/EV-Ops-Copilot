@@ -27,8 +27,22 @@ TODO(build): implement.
 
 from __future__ import annotations
 
+import logging
+
 from ops_copilot.agent.state import AgentState
 
+log = logging.getLogger(__name__)
 
+
+# PHASE 3 SKELETON — a fixed stand-in that proves the loop's shape.
+# Replaced with the real logic described above in a later phase.
 async def execute_node(state: AgentState) -> dict:
-    raise NotImplementedError("see module docstring")
+    calls = state.get("pending_tool_calls", [])
+    results = [
+        {"turn_id": state.get("turn_id"), "tool": c.tool, "args": c.args,
+         "result": {"status": "ok", "rows": [{"fake_value": state.get("iteration", 0)}]}}
+        for c in calls
+    ]
+    log.info("execute: lap %s, %d fake result(s) (skeleton, no database, no MCP)",
+             state.get("iteration"), len(results))
+    return {"raw_results": results, "pending_tool_calls": []}

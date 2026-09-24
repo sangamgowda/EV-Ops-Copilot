@@ -33,8 +33,24 @@ TODO(build): implement.
 
 from __future__ import annotations
 
-from ops_copilot.agent.state import AgentState
+import logging
+
+from ops_copilot.agent.state import AgentState, StopReason
+
+log = logging.getLogger(__name__)
+
+# Skeleton only: pretend the evidence becomes sufficient on this lap.
+SKELETON_SUFFICIENT_ON_LAP = 3
 
 
+# PHASE 3 SKELETON — a fixed stand-in that proves the loop's shape.
+# Replaced with the real logic described above in a later phase.
 async def reflect_node(state: AgentState) -> dict:
-    raise NotImplementedError("see module docstring")
+    iteration = state.get("iteration", 1)
+    if iteration < SKELETON_SUFFICIENT_ON_LAP:
+        log.info("reflect: lap %d -> not sufficient, go again (skeleton)", iteration)
+        return {"stop_reason": None, "partial": False, "open_gaps": ["mechanism"],
+                "next_question": f"fake narrower question after lap {iteration}"}
+    log.info("reflect: lap %d -> sufficient (skeleton)", iteration)
+    return {"stop_reason": StopReason.COMPLETE.value, "partial": False,
+            "open_gaps": [], "next_question": None}

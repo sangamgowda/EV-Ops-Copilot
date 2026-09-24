@@ -26,8 +26,30 @@ TODO(build): implement.
 
 from __future__ import annotations
 
-from ops_copilot.agent.state import AgentState
+import logging
+
+from ops_copilot.agent.state import AgentState, Evidence
+
+log = logging.getLogger(__name__)
 
 
+# PHASE 3 SKELETON — a fixed stand-in that proves the loop's shape.
+# Replaced with the real logic described above in a later phase.
 async def observe_node(state: AgentState) -> dict:
-    raise NotImplementedError("see module docstring")
+    iteration = state.get("iteration", 1)
+    offset = len(state.get("evidence", []))
+    raw = state.get("raw_results", [])
+    new = [
+        Evidence(id=f"e{offset + i}", tool=r["tool"], iteration=iteration,
+                 summary=f"fake result from lap {iteration}", tool_args=r["args"])
+        for i, r in enumerate(raw, start=1)
+    ]
+    log.info("observe: lap %d added %d evidence (total now %d)",
+             iteration, len(new), offset + len(new))
+    # Only the NEW entries are returned: the state's `add` reducer appends
+    # them. Returning the whole list here would duplicate every lap.
+    return {
+        "evidence": new,
+        "tool_history": [f"{r['tool']}:{r['args']}" for r in raw],
+        "raw_results": [],
+    }

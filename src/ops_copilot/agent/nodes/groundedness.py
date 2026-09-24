@@ -26,8 +26,15 @@ TODO(build): implement tiers 1-3 as pure functions, then tier 4.
 
 from __future__ import annotations
 
-from ops_copilot.agent.state import AgentState
+import logging
+
+from ops_copilot.agent.state import AgentState, GroundednessResult
+
+log = logging.getLogger(__name__)
 
 
+# PHASE 3 SKELETON — a fixed stand-in that proves the loop's shape.
+# Replaced with the real logic described above in a later phase.
 async def groundedness_node(state: AgentState) -> dict:
-    raise NotImplementedError("see module docstring")
+    log.info("grounding: always passes (skeleton)")
+    return {"groundedness": GroundednessResult(passed=True)}

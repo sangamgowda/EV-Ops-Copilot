@@ -24,8 +24,24 @@ TODO(build): implement.
 
 from __future__ import annotations
 
-from ops_copilot.agent.state import AgentState
+import logging
+
+from ops_copilot.agent.state import AgentState, ToolCall
+
+log = logging.getLogger(__name__)
 
 
+# PHASE 3 SKELETON — a fixed stand-in that proves the loop's shape.
+# Replaced with the real logic described above in a later phase.
 async def plan_node(state: AgentState) -> dict:
-    raise NotImplementedError("see module docstring")
+    # A lap begins here, so the lap counter is advanced here and nowhere else.
+    iteration = state.get("iteration", 0) + 1
+    call = ToolCall(tool="structured_query_tool", args={"sql": f"SELECT 'fake query, lap {iteration}'"})
+    log.info("plan: lap %d, fixed tool call (skeleton, no LLM)", iteration)
+    return {
+        "iteration": iteration,
+        "pending_tool_calls": [call],
+        "plan_reasoning": "skeleton",
+        # A new lap starts undecided; last lap's verdict must not leak into it.
+        "stop_reason": None,
+    }

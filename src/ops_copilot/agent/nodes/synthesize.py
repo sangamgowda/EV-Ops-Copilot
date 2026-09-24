@@ -24,8 +24,28 @@ TODO(build): implement.
 
 from __future__ import annotations
 
-from ops_copilot.agent.state import AgentState
+import logging
+
+from ops_copilot.agent.state import AgentState, Citation
+
+log = logging.getLogger(__name__)
 
 
+# PHASE 3 SKELETON — a fixed stand-in that proves the loop's shape.
+# Replaced with the real logic described above in a later phase.
 async def synthesize_node(state: AgentState) -> dict:
-    raise NotImplementedError("see module docstring")
+    evidence = state.get("evidence", [])
+    answer = (f"Skeleton answer after {state.get('iteration', 0)} lap(s), "
+              f"built from {len(evidence)} piece(s) of fake evidence.")
+    # A failed grounding result already in state means this run IS the
+    # retry. Recording that is what lets the graph stop after one.
+    grounding = state.get("groundedness")
+    retrying = grounding is not None and not grounding.passed
+    log.info("synthesize: fixed answer (skeleton, no LLM)%s", " — retry" if retrying else "")
+    return {
+        "answer": answer,
+        "citations": [Citation(claim=e.summary, evidence_id=e.id) for e in evidence],
+        "confidence": "low",
+        "gaps": [],
+        "_grounding_retried": retrying or state.get("_grounding_retried", False),
+    }
