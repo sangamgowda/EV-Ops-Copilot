@@ -20,8 +20,8 @@ class TestFrontMatter:
     def test_parsed(self):
         meta, body = split_front_matter(MANUAL.read_text(encoding="utf-8"))
         assert meta["domain"] == "diagnostic"
-        assert meta["applies_to_models"] == ["SC-F50", "SC-F45", "SC-F50G1"]
-        assert meta["effective_date"] == date(2026, 1, 15)
+        assert meta["applies_to_models"] == ["Volt 1", "Volt 1 Gen 2", "Volt 1 Ultra"]
+        assert meta["effective_date"] == date(2026, 9, 1)
         assert body.lstrip().startswith("# Service Manual")
 
     def test_absent(self):
@@ -50,7 +50,7 @@ class TestPromotion:
         ours = error_code_rows(parse_structure(body), MANUAL.stem)
         theirs = seed.parse_error_codes(MANUAL)
         assert sorted(ours, key=lambda r: r["code"]) == sorted(theirs, key=lambda r: r["code"])
-        assert len(ours) == 14
+        assert len(ours) == 16
 
     def test_table_without_meaning_column_not_promoted(self):
         doc = "| Code | Count |\n|---|---|\n| ERR_401 | 12 |\n"

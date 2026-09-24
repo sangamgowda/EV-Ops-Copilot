@@ -7,6 +7,10 @@ starts.
 
 from __future__ import annotations
 
+from typing import ClassVar
+
+import pytest
+
 from ops_copilot.rag.entity_resolution import resolve_against
 
 # Dense, like the seeded fleet: one wrong digit lands on a real vehicle.
@@ -54,3 +58,22 @@ class TestResolution:
 
     def test_empty_input(self):
         assert resolve_against("  ", FLEET).status == "not_found"
+
+
+class TestShortPaddedIds:
+    """The seeded fleet uses short zero-padded ids (V-001 ... V-120).
+    Padding is formatting: people type "42", "V42" or "v 42"."""
+
+    FLEET: ClassVar[list[str]] = [f"V-{n:03d}" for n in range(1, 121)]
+
+    @pytest.mark.parametrize("raw", ["V-042", "v-042", "V042", "V42", "v 42", "42", "042"])
+    def test_every_spelling_is_exact(self, raw):
+        assert (resolve_against(raw, self.FLEET).status, resolve_against(raw, self.FLEET).value) \
+            == ("exact", "V-042")
+
+    def test_three_digit_ids_keep_their_zeros(self):
+        assert resolve_against("V-100", self.FLEET).value == "V-100"
+        assert resolve_against("110", self.FLEET).value == "V-110"
+
+    def test_out_of_range_is_not_invented(self):
+        assert resolve_against("V-999", self.FLEET).status != "exact"

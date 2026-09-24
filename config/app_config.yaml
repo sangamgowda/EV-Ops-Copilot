@@ -196,11 +196,11 @@ sql_validation:
   # rules cannot reason about how expensive a valid query is.
   #
   # Measured, not guessed: scripts/calibrate_cost_budget.py asks the
-  # planner on the loaded data (2M telemetry rows). Heaviest legitimate
-  # query ~29k, cheapest full telemetry scan ~46k. The old 500000 let
-  # every full scan through. Re-run the script when volume changes by
-  # an order of magnitude — cost grows with table size.
-  explain_cost_budget: 40000
+  # planner on the loaded data (1.5M telemetry rows: 120 vehicles, 90
+  # days). Heaviest legitimate query ~20k, cheapest full telemetry scan
+  # ~33k. Re-run the script whenever the data is re-seeded at a
+  # different size — cost grows with table size, and the band moves.
+  explain_cost_budget: 27000
   explain_max_rows: 1000000
 
   statement_timeout_ms: 5000

@@ -43,24 +43,24 @@ class TestFusion:
 class TestBoost:
     def _fused(self):
         return rrf_fuse(
-            [hit(1, "general range advice"), hit(2, "overload bulletin", ["SC-F50"])],
+            [hit(1, "general range advice"), hit(2, "overload bulletin", ["Volt 1 Gen 2"])],
             [], 60, 0.6, 0.4,
         )
 
     def test_boost_reorders_by_model(self):
-        out = apply_boost(self._fused(), {"VIN-1042", "SC-F50"}, 0.15)
+        out = apply_boost(self._fused(), {"V-042", "Volt 1 Gen 2"}, 0.15)
         assert [c["chunk_id"] for c in out] == [2, 1]
 
     def test_boost_never_filters(self):
         """A VIN appears in almost no documents. A filter would return
         nothing; a boost returns everything, reordered."""
-        out = apply_boost(self._fused(), {"VIN-9999"}, 0.15)
+        out = apply_boost(self._fused(), {"V-999"}, 0.15)
         assert len(out) == 2
         assert all(c["boost"] == 0.0 for c in out)
 
     def test_boost_matches_entity_in_content(self):
-        fused = rrf_fuse([hit(1), hit(2, "Seen on vin-1042 during trial")], [], 60, 0.6, 0.4)
-        out = apply_boost(fused, {"VIN-1042"}, 0.15)
+        fused = rrf_fuse([hit(1), hit(2, "Seen on v-042 during trial")], [], 60, 0.6, 0.4)
+        out = apply_boost(fused, {"V-042"}, 0.15)
         assert out[0]["chunk_id"] == 2
 
 

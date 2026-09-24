@@ -207,7 +207,7 @@ class AgentState(TypedDict, total=False):
 
     # Resolved entities — after fuzzy matching against real rows
     resolved_entities: dict[str, Any]
-    entity_notes: list[str]   # "assuming you meant VIN-9021"
+    entity_notes: list[str]   # "assuming you meant V-021"
 
     # Loop
     iteration: int

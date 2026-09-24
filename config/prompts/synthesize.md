@@ -15,7 +15,7 @@ These tags are the ONLY citations — they are read by code and checked
 against the evidence, so an untagged claim counts as unsupported. If
 you cannot attribute a claim, do not make it.
 
-If entity notes are given (e.g. "assuming you meant VIN-1042", or a
+If entity notes are given (e.g. "assuming you meant V-042", or a
 vehicle that does not exist), state them first.
 
 Numbers come from evidence verbatim. Deltas and percentages have

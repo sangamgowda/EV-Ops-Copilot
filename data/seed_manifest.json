@@ -1,29 +1,29 @@
 {
   "generated_with": {
-    "vehicles": 200,
+    "vehicles": 120,
     "days": 90,
     "seed": 42,
     "interval_minutes": 5,
     "sales_scale": 1.0
   },
   "telemetry_window": {
-    "start": "2026-06-27",
-    "end": "2026-09-24"
+    "start": "2026-06-28",
+    "end": "2026-09-25"
   },
   "row_counts": {
-    "error_codes": 14,
-    "vehicle_baseline_specs": 84,
-    "vehicles": 200,
-    "vehicle_telemetry": 2041714,
-    "service_events": 584,
-    "sales_transactions": 19595
+    "error_codes": 16,
+    "vehicle_baseline_specs": 115,
+    "vehicles": 120,
+    "vehicle_telemetry": 1526449,
+    "service_events": 359,
+    "sales_transactions": 20160
   },
   "scenarios": [
     {
       "scenario": "overload",
-      "vehicle_id": "VIN-1007",
-      "model_code": "SC-F50",
-      "onset": "2026-09-15",
+      "vehicle_id": "V-007",
+      "model_code": "Volt 1",
+      "onset": "2026-09-16",
       "finding": "Current draw well above baseline; payload above rated; cell health normal",
       "cause": "Sustained overload",
       "documents": [
@@ -33,105 +33,182 @@
         "ERR_601"
       ],
       "measured_since_onset": {
-        "current_draw": {
-          "actual": 32.1,
-          "baseline": 24.1,
-          "delta_pct": 33.3
+        "speed": {
+          "actual": 44.4,
+          "baseline": 44.4,
+          "delta_pct": -0.1
         },
-        "motor_temp": {
-          "actual": 55.8,
-          "baseline": 49.8,
-          "delta_pct": 12.1
-        },
-        "payload": {
-          "actual": 187.5,
-          "baseline": 95.0,
-          "delta_pct": 97.3
+        "charge_power": {
+          "actual": 0.8,
+          "baseline": 0.8,
+          "delta_pct": 0.1
         },
         "range_estimate": {
-          "actual": 126.5,
-          "baseline": 169.3,
-          "delta_pct": -25.3
+          "actual": 109.5,
+          "baseline": 148.7,
+          "delta_pct": -26.4
         },
-        "cell_health_latest": 97.46
+        "payload": {
+          "actual": 188.8,
+          "baseline": 95.0,
+          "delta_pct": 98.7
+        },
+        "motor_temp": {
+          "actual": 50.8,
+          "baseline": 47.3,
+          "delta_pct": 7.4
+        },
+        "current_draw": {
+          "actual": 30.3,
+          "baseline": 22.4,
+          "delta_pct": 35.0
+        },
+        "cell_health_latest": 96.14
+      }
+    },
+    {
+      "scenario": "speed_cap",
+      "vehicle_id": "V-012",
+      "model_code": "Volt 1 Ultra",
+      "onset": "2026-09-15",
+      "finding": "Speed in Sonic / Sonic X held near 42 km/h (baseline 62 / 70) since the 3.2.0 update",
+      "cause": "Firmware 3.2.0 applies the Eco X speed limit to Sonic and Sonic X",
+      "documents": [
+        "SB-135_firmware_sonic_speed_cap"
+      ],
+      "error_codes": [
+        "ERR_205"
+      ],
+      "measured_since_onset": {
+        "speed": {
+          "actual": 46.4,
+          "baseline": 52.8,
+          "delta_pct": -12.2
+        },
+        "charge_power": {
+          "actual": 0.7,
+          "baseline": 0.8,
+          "delta_pct": -0.3
+        },
+        "range_estimate": {
+          "actual": 199.9,
+          "baseline": 198.5,
+          "delta_pct": 0.7
+        },
+        "payload": {
+          "actual": 91.8,
+          "baseline": 95.0,
+          "delta_pct": -3.3
+        },
+        "motor_temp": {
+          "actual": 54.3,
+          "baseline": 53.4,
+          "delta_pct": 1.8
+        },
+        "current_draw": {
+          "actual": 27.6,
+          "baseline": 32.6,
+          "delta_pct": -15.4
+        },
+        "cell_health_latest": 98.38
       }
     },
     {
       "scenario": "cell_wear",
-      "vehicle_id": "VIN-1017",
-      "model_code": "SC-F50G1",
-      "onset": "2026-06-27",
-      "finding": "Cell health falling ~2% per week; current draw near baseline",
-      "cause": "Cell imbalance / capacity loss",
+      "vehicle_id": "V-017",
+      "model_code": "Volt 1",
+      "onset": "2026-06-28",
+      "finding": "Cell health falling ~0.6% per week; current draw near baseline",
+      "cause": "Removable pack capacity loss / cell imbalance",
       "documents": [
-        "SB-121_cell_imbalance"
+        "SB-121_removable_pack_cell_wear"
       ],
       "error_codes": [
         "ERR_402",
         "ERR_403"
       ],
       "measured_since_onset": {
-        "current_draw": {
-          "actual": 30.3,
-          "baseline": 30.6,
-          "delta_pct": -0.9
+        "speed": {
+          "actual": 41.9,
+          "baseline": 42.0,
+          "delta_pct": -0.2
         },
-        "motor_temp": {
-          "actual": 54.1,
-          "baseline": 53.2,
-          "delta_pct": 1.6
-        },
-        "payload": {
-          "actual": 91.8,
-          "baseline": 95.0,
-          "delta_pct": -3.4
+        "charge_power": {
+          "actual": 0.7,
+          "baseline": 0.8,
+          "delta_pct": -0.0
         },
         "range_estimate": {
-          "actual": 131.3,
-          "baseline": 144.9,
-          "delta_pct": -9.4
+          "actual": 139.9,
+          "baseline": 154.7,
+          "delta_pct": -9.6
+        },
+        "payload": {
+          "actual": 89.1,
+          "baseline": 95.0,
+          "delta_pct": -6.2
+        },
+        "motor_temp": {
+          "actual": 46.8,
+          "baseline": 45.9,
+          "delta_pct": 2.0
+        },
+        "current_draw": {
+          "actual": 20.6,
+          "baseline": 20.6,
+          "delta_pct": 0.2
         },
         "cell_health_latest": 84.0
       }
     },
     {
       "scenario": "undocumented",
-      "vehicle_id": "VIN-1023",
-      "model_code": "SC-C37",
-      "onset": "2026-09-15",
+      "vehicle_id": "V-023",
+      "model_code": "Volt 1",
+      "onset": "2026-09-16",
       "finding": "Current draw ~30% above baseline; payload and cell health normal",
       "cause": null,
       "documents": [],
-      "note": "No service documents cover this model; the correct answer is partial.",
+      "note": "No document explains high current with normal payload and cell health; the correct answer is partial.",
       "measured_since_onset": {
-        "current_draw": {
-          "actual": 24.0,
-          "baseline": 18.2,
-          "delta_pct": 31.9
+        "speed": {
+          "actual": 42.5,
+          "baseline": 42.5,
+          "delta_pct": 0.1
         },
-        "motor_temp": {
-          "actual": 48.8,
-          "baseline": 46.7,
-          "delta_pct": 4.5
-        },
-        "payload": {
-          "actual": 95.4,
-          "baseline": 95.0,
-          "delta_pct": 0.5
+        "charge_power": {
+          "actual": 0.7,
+          "baseline": 0.8,
+          "delta_pct": -0.7
         },
         "range_estimate": {
-          "actual": 118.8,
-          "baseline": 152.0,
-          "delta_pct": -21.8
+          "actual": 118.4,
+          "baseline": 152.5,
+          "delta_pct": -22.3
         },
-        "cell_health_latest": 98.09
+        "payload": {
+          "actual": 93.1,
+          "baseline": 95.0,
+          "delta_pct": -2.0
+        },
+        "motor_temp": {
+          "actual": 53.5,
+          "baseline": 46.2,
+          "delta_pct": 15.9
+        },
+        "current_draw": {
+          "actual": 27.3,
+          "baseline": 21.1,
+          "delta_pct": 29.6
+        },
+        "cell_health_latest": 97.67
       }
     },
     {
       "scenario": "overload",
-      "vehicle_id": "VIN-1029",
-      "model_code": "SC-F45",
-      "onset": "2026-09-15",
+      "vehicle_id": "V-029",
+      "model_code": "Volt 1 Gen 2",
+      "onset": "2026-09-16",
       "finding": "Current draw well above baseline; payload above rated; cell health normal",
       "cause": "Sustained overload",
       "documents": [
@@ -141,72 +218,92 @@
         "ERR_601"
       ],
       "measured_since_onset": {
-        "current_draw": {
-          "actual": 29.2,
-          "baseline": 21.4,
-          "delta_pct": 36.3
+        "speed": {
+          "actual": 44.7,
+          "baseline": 44.4,
+          "delta_pct": 0.7
         },
-        "motor_temp": {
-          "actual": 53.4,
-          "baseline": 49.4,
-          "delta_pct": 8.2
-        },
-        "payload": {
-          "actual": 190.1,
-          "baseline": 95.0,
-          "delta_pct": 100.1
+        "charge_power": {
+          "actual": 0.8,
+          "baseline": 0.8,
+          "delta_pct": 0.2
         },
         "range_estimate": {
-          "actual": 120.5,
-          "baseline": 163.0,
-          "delta_pct": -26.1
+          "actual": 135.8,
+          "baseline": 185.8,
+          "delta_pct": -26.9
         },
-        "cell_health_latest": 97.7
+        "payload": {
+          "actual": 189.7,
+          "baseline": 95.0,
+          "delta_pct": 99.7
+        },
+        "motor_temp": {
+          "actual": 51.1,
+          "baseline": 47.2,
+          "delta_pct": 8.1
+        },
+        "current_draw": {
+          "actual": 30.3,
+          "baseline": 22.3,
+          "delta_pct": 35.7
+        },
+        "cell_health_latest": 96.74
       }
     },
     {
       "scenario": "cell_wear",
-      "vehicle_id": "VIN-1036",
-      "model_code": "SC-F50G1",
-      "onset": "2026-06-27",
-      "finding": "Cell health falling ~2% per week; current draw near baseline",
-      "cause": "Cell imbalance / capacity loss",
+      "vehicle_id": "V-036",
+      "model_code": "Volt 1",
+      "onset": "2026-06-28",
+      "finding": "Cell health falling ~0.6% per week; current draw near baseline",
+      "cause": "Removable pack capacity loss / cell imbalance",
       "documents": [
-        "SB-121_cell_imbalance"
+        "SB-121_removable_pack_cell_wear"
       ],
       "error_codes": [
         "ERR_402",
         "ERR_403"
       ],
       "measured_since_onset": {
-        "current_draw": {
-          "actual": 25.8,
-          "baseline": 25.8,
-          "delta_pct": 0.0
+        "speed": {
+          "actual": 43.8,
+          "baseline": 43.6,
+          "delta_pct": 0.5
         },
-        "motor_temp": {
-          "actual": 51.4,
-          "baseline": 50.3,
-          "delta_pct": 2.0
-        },
-        "payload": {
-          "actual": 93.3,
-          "baseline": 95.0,
-          "delta_pct": -1.8
+        "charge_power": {
+          "actual": 0.7,
+          "baseline": 0.8,
+          "delta_pct": -0.1
         },
         "range_estimate": {
-          "actual": 143.9,
-          "baseline": 158.4,
-          "delta_pct": -9.1
+          "actual": 135.4,
+          "baseline": 149.2,
+          "delta_pct": -9.2
+        },
+        "payload": {
+          "actual": 94.4,
+          "baseline": 95.0,
+          "delta_pct": -0.7
+        },
+        "motor_temp": {
+          "actual": 47.8,
+          "baseline": 46.7,
+          "delta_pct": 2.3
+        },
+        "current_draw": {
+          "actual": 21.8,
+          "baseline": 21.7,
+          "delta_pct": 0.4
         },
         "cell_health_latest": 84.0
       }
     },
     {
       "scenario": "overload",
-      "vehicle_id": "VIN-1042",
-      "model_code": "SC-F50",
-      "onset": "2026-09-15",
+      "vehicle_id": "V-042",
+      "model_code": "Volt 1 Gen 2",
+      "onset": "2026-09-16",
       "finding": "Current draw well above baseline; payload above rated; cell health normal",
       "cause": "Sustained overload",
       "documents": [
@@ -216,87 +313,226 @@
         "ERR_601"
       ],
       "measured_since_onset": {
-        "current_draw": {
-          "actual": 32.3,
-          "baseline": 24.0,
-          "delta_pct": 34.4
+        "speed": {
+          "actual": 46.1,
+          "baseline": 45.5,
+          "delta_pct": 1.4
         },
-        "motor_temp": {
-          "actual": 53.6,
-          "baseline": 49.7,
-          "delta_pct": 8.0
-        },
-        "payload": {
-          "actual": 189.3,
-          "baseline": 95.0,
-          "delta_pct": 99.2
+        "charge_power": {
+          "actual": 0.8,
+          "baseline": 0.8,
+          "delta_pct": 0.7
         },
         "range_estimate": {
-          "actual": 126.4,
-          "baseline": 169.5,
-          "delta_pct": -25.4
+          "actual": 137.1,
+          "baseline": 186.1,
+          "delta_pct": -26.4
         },
-        "cell_health_latest": 97.64
+        "payload": {
+          "actual": 190.4,
+          "baseline": 95.0,
+          "delta_pct": 100.4
+        },
+        "motor_temp": {
+          "actual": 51.5,
+          "baseline": 48.2,
+          "delta_pct": 6.8
+        },
+        "current_draw": {
+          "actual": 33.3,
+          "baseline": 24.1,
+          "delta_pct": 38.4
+        },
+        "cell_health_latest": 97.08
       }
     },
     {
-      "scenario": "firmware",
-      "vehicle_ids": [
-        "VIN-1001",
-        "VIN-1004",
-        "VIN-1006",
-        "VIN-1011",
-        "VIN-1013",
-        "VIN-1019",
-        "VIN-1021",
-        "VIN-1024",
-        "VIN-1030",
-        "VIN-1031",
-        "VIN-1041",
-        "VIN-1044",
-        "VIN-1046",
-        "VIN-1059",
-        "VIN-1071",
-        "VIN-1086",
-        "VIN-1087",
-        "VIN-1101",
-        "VIN-1105",
-        "VIN-1107",
-        "VIN-1111",
-        "VIN-1113",
-        "VIN-1115",
-        "VIN-1120",
-        "VIN-1126",
-        "VIN-1127",
-        "VIN-1129",
-        "VIN-1137",
-        "VIN-1139",
-        "VIN-1140",
-        "VIN-1147",
-        "VIN-1150",
-        "VIN-1157",
-        "VIN-1159",
-        "VIN-1160",
-        "VIN-1161",
-        "VIN-1163",
-        "VIN-1176",
-        "VIN-1181",
-        "VIN-1184",
-        "VIN-1187",
-        "VIN-1190",
-        "VIN-1191",
-        "VIN-1195",
-        "VIN-1198",
-        "VIN-1199"
-      ],
-      "finding": "Motor temperature ~12 C above baseline in sport mode after the 2.6.0 update",
-      "cause": "Firmware 2.6.0 throttle map",
+      "scenario": "speed_cap",
+      "vehicle_id": "V-055",
+      "model_code": "Volt 1 Ultra",
+      "onset": "2026-09-15",
+      "finding": "Speed in Sonic / Sonic X held near 42 km/h (baseline 62 / 70) since the 3.2.0 update",
+      "cause": "Firmware 3.2.0 applies the Eco X speed limit to Sonic and Sonic X",
       "documents": [
-        "SB-127_firmware_throttle_surge"
+        "SB-135_firmware_sonic_speed_cap"
       ],
       "error_codes": [
-        "ERR_202"
-      ]
+        "ERR_205"
+      ],
+      "measured_since_onset": {
+        "speed": {
+          "actual": 46.5,
+          "baseline": 56.6,
+          "delta_pct": -17.9
+        },
+        "charge_power": {
+          "actual": 0.8,
+          "baseline": 0.8,
+          "delta_pct": 1.2
+        },
+        "range_estimate": {
+          "actual": 190.5,
+          "baseline": 189.2,
+          "delta_pct": 0.7
+        },
+        "payload": {
+          "actual": 93.0,
+          "baseline": 95.0,
+          "delta_pct": -2.1
+        },
+        "motor_temp": {
+          "actual": 56.5,
+          "baseline": 55.8,
+          "delta_pct": 1.4
+        },
+        "current_draw": {
+          "actual": 29.0,
+          "baseline": 36.3,
+          "delta_pct": -20.0
+        },
+        "cell_health_latest": 98.31
+      }
+    },
+    {
+      "scenario": "charger_fault",
+      "vehicle_id": "V-064",
+      "model_code": "Volt 1 Gen 2",
+      "onset": "2026-09-13",
+      "finding": "Charging power ~0.34 kW against a 0.75 kW baseline; riding metrics normal",
+      "cause": "Fast charger delivering under half its rated power",
+      "documents": [
+        "SB-140_charger_low_power"
+      ],
+      "error_codes": [
+        "ERR_303"
+      ],
+      "measured_since_onset": {
+        "speed": {
+          "actual": 50.7,
+          "baseline": 51.1,
+          "delta_pct": -0.8
+        },
+        "charge_power": {
+          "actual": 0.3,
+          "baseline": 0.8,
+          "delta_pct": -54.6
+        },
+        "range_estimate": {
+          "actual": 164.8,
+          "baseline": 163.9,
+          "delta_pct": 0.5
+        },
+        "payload": {
+          "actual": 87.9,
+          "baseline": 95.0,
+          "delta_pct": -7.4
+        },
+        "motor_temp": {
+          "actual": 54.0,
+          "baseline": 51.7,
+          "delta_pct": 4.4
+        },
+        "current_draw": {
+          "actual": 29.1,
+          "baseline": 29.1,
+          "delta_pct": 0.0
+        },
+        "cell_health_latest": 97.6
+      }
+    },
+    {
+      "scenario": "speed_cap",
+      "vehicle_id": "V-088",
+      "model_code": "Volt 1 Ultra",
+      "onset": "2026-09-15",
+      "finding": "Speed in Sonic / Sonic X held near 42 km/h (baseline 62 / 70) since the 3.2.0 update",
+      "cause": "Firmware 3.2.0 applies the Eco X speed limit to Sonic and Sonic X",
+      "documents": [
+        "SB-135_firmware_sonic_speed_cap"
+      ],
+      "error_codes": [
+        "ERR_205"
+      ],
+      "measured_since_onset": {
+        "speed": {
+          "actual": 45.6,
+          "baseline": 55.7,
+          "delta_pct": -18.2
+        },
+        "charge_power": {
+          "actual": 0.7,
+          "baseline": 0.8,
+          "delta_pct": -0.1
+        },
+        "range_estimate": {
+          "actual": 193.9,
+          "baseline": 190.5,
+          "delta_pct": 1.8
+        },
+        "payload": {
+          "actual": 94.4,
+          "baseline": 95.0,
+          "delta_pct": -0.7
+        },
+        "motor_temp": {
+          "actual": 56.6,
+          "baseline": 55.2,
+          "delta_pct": 2.6
+        },
+        "current_draw": {
+          "actual": 28.0,
+          "baseline": 35.5,
+          "delta_pct": -21.1
+        },
+        "cell_health_latest": 98.39
+      }
+    },
+    {
+      "scenario": "charger_fault",
+      "vehicle_id": "V-091",
+      "model_code": "Volt 1 Gen 2",
+      "onset": "2026-09-13",
+      "finding": "Charging power ~0.34 kW against a 0.75 kW baseline; riding metrics normal",
+      "cause": "Fast charger delivering under half its rated power",
+      "documents": [
+        "SB-140_charger_low_power"
+      ],
+      "error_codes": [
+        "ERR_303"
+      ],
+      "measured_since_onset": {
+        "speed": {
+          "actual": 43.7,
+          "baseline": 43.8,
+          "delta_pct": -0.3
+        },
+        "charge_power": {
+          "actual": 0.3,
+          "baseline": 0.8,
+          "delta_pct": -54.4
+        },
+        "range_estimate": {
+          "actual": 191.2,
+          "baseline": 191.7,
+          "delta_pct": -0.3
+        },
+        "payload": {
+          "actual": 94.6,
+          "baseline": 95.0,
+          "delta_pct": -0.4
+        },
+        "motor_temp": {
+          "actual": 50.3,
+          "baseline": 47.0,
+          "delta_pct": 7.0
+        },
+        "current_draw": {
+          "actual": 22.1,
+          "baseline": 22.2,
+          "delta_pct": -0.2
+        },
+        "cell_health_latest": 96.6
+      }
     }
   ]
 }

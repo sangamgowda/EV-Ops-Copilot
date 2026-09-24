@@ -110,7 +110,7 @@ def wire(monkeypatch):
 
 def routed(hint: str) -> RouterOutput:
     return RouterOutput(domains=["diagnostic"], query_type=hint, complexity_hint=hint,
-                        entities={"vehicle_id": "VIN-1007"})
+                        entities={"vehicle_id": "V-007"})
 
 
 ROWS = {"status": "ok", "rows": [{"code": "ERR_601", "meaning": "Sustained over-current"}]}
@@ -184,7 +184,7 @@ class TestLoopControl:
         to keep looping."""
         s = Script(
             router=[routed("explain")],
-            plan=[PlanOutput(reasoning="", tool_calls=[sql(1), rag("why is current high on SC-C37")])],
+            plan=[PlanOutput(reasoning="", tool_calls=[sql(1), rag("why is current high on Volt 1 Ultra")])],
             reflect=[ReflectOutput(sufficient=True, partial=True, missing=["mechanism"],
                                    stop_reason="exhausted")],
             synthesize=[answer("ERR_601 was logged [e1]. The cause cannot be established because "

@@ -2,7 +2,7 @@
 title: Sales Review — Q2 2026
 doc_type: success_story
 domain: business
-applies_to_models: [SC-F50, SC-F45, SC-C37]
+applies_to_models: [Volt 1, Volt 1 Gen 2, Volt 1 Ultra]
 effective_date: 2026-07-10
 ---
 
@@ -31,5 +31,7 @@ each.
 
 ## Model mix
 
-The 5 kWh flagship was the best seller. The 4.5 kWh variant gained
-share among first-time buyers because of its lower price.
+The Volt 1 Gen 2 was the best seller. The Volt 1 held its share among
+first-time buyers and students because of its lower price. The Volt 1
+Ultra went on sale in the south on 1 June, so it contributed only one
+month to the quarter.

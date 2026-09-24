@@ -13,7 +13,7 @@ The vehicle id the model extracted is checked against real rows
 here, before any search — through the MCP server's
 resolve_entity_tool, because the agent process holds no database
 credentials. The outcome is recorded as an Evidence
-entry (tool "entity_resolution") as well as a note, so "VIN-9999 does
+entry (tool "entity_resolution") as well as a note, so "V-999 does
 not exist" is something Synthesize can cite rather than something it
 has to take on faith.
 

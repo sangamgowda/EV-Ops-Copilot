@@ -1,6 +1,6 @@
 -- The planted overload fault, visible by hand (Phase 2 "done when").
 -- Current draw is compared with the baseline for the SAME drive mode;
--- VIN-1001 is an ordinary vehicle, included for contrast.
+-- V-001 is an ordinary vehicle, included for contrast.
 -- Run: Get-Content scripts/checks/planted_fault.sql | docker compose exec -T postgres psql -U opscopilot -d opscopilot
 
 SELECT t.vehicle_id,
@@ -17,7 +17,7 @@ LEFT JOIN vehicle_baseline_specs b
        ON b.model_code = v.model_code
       AND b.drive_mode = t.drive_mode
       AND b.metric_name = t.metric_name
-WHERE t.vehicle_id IN ('VIN-1042', 'VIN-1007', 'VIN-1029', 'VIN-1001')
-  AND t.recorded_at >= '2026-09-15'
+WHERE t.vehicle_id IN ('V-042', 'V-007', 'V-029', 'V-001')
+  AND t.recorded_at >= now() - interval '9 days'
 GROUP BY t.vehicle_id, v.model_code
 ORDER BY pct_above DESC;

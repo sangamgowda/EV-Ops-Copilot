@@ -203,10 +203,10 @@ LEGITIMATE = [
     "round(avg(b.nominal_value)::numeric, 1) AS baseline, max(t.unit) AS unit, max(b.tolerance_pct) AS tolerance_pct "
     "FROM vehicle_telemetry t JOIN vehicles v ON v.vehicle_id = t.vehicle_id "
     "JOIN vehicle_baseline_specs b ON b.model_code = v.model_code AND b.drive_mode = t.drive_mode "
-    "AND b.metric_name = t.metric_name WHERE t.vehicle_id = 'VIN-1042' "
+    "AND b.metric_name = t.metric_name WHERE t.vehicle_id = 'V-042' "
     "AND t.recorded_at >= now() - interval '7 days' AND t.metric_name IN ('current_draw', 'payload') "
     "GROUP BY t.metric_name LIMIT 10",
-    "SELECT max(t.metric_value) AS cell_health_pct FROM vehicle_telemetry t WHERE t.vehicle_id = 'VIN-1042' "
+    "SELECT max(t.metric_value) AS cell_health_pct FROM vehicle_telemetry t WHERE t.vehicle_id = 'V-042' "
     "AND t.metric_name = 'cell_health' AND t.recorded_at >= now() - interval '2 days' LIMIT 1",
     "SELECT code, subsystem, meaning, recommended_action, severity FROM error_codes WHERE code = 'ERR_401' LIMIT 5",
     "SELECT max((deal_metadata->>'discount_pct')::numeric) AS max_discount_pct FROM sales_transactions "
@@ -218,8 +218,8 @@ LEGITIMATE = [
     "WITH q AS (SELECT s.region, s.unit_price FROM sales_transactions s JOIN vehicles v "
     "ON v.vehicle_id = s.vehicle_id WHERE v.model_code = 'M1') SELECT region, avg(unit_price) FROM q GROUP BY region",
     "SELECT se.vehicle_id, se.error_code, ec.meaning FROM service_events se JOIN error_codes ec "
-    "ON ec.code = se.error_code WHERE se.vehicle_id = 'VIN-1042' ORDER BY se.occurred_on DESC",
-    "SELECT t.recorded_at, t.metric_value FROM vehicle_telemetry t WHERE t.vehicle_id = 'VIN-1042' "
+    "ON ec.code = se.error_code WHERE se.vehicle_id = 'V-042' ORDER BY se.occurred_on DESC",
+    "SELECT t.recorded_at, t.metric_value FROM vehicle_telemetry t WHERE t.vehicle_id = 'V-042' "
     "AND t.recorded_at BETWEEN now() - interval '3 days' AND now() ORDER BY t.recorded_at",
     "SELECT x.vehicle_id FROM (SELECT vehicle_id, count(*) AS n FROM service_events GROUP BY vehicle_id) x "
     "JOIN vehicles v ON v.vehicle_id = x.vehicle_id WHERE x.n > 3",

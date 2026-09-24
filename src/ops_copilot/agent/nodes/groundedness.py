@@ -23,7 +23,7 @@ evaluation/, offline, where it can be afforded.
 
 Details that decide whether this is usable or just noisy:
 
-  Tier 2 ignores identifiers (VIN-1042, ERR_401, SB-114, Q2, [e3]),
+  Tier 2 ignores identifiers (V-042, ERR_401, SB-114, Q2, [e3]),
   dates and version strings — digits inside a name are not claims.
   A number also counts as traced when it is an evidence number
   ROUNDED to the precision written: "36%" traces to a delta of 36.4.
@@ -60,7 +60,7 @@ from ops_copilot.settings import get_config, load_prompt
 log = logging.getLogger(__name__)
 
 _TAG = re.compile(r"\[(e\d+)\]")
-_IDENT = re.compile(r"\b[A-Za-z][A-Za-z0-9]*(?:[-_][A-Za-z0-9]+)+\b")   # VIN-1042, ERR_401
+_IDENT = re.compile(r"\b[A-Za-z][A-Za-z0-9]*(?:[-_][A-Za-z0-9]+)+\b")   # V-042, ERR_401
 _DATE = re.compile(r"\b\d{4}-\d{2}-\d{2}(?:[T ][\d:.+Z-]+)?\b")
 _VERSION = re.compile(r"\b\d+\.\d+\.\d+\b")
 _NUMBER = re.compile(r"(?<![\w.])[-+]?\d[\d,]*(?:\.\d+)?")

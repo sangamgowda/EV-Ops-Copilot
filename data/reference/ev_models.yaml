@@ -1,10 +1,12 @@
 # ─────────────────────────────────────────────────────────────
 # Reference catalogue for the synthetic dataset.
 #
-# Figures marked `public` were compiled in September 2026 from
-# published spec sheets, launch coverage and registration reports
-# for electric scooters sold in India. Product and brand names are
-# replaced with neutral model codes.
+# One scooter family, three models. Figures marked `public` come
+# from the maker's own published articles on its two scooters,
+# with product and brand names replaced by neutral ones:
+#   "Volt 1"        the smaller-battery model
+#   "Volt 1 Gen 2"  the flagship
+#   "Volt 1 Ultra"  invented: a top-of-range model, for contrast
 #
 # Figures marked `assumed` were not published and are reasonable
 # engineering estimates. scripts/seed_synthetic_data.py reads this
@@ -14,117 +16,93 @@
 currency: INR
 market: India
 
-# Drive modes in the database are normalised to three. Real products
-# ship with four to six named modes; each maps onto one of these.
-drive_modes:
-  eco:   {maps_from: "the one or two lowest-power modes", share: 0.35}
-  city:  {maps_from: "the middle modes",                  share: 0.45}
-  sport: {maps_from: "the one or two highest-power modes", share: 0.20}
+# Six ride modes, lowest power to highest. Each model offers the
+# modes up to its own top speed: Sonic X exists only on the Ultra.
+# speed_cap is the most the controller allows in that mode; torque
+# is the peak the controller allows the motor to deliver.
+ride_modes:
+  Eco X:   {speed_cap_kmph: 45,  torque_nm: 25, character: "very low torque, maximum range"}
+  Eco:     {speed_cap_kmph: 50,  torque_nm: 35, character: "low torque, a little livelier than Eco X"}
+  Ride:    {speed_cap_kmph: 70,  torque_nm: 50, character: "everyday mode, good torque"}
+  Air:     {speed_cap_kmph: 90,  torque_nm: 60, character: "high speed, strong pull"}
+  Sonic:   {speed_cap_kmph: 100, torque_nm: 72, character: "full performance"}
+  Sonic X: {speed_cap_kmph: 115, torque_nm: 80, character: "Ultra only; unlocks the top speed"}
+
+# Shared by every model (public unless marked).
+common:
+  boot_litres: 30                # public
+  display: 7-inch TFT touchscreen with navigation and Bluetooth   # public
+  water_resistance: IP67 battery and motor                        # public
+  brakes: front and rear disc with combined braking (CBS)         # public
+  suspension: telescopic front fork, rear mono-shock              # public
+  standard_charger_w: 750        # public (sold as an accessory for Rs 13,000)
+  charge_0_80_fixed_pack: "3 h 47 min"      # public
+  charge_0_80_removable_pack: "2 h 7 min"   # public
+  warranty_vehicle: "3 years or 30,000 km (vehicle, motor, battery)"  # public
+  warranty_charger: "1 year or 10,000 km"   # public
+  running_cost_inr_per_km: 0.25  # public
+  rated_payload_kg: 150          # assumed: rider + pillion + cargo
+  tyres: 12-inch tubeless        # assumed
 
 models:
 
-  SC-F50:
-    name: Flagship scooter, 5 kWh (2nd generation)
+  Volt 1:
     status: on_sale
-    fleet_share: 0.40            # assumed, share of seeded vehicles
-    battery_kwh: 5.0             # public
-    idc_range_km: 265            # public
-    top_speed_kmph: 115          # public
-    motor_peak_kw: 8.8           # public
-    peak_torque_nm: 72           # public
+    fleet_share: 0.30            # assumed, share of seeded vehicles
+    battery_kwh: 3.7             # public
+    idc_range_km: 155            # public
+    top_speed_kmph: 100          # set by the ride-mode table (Sonic)
+    motor_peak_kw: 8.5           # assumed (same motor family)
+    peak_torque_nm: 72           # assumed
     accel_0_40_s: 2.55           # public
-    kerb_weight_kg: 129          # public
-    boot_litres: 35              # public
-    ride_modes: 6                # public
-    regen_levels: 4              # public
-    price_inr: 177999            # public, launch ex-showroom
-    pack_nominal_v: 51.8         # assumed
-    rated_payload_kg: 150        # assumed: rider + pillion + cargo
-    wh_per_km: {eco: 22, city: 28, sport: 38}   # assumed
-    avg_speed_kmph: {eco: 34, city: 44, sport: 58}  # assumed
-    sold_from: "2025-11-01"      # assumed
+    kerb_weight_kg: 126          # assumed
+    price_inr: 124999            # assumed
+    pack_nominal_v: 48.0         # assumed
+    modes: [Eco X, Eco, Ride, Air, Sonic]
+    wh_per_km:      {Eco X: 18, Eco: 20, Ride: 24, Air: 29, Sonic: 34}   # assumed
+    avg_speed_kmph: {Eco X: 32, Eco: 36, Ride: 46, Air: 55, Sonic: 62}  # assumed
+    sold_from: "2024-10-01"
 
-  SC-F45:
-    name: Flagship scooter, 4.5 kWh (2nd generation)
+  Volt 1 Gen 2:
+    status: on_sale
+    fleet_share: 0.45
+    battery_kwh: 5.0             # public (fixed + removable pack)
+    idc_range_km: 212            # public
+    top_speed_kmph: 100          # set by the ride-mode table (Sonic)
+    motor_peak_kw: 8.5           # public
+    motor_continuous_kw: 4.5     # public
+    peak_torque_nm: 72           # public
+    accel_0_40_s: 2.77           # public
+    kerb_weight_kg: 134          # assumed
+    price_inr: 145000            # public, ex-showroom
+    pack_nominal_v: 51.8         # assumed
+    modes: [Eco X, Eco, Ride, Air, Sonic]
+    wh_per_km:      {Eco X: 19, Eco: 21, Ride: 26, Air: 31, Sonic: 36}
+    avg_speed_kmph: {Eco X: 32, Eco: 36, Ride: 46, Air: 55, Sonic: 62}
+    sold_from: "2025-06-01"
+
+  Volt 1 Ultra:
     status: on_sale
     fleet_share: 0.25
-    battery_kwh: 4.5             # public
-    idc_range_km: 236            # public
-    top_speed_kmph: 90           # public
-    motor_peak_kw: 8.8           # public
-    peak_torque_nm: 72           # public
-    accel_0_40_s: 3.3            # public
-    kerb_weight_kg: 129          # public
-    boot_litres: 35              # public
-    ride_modes: 6                # public
-    regen_levels: 4              # public
-    price_inr: 169999            # public
+    battery_kwh: 6.4             # assumed
+    idc_range_km: 248            # assumed
+    top_speed_kmph: 115          # Sonic X
+    motor_peak_kw: 10.5          # assumed
+    peak_torque_nm: 80           # assumed
+    accel_0_40_s: 2.4            # assumed
+    kerb_weight_kg: 139          # assumed
+    price_inr: 174999            # assumed
     pack_nominal_v: 51.8         # assumed
-    rated_payload_kg: 150        # assumed
-    wh_per_km: {eco: 21, city: 27, sport: 35}
-    avg_speed_kmph: {eco: 33, city: 42, sport: 54}
-    sold_from: "2025-11-01"
-
-  SC-F50G1:
-    name: Flagship scooter, 5 kWh (previous generation)
-    status: discontinued
-    fleet_share: 0.20
-    battery_kwh: 5.0             # public
-    idc_range_km: 248            # public
-    top_speed_kmph: 105          # public
-    motor_peak_kw: 8.5           # public
-    peak_torque_nm: 72           # public
-    kerb_weight_kg: 137          # public (8 kg heavier than 2nd gen)
-    ride_modes: 4                # public
-    charger_w: 750               # public
-    charge_0_80_h: 4.0           # public
-    charge_0_100_h: 8.0          # public
-    price_inr: 166000            # public, launch ex-showroom
-    pack_nominal_v: 51.8         # assumed
-    rated_payload_kg: 150        # assumed
-    wh_per_km: {eco: 23, city: 30, sport: 40}
-    avg_speed_kmph: {eco: 33, city: 42, sport: 55}
-    sold_from: "2024-10-01"
-    sold_until: "2025-12-31"     # assumed
-
-  SC-C37:
-    name: Compact scooter, 3.7 kWh
-    status: on_sale
-    fleet_share: 0.15
-    battery_kwh: 3.7             # public
-    idc_range_km: 151            # public
-    top_speed_kmph: 105          # public
-    motor_peak_kw: 8.5           # public
-    peak_torque_nm: 72           # public
-    kerb_weight_kg: 126          # public
-    seat_height_mm: 796          # public
-    boot_litres: 35              # public
-    price_inr: 139999            # public
-    pack_nominal_v: 48.0         # assumed
-    rated_payload_kg: 140        # assumed
-    wh_per_km: {eco: 20, city: 26, sport: 34}
-    avg_speed_kmph: {eco: 32, city: 41, sport: 53}
-    sold_from: "2024-10-01"
-
-  # Family scooter line. Launched on 2 Sep 2026 with deliveries from
-  # 25 Sep 2026, so it has no vehicles or telemetry yet. It is in the
-  # catalogue for launch and pricing questions.
-  SC-W22: {name: Family scooter S, 2.2 kWh,  status: pre_delivery, battery_kwh: 2.2, idc_range_km: 110, price_inr: 109999, launched_on: "2026-09-02"}
-  SC-W27: {name: Family scooter S, 2.7 kWh,  status: pre_delivery, battery_kwh: 2.7, idc_range_km: 132, price_inr: 139999, launched_on: "2026-09-02"}
-  SC-W37: {name: Family scooter, 3.7 kWh,    status: pre_delivery, battery_kwh: 3.7, idc_range_km: 171, price_inr: 159999, launched_on: "2026-09-02"}
-  SC-W50: {name: Family scooter Plus, 5 kWh, status: pre_delivery, battery_kwh: 5.0, idc_range_km: 243, price_inr: 189999, launched_on: "2026-09-02"}
+    modes: [Eco X, Eco, Ride, Air, Sonic, Sonic X]
+    wh_per_km:      {Eco X: 19, Eco: 21, Ride: 26, Air: 31, Sonic: 36, Sonic X: 42}
+    avg_speed_kmph: {Eco X: 32, Eco: 36, Ride: 46, Air: 55, Sonic: 62, Sonic X: 70}
+    # Launched in the south first; other regions from launched_elsewhere.
+    sold_from: "2026-06-01"
+    launched_elsewhere: "2026-08-15"
 
 # Monthly retail volumes for the whole brand. The seed script shapes
 # sales_transactions to follow this curve.
 monthly_sales:
-  # public anchors
-  public:
-    "2025-10": 1050              # 974 registered + 76 in one state not on the portal
-    "2026-03": 1760              # record month
-    "2026-04": 1244
-    jan_aug_2025_total: 3436
-    jan_aug_2026_total: 10429    # +203% year on year
-  # full curve used for seeding; public anchors kept, gaps filled
   curve:
     "2024-10": 280
     "2024-11": 300
@@ -136,7 +114,7 @@ monthly_sales:
     "2025-05": 440
     "2025-06": 460
     "2025-07": 480
-    "2025-08": 506               # Jan–Aug 2025 sums to 3436
+    "2025-08": 506
     "2025-09": 820
     "2025-10": 1050
     "2025-11": 1000
@@ -146,27 +124,27 @@ monthly_sales:
     "2026-03": 1760
     "2026-04": 1244
     "2026-05": 1180
-    "2026-06": 1210
-    "2026-07": 1245
-    "2026-08": 1290              # Jan–Aug 2026 sums to 10429
-    "2026-09": 1000              # month to date
+    "2026-06": 1310
+    "2026-07": 1420
+    "2026-08": 1480
+    "2026-09": 1100              # month to date
 
 # Sales zones. Home market is the south; the others are newer.
 regions:
-  south: {share: 0.68, cities: [Bengaluru, Chennai, Hyderabad, Kochi, Mysuru, Coimbatore], ambient_c: 27}
-  west:  {share: 0.17, cities: [Pune, Mumbai, Goa], ambient_c: 29}
-  north: {share: 0.10, cities: [Delhi, Jaipur], ambient_c: 33}
-  east:  {share: 0.05, cities: [Kolkata, Bhubaneswar], ambient_c: 30}
+  south: {share: 0.60, cities: [Bengaluru, Chennai, Hyderabad, Kochi, Mysuru, Coimbatore], ambient_c: 27}
+  west:  {share: 0.20, cities: [Pune, Mumbai, Goa], ambient_c: 29}
+  north: {share: 0.13, cities: [Delhi, Jaipur], ambient_c: 33}
+  east:  {share: 0.07, cities: [Kolkata, Bhubaneswar], ambient_c: 30}
 
-# Issues owners report publicly for scooters in this segment. Used as
-# the free-text vocabulary for service_events.reported_issue.
+# Issues owners report for scooters in this segment. Used as the
+# free-text vocabulary for service_events.reported_issue.
 reported_issues:
   - {issue: "Real-world range well below claimed range", share: 0.26}
-  - {issue: "Scooter surges forward briefly after throttle is released", share: 0.10}
   - {issue: "Front brake feels weak; pads wearing quickly", share: 0.14}
   - {issue: "Noise from front fork over bumps", share: 0.10}
-  - {issue: "Ride mode only changes after stopping and restarting", share: 0.08}
-  - {issue: "Start switch intermittently unresponsive", share: 0.07}
+  - {issue: "Ride mode only changes after stopping and restarting", share: 0.10}
+  - {issue: "Start switch intermittently unresponsive", share: 0.08}
   - {issue: "Charging slower than expected", share: 0.10}
-  - {issue: "Dashboard freezes or reboots", share: 0.08}
+  - {issue: "Dashboard freezes or reboots", share: 0.10}
   - {issue: "Rattle from body panels", share: 0.07}
+  - {issue: "Removable battery hard to lock into its dock", share: 0.05}

@@ -6,7 +6,7 @@ inventing. So the VIN is checked against real rows first.
 
   exact match          use it
   one close match      use it, and SAY SO in the answer
-                       ("assuming you meant VIN-9021")
+                       ("assuming you meant V-021")
   several close        ask which one
   nothing close        tell the user it does not exist — that is a
                        real answer, not a failure
@@ -21,7 +21,7 @@ Split in two so the decision is testable without a database:
   resolve_vehicle_id(raw)           fetches candidates, then the above
 
 "Exact" is judged after normalisation — case, spaces and separators
-are formatting, not a different vehicle. "vin 1042" is VIN-1042.
+are formatting, not a different vehicle. "v 42" is V-042.
 """
 
 from __future__ import annotations
@@ -45,11 +45,13 @@ class Resolution:
 
 
 def _norm(s: str) -> str:
-    return re.sub(r"[^A-Z0-9]", "", s.upper())
+    # Leading zeros are padding, not identity: "V42", "v 42" and
+    # "V-042" are the same vehicle.
+    return re.sub(r"(?<!\d)0+(?=\d)", "", re.sub(r"[^A-Z0-9]", "", s.upper()))
 
 
 def _digits(s: str) -> str:
-    return re.sub(r"\D", "", s)
+    return re.sub(r"(?<!\d)0+(?=\d)", "", re.sub(r"\D", "", s))
 
 
 def resolve_against(raw: str, known_ids: list[str], cfg: dict[str, Any] | None = None) -> Resolution:
@@ -103,7 +105,7 @@ def resolve_against(raw: str, known_ids: list[str], cfg: dict[str, Any] | None =
 # The ORDER BY is load-bearing. In a fleet of any size more than :lim
 # ids clear the loose trigram prefilter, and an unordered LIMIT keeps an
 # arbitrary subset — which can drop the exact match itself, turning
-# "VIN-1042" into "ambiguous" with the right answer missing.
+# "V-042" into "ambiguous" with the right answer missing.
 _CANDIDATES_SQL = text("""
     SELECT vehicle_id FROM (
         SELECT vehicle_id FROM vehicles WHERE vehicle_id ILIKE :raw
@@ -123,7 +125,9 @@ async def resolve_vehicle_id(raw: str) -> Resolution:
 
     cfg = get_config()["entity_resolution"]
     stripped = raw.strip()
-    digits = _digits(stripped) if _norm(stripped).isdigit() else ""
+    # Any digits typed pull candidates in: "V42" shares too few
+    # trigrams with "V-042" to clear the prefilter on its own.
+    digits = _digits(stripped)
     async with readonly_engine().connect() as conn:
         await conn.execute(
             text("SELECT set_config('pg_trgm.similarity_threshold', :t, true)"),

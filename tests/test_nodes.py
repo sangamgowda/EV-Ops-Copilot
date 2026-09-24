@@ -48,8 +48,8 @@ class TestGrounding:
         assert unresolved_citations("a [e1] b [e3]", cites, {"e1", "e2"}) == ["e3", "e7"]
 
     def test_identifiers_are_not_numbers(self):
-        nums = [v for _, v in extract_numbers("VIN-1042 logged ERR_401 per SB-114 on 2026-09-14, "
-                                                "firmware 2.6.0, in Q2 [e3], drew 33.2 A")]
+        nums = [v for _, v in extract_numbers("V-042 logged ERR_401 per SB-114 on 2026-09-14, "
+                                                "firmware 3.2.0, in Q2 [e3], drew 33.2 A")]
         assert nums == [33.2]
 
     def test_rounded_evidence_number_traces(self):
@@ -192,15 +192,15 @@ class TestDocumentCoverage:
     def test_uncovered_model_is_stated_in_the_evidence(self):
         from ops_copilot.agent.nodes.observe import _coverage
 
-        chunk = {"applies_to_models": ["SC-F50", "SC-F45"], "boosted": False}
-        note = _coverage(chunk, {"entity_id": "VIN-1023"})
-        assert "SC-F50, SC-F45" in note and "does NOT list" in note
+        chunk = {"applies_to_models": ["Volt 1 Gen 2", "Volt 1"], "boosted": False}
+        note = _coverage(chunk, {"entity_id": "V-023"})
+        assert "Volt 1 Gen 2, Volt 1" in note and "does NOT list" in note
 
     def test_covered_model_is_not_flagged(self):
         from ops_copilot.agent.nodes.observe import _coverage
 
-        chunk = {"applies_to_models": ["SC-F50"], "boosted": True}
-        assert "does NOT" not in _coverage(chunk, {"entity_id": "VIN-1042"})
+        chunk = {"applies_to_models": ["Volt 1 Gen 2"], "boosted": True}
+        assert "does NOT" not in _coverage(chunk, {"entity_id": "V-042"})
         # No vehicle asked about: nothing to flag.
         assert "does NOT" not in _coverage({"applies_to_models": [], "boosted": False}, {})
 

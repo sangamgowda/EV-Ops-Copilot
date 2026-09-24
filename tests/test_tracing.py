@@ -83,7 +83,7 @@ async def execute_node(state, config=None):
 @tracing.traced("router")
 async def router_node(state, config=None):
     return {"domains": ["diagnostic"], "query_type": "explain",
-            "entities": {"vehicle_id": "VIN-1042"}}
+            "entities": {"vehicle_id": "V-042"}}
 
 
 async def run_turn_like(stop_reason: str = "complete", partial: bool = False) -> None:

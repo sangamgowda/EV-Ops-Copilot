@@ -24,7 +24,7 @@ from ops_copilot.agent.state import new_state  # noqa: E402
 async def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     state = await build_graph().ainvoke(
-        new_state("Why did range drop on VIN-1042 last week?", "skeleton-session", "turn-1")
+        new_state("Why did range drop on V-042 last week?", "skeleton-session", "turn-1")
     )
     print("\n--- result ---")
     print(f"laps:        {state['iteration']}")

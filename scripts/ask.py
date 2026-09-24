@@ -6,7 +6,7 @@ found, what Reflect decided, then the answer and its grounding check.
 
 Run where the agent runs (the api container), with mcp-server up:
 
-  python scripts/ask.py "Why did range drop on VIN-1042 this week?"
+  python scripts/ask.py "Why did range drop on V-042 this week?"
 """
 
 from __future__ import annotations

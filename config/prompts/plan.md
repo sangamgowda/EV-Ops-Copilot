@@ -61,19 +61,29 @@ computed for you in code. Do not compute them in SQL.
 These follow every rule above. Copy their shape; change only what the
 question needs.
 
-"Why did range drop on VIN-1042 this week?" — lap 1 needs the
+"Why did range drop on V-042 this week?" — lap 1 needs the
 measurement AND its baseline, in one query, plus the documents:
 
 {"reasoning": "a why-question needs readings against baseline, and the documented mechanism",
  "tool_calls": [
-  {"tool": "structured_query_tool", "args": {"sql": "SELECT t.metric_name AS metric, round(avg(t.metric_value)::numeric, 1) AS actual, round(avg(b.nominal_value)::numeric, 1) AS baseline, max(t.unit) AS unit, max(b.tolerance_pct) AS tolerance_pct, max(b.rated_payload_kg) AS rated_payload_kg FROM vehicle_telemetry t JOIN vehicles v ON v.vehicle_id = t.vehicle_id JOIN vehicle_baseline_specs b ON b.model_code = v.model_code AND b.drive_mode = t.drive_mode AND b.metric_name = t.metric_name WHERE t.vehicle_id = 'VIN-1042' AND t.recorded_at >= now() - interval '7 days' AND t.metric_name IN ('current_draw', 'payload') GROUP BY t.metric_name LIMIT 10"}},
-  {"tool": "rag_retrieval_tool", "args": {"query": "range dropped and current draw above baseline", "domain": "diagnostic", "entity_id": "VIN-1042"}}]}
+  {"tool": "structured_query_tool", "args": {"sql": "SELECT t.metric_name AS metric, round(avg(t.metric_value)::numeric, 1) AS actual, round(avg(b.nominal_value)::numeric, 1) AS baseline, max(t.unit) AS unit, max(b.tolerance_pct) AS tolerance_pct, max(b.rated_payload_kg) AS rated_payload_kg FROM vehicle_telemetry t JOIN vehicles v ON v.vehicle_id = t.vehicle_id JOIN vehicle_baseline_specs b ON b.model_code = v.model_code AND b.drive_mode = t.drive_mode AND b.metric_name = t.metric_name WHERE t.vehicle_id = 'V-042' AND t.recorded_at >= now() - interval '7 days' AND t.metric_name IN ('current_draw', 'payload') GROUP BY t.metric_name LIMIT 10"}},
+  {"tool": "rag_retrieval_tool", "args": {"query": "range dropped and current draw above baseline", "domain": "diagnostic", "entity_id": "V-042"}}]}
+
+"Why won't V-012 go faster than 45?" — a symptom tied to ride modes
+needs the readings split by mode, or one slow mode averages away:
+
+{"reasoning": "a speed complaint is mode-specific, so compare speed per ride mode against baseline",
+ "tool_calls": [
+  {"tool": "structured_query_tool", "args": {"sql": "SELECT t.metric_name AS metric, t.drive_mode AS mode, round(avg(t.metric_value)::numeric, 1) AS actual, round(avg(b.nominal_value)::numeric, 1) AS baseline, max(t.unit) AS unit, max(b.tolerance_pct) AS tolerance_pct FROM vehicle_telemetry t JOIN vehicles v ON v.vehicle_id = t.vehicle_id JOIN vehicle_baseline_specs b ON b.model_code = v.model_code AND b.drive_mode = t.drive_mode AND b.metric_name = t.metric_name WHERE t.vehicle_id = 'V-012' AND t.metric_name = 'speed' AND t.recorded_at >= now() - interval '7 days' GROUP BY t.metric_name, t.drive_mode LIMIT 10"}}]}
+
+Charging questions use metric_name 'charge_power', recorded with
+drive_mode 'Charging' and baselined the same way.
 
 A single latest value (to rule a cause in or out):
 
 {"reasoning": "cell health rules degradation in or out",
  "tool_calls": [
-  {"tool": "structured_query_tool", "args": {"sql": "SELECT max(t.metric_value) AS cell_health_pct FROM vehicle_telemetry t WHERE t.vehicle_id = 'VIN-1042' AND t.metric_name = 'cell_health' AND t.recorded_at >= now() - interval '2 days' LIMIT 1"}}]}
+  {"tool": "structured_query_tool", "args": {"sql": "SELECT max(t.metric_value) AS cell_health_pct FROM vehicle_telemetry t WHERE t.vehicle_id = 'V-042' AND t.metric_name = 'cell_health' AND t.recorded_at >= now() - interval '2 days' LIMIT 1"}}]}
 
 "What does ERR_401 mean?" — an exact code is a SQL lookup, not a search:
 

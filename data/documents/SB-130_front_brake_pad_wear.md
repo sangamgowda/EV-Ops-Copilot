@@ -2,7 +2,7 @@
 title: SB-130 — Early front brake pad wear
 doc_type: service_bulletin
 domain: diagnostic
-applies_to_models: [SC-F50, SC-F45, SC-F50G1]
+applies_to_models: [Volt 1, Volt 1 Gen 2, Volt 1 Ultra]
 effective_date: 2026-05-05
 ---
 
@@ -10,9 +10,10 @@ effective_date: 2026-05-05
 
 ## Summary
 
-Riders who rely mainly on the front brake in city traffic can wear
-the front pads out in two to three months. The brake then feels
-weak before the wear sensor triggers.
+Riders who rely mainly on the front brake lever in city traffic can
+wear the front disc pads out in two to three months. The brake then
+feels weak before the wear sensor triggers. Combined braking (CBS)
+spreads force across both wheels only when the rear lever is used.
 
 ## Symptoms
 
@@ -22,5 +23,6 @@ weak before the wear sensor triggers.
 ## Action
 
 - Replace front brake pads with the revised compound part.
-- Advise the rider to use a higher regenerative braking level,
-  which reduces pad wear.
+- Show the rider how the rear lever applies both brakes through CBS,
+  and suggest a higher regenerative braking level. Both reduce pad
+  wear.

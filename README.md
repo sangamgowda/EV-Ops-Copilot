@@ -11,12 +11,16 @@ you where each part of the answer came from.
 ## What you can ask it
 
 **Vehicle questions**
-- "Why did range drop on VIN-1042 last week?"
-- "What does error code ERR_401 mean?"
+- "Why did range drop on V-042 this week?"
+- "Why won't V-012 go above 45 km/h in Sonic mode?"
+- "What does error code ERR_205 mean?"
 
 **Business questions**
-- "How are sales tracking this quarter?"
-- "Which region sold the most last month?"
+- "Why did the south outsell the other regions this quarter?"
+- "Which model sold the most this year?"
+
+[`docs/DATA_GUIDE.md`](docs/DATA_GUIDE.md) lists what is in the
+sample data and 24 questions with the answer you should expect.
 
 Some questions are both, and it handles those too.
 
@@ -120,7 +124,7 @@ docker compose exec api python scripts/seed_synthetic_data.py --reset
 # or from your own machine (Postgres on localhost:5432)
 python scripts/seed_synthetic_data.py --reset
 
-# bigger or smaller
+# bigger or smaller (then re-run scripts/calibrate_cost_budget.py)
 python scripts/seed_synthetic_data.py --vehicles 300 --days 90 --reset
 
 # CSV files only, no database needed
@@ -133,20 +137,21 @@ as compressed CSV files.
 
 ### What is in it
 
-With the default 50 vehicles and 30 days:
+With the default 120 vehicles and 90 days:
 
 | Table | Rows | What it holds |
 |---|---|---|
-| vehicles | 50 | four scooter models, eight cities, private and fleet use |
-| vehicle_baseline_specs | 84 | normal values for each model and riding mode |
-| vehicle_telemetry | ~200,000 | speed, power draw, battery, temperature and load, every 5 minutes while riding |
-| service_events | ~140 | service visits and customer complaints over 12 months |
-| sales_transactions | ~19,600 | two years of sales across four regions |
-| error_codes | 14 | trouble codes, read from the service manual |
+| vehicles | 120 | V-001 to V-120: three scooter models (Volt 1, Volt 1 Gen 2, Volt 1 Ultra), 15 cities, private and fleet use |
+| vehicle_baseline_specs | 115 | normal values for each model and ride mode (Eco X, Eco, Ride, Air, Sonic, Sonic X) and for charging |
+| vehicle_telemetry | ~1.5 million | speed, power draw, battery, temperature and load every 5 minutes while riding; nightly charging power |
+| service_events | ~360 | service visits and customer complaints over 12 months |
+| sales_transactions | ~20,000 | two years of sales across four regions |
+| error_codes | 16 | trouble codes, read from the service manual |
 
-Model specs and monthly sales volumes follow publicly reported
-figures for electric scooters in India, with brand names replaced by
-neutral codes (`data/reference/ev_models.yaml`).
+Model specs follow figures the maker of a real scooter family has
+published, with brand and product names replaced by neutral ones
+(`data/reference/ev_models.yaml`). Full details are in
+[`docs/DATA_GUIDE.md`](docs/DATA_GUIDE.md).
 
 ### Built-in test cases
 
@@ -155,10 +160,11 @@ can be checked:
 
 | Vehicle | Problem | Explained by |
 |---|---|---|
-| VIN-1042, VIN-1007, VIN-1029 | overloaded: power use up ~33%, range down ~25% | SB-114 |
-| VIN-1017, VIN-1036 | battery wearing out: health falling from 92% to 84% | SB-121 |
-| vehicles on firmware 2.6.0 | motor runs ~12 °C hotter in sport mode | SB-127 |
-| VIN-1023 | power use up ~30% on a model with no documents | nothing — the right answer says so |
+| V-042, V-007, V-029 | overloaded: power use up ~38%, range down ~26% | SB-114 |
+| V-012, V-055, V-088 | firmware 3.2.0 holds Sonic and Sonic X to 45 km/h | SB-135 |
+| V-064, V-091 | charger delivering under half its rated power | SB-140 |
+| V-017, V-036 | battery wearing out: health falling from 92% to 84% | SB-121 |
+| V-023 | power use up ~30% for no documented reason | nothing — the right answer says so |
 
 Full details, with measured numbers, are written to
 `data/seed_manifest.json` each time the data is loaded.
@@ -167,6 +173,10 @@ Full details, with measured numbers, are written to
 
 `data/documents/` holds made-up service bulletins, manuals, a help
 article and business reports, ready to add with `POST /ingest`.
+
+Eleven public blog articles about the real scooters can be added on
+top. They are fetched onto your machine and never committed — see
+[`docs/DATA_GUIDE.md`](docs/DATA_GUIDE.md#5-where-it-all-comes-from).
 
 ### Collecting web pages
 
@@ -226,7 +236,7 @@ curl -X POST localhost:8000/ingest -F "file=@data/documents/SB-114_sustained_ove
 # ask a question
 curl -X POST localhost:8000/chat \
   -H 'Content-Type: application/json' \
-  -d '{"question": "Why did range drop on VIN-1042 last week?"}'
+  -d '{"question": "Why did range drop on V-042 this week?"}'
 ```
 
 ### Without Docker

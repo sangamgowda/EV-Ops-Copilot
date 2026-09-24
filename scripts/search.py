@@ -8,7 +8,7 @@ comes back as an explicit status, never as weak chunks.
 Usage:
   python scripts/search.py "why does range drop in cold weather"
   python scripts/search.py "fleet discount" --domain business
-  python scripts/search.py "range dropped" --vehicle VIN-1O42
+  python scripts/search.py "range dropped" --vehicle V-O42
 """
 
 from __future__ import annotations
@@ -54,7 +54,7 @@ def main() -> None:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("query")
     p.add_argument("--domain", default="diagnostic", choices=["diagnostic", "business"])
-    p.add_argument("--vehicle", help="a vehicle id to resolve and boost, e.g. VIN-1042")
+    p.add_argument("--vehicle", help="a vehicle id to resolve and boost, e.g. V-042")
     args = p.parse_args()
     if sys.platform == "win32":
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())

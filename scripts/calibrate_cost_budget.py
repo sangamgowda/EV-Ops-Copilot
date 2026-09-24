@@ -40,9 +40,9 @@ MUST_PASS = {
         "SELECT t.metric_name, avg(t.metric_value), avg(b.nominal_value) FROM vehicle_telemetry t "
         "JOIN vehicles v ON v.vehicle_id = t.vehicle_id JOIN vehicle_baseline_specs b "
         "ON b.model_code = v.model_code AND b.drive_mode = t.drive_mode AND b.metric_name = t.metric_name "
-        "WHERE t.vehicle_id = 'VIN-1042' AND t.recorded_at >= now() - interval '7 days' GROUP BY t.metric_name",
+        "WHERE t.vehicle_id = 'V-042' AND t.recorded_at >= now() - interval '7 days' GROUP BY t.metric_name",
     "one vehicle, raw readings, 30d":
-        f"SELECT recorded_at, metric_value FROM vehicle_telemetry WHERE vehicle_id = 'VIN-1042' AND {window(30)}",
+        f"SELECT recorded_at, metric_value FROM vehicle_telemetry WHERE vehicle_id = 'V-042' AND {window(30)}",
     "whole fleet, one metric, 7d":
         f"SELECT vehicle_id, avg(metric_value) FROM vehicle_telemetry "
         f"WHERE metric_name = 'current_draw' AND {window(7)} GROUP BY vehicle_id",

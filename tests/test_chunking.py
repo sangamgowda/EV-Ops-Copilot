@@ -78,7 +78,7 @@ class TestTablesAreNeverSplit:
 
     def test_short_caption_moves_into_table_chunk(self):
         doc = ("# D\n\n## Limits\n\nRated limits per model:\n\n"
-               "| Model | Payload |\n|---|---|\n| SC-F50 | 150 |\n")
+               "| Model | Payload |\n|---|---|\n| M-50 | 150 |\n")
         chunks = chunk_document(doc, "D", "manual")
         assert _types(chunks) == ["table", "table_row"]
         assert "Rated limits per model:" in chunks[0].content
@@ -141,5 +141,5 @@ class TestRealDocuments:
         meta, body = split_front_matter((DOCS / "manual_error_codes.md").read_text(encoding="utf-8"))
         chunks = chunk_document(body, meta["title"], meta["doc_type"])
         rows = [c for c in chunks if c.chunk_type == "table_row"]
-        assert len(rows) == 14
+        assert len(rows) == 16
         assert any(r.error_codes == ["ERR_401"] for r in rows)

@@ -7,7 +7,7 @@ const WIDTHS = [280, 320, 360, 380, 414, 768];
 // A deliberately awkward answer: long SQL, a long unbroken token, many
 // chips, a partial result with gaps. If any of it can push the page
 // wider than the screen, this will.
-const LONG_ID = "VIN-1042-REPLACEMENT-UNIT-WITH-AN-UNBROKEN-IDENTIFIER-0000000000";
+const LONG_ID = "V-042-REPLACEMENT-UNIT-WITH-AN-UNBROKEN-IDENTIFIER-0000000000";
 const DONE = {
   turn_id: "turn-e2e",
   session_id: "s",
@@ -30,7 +30,7 @@ const DONE = {
       "SELECT t.metric_name AS metric, round(avg(t.metric_value)::numeric,1) AS actual, " +
       "round(avg(b.nominal_value)::numeric,1) AS baseline FROM vehicle_telemetry t JOIN vehicles v " +
       "ON v.vehicle_id = t.vehicle_id JOIN vehicle_baseline_specs b ON b.model_code = v.model_code " +
-      "WHERE t.vehicle_id = 'VIN-1042' AND t.recorded_at >= now() - interval '7 days' GROUP BY 1 LIMIT 10",
+      "WHERE t.vehicle_id = 'V-042' AND t.recorded_at >= now() - interval '7 days' GROUP BY 1 LIMIT 10",
     query: i === 4 ? "range dropped and current draw is high with heavy loads" : null,
     score: i === 4 ? 0.7396 : null,
   })),
@@ -39,7 +39,7 @@ const DONE = {
       tools: [{ tool: "structured_query_tool", args: {} }, { tool: "rag_retrieval_tool",
         args: { query: "range dropped and current draw is high with heavy loads" } }],
       found: ["e1", "e2", "e3", "e5"], decision: "continue", missing: ["alternative"],
-      next_question: "What is the latest cell health for VIN-1042?" },
+      next_question: "What is the latest cell health for V-042?" },
     { lap: 2, reasoning: "cell health rules degradation in or out", tools: [], found: ["e4"],
       decision: "exhausted", missing: ["mechanism"], next_question: null },
   ],

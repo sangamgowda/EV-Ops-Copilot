@@ -35,7 +35,7 @@ async def _fake_turn(question, session_id, *, turn_id="t", emit=None, **_):
     state = new_state(question, session_id, turn_id)
     if emit:
         emit("routed", {"domains": ["diagnostic"], "query_type": "lookup",
-                        "entities": {"vehicle_id": "VIN-1042"}, "notes": []})
+                        "entities": {"vehicle_id": "V-042"}, "notes": []})
         emit("plan", {"iteration": 1, "reasoning": "",
                       "tools": [{"tool": "structured_query_tool",
                                  "args": {"sql": "SELECT code FROM error_codes WHERE code = 'ERR_401'"}}]})
@@ -77,7 +77,7 @@ class TestChatStream:
         assert names.index("progress") < names.index("token") < names.index("done")
         assert names[-1] == "done"
         messages = [d["message"] for e, d in events if e == "progress"]
-        assert "Understood: a diagnostic question about VIN-1042" in messages
+        assert "Understood: a diagnostic question about V-042" in messages
         assert "Looking up error code ERR_401" in messages
         assert "".join(d["text"] for e, d in events if e == "token") == "ERR_401 is a BMS timeout [e1]."
         done = dict(events)["done"]

@@ -24,6 +24,12 @@ from dataclasses import asdict
 from ops_copilot.rag.entity_resolution import resolve_vehicle_id
 from ops_copilot.rag.ingest import DOMAINS
 from ops_copilot.rag.retrieve import retrieve
+from ops_copilot.settings import get_schema_config
+
+
+def _known_models() -> set[str]:
+    column = get_schema_config()["tables"]["vehicles"]["columns"]["model_code"]
+    return {m.lower() for m in column.get("allowed_values", [])}
 
 
 async def rag_retrieval(query: str, domain: str, entity_id: str | None = None) -> dict:
@@ -38,8 +44,11 @@ async def rag_retrieval(query: str, domain: str, entity_id: str | None = None) -
     resolution = None
     boost_id = None
     if entity_id:
-        # Model codes ("SC-F50") are not vehicles; they boost as given.
-        if entity_id.upper().startswith("VIN"):
+        # Model names ("Volt 1 Gen 2") are not vehicles; they boost as
+        # given. Anything else is a vehicle id and is resolved first.
+        # Judged against the known models, not an id format, so the
+        # check survives a change of id scheme.
+        if entity_id.strip().lower() not in _known_models():
             r = await resolve_vehicle_id(entity_id)
             resolution = asdict(r)
             boost_id = r.value if r.status in ("exact", "fuzzy") else None

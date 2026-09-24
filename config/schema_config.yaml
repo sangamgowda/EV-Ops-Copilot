@@ -56,6 +56,7 @@ tables:
           - range_estimate
           - motor_temp
           - cell_health
+          - charge_power
       metric_value:
         type: double precision
         description: >
@@ -64,16 +65,21 @@ tables:
           the consumption of the trip just finished (one row per
           trip). payload is total load (rider, pillion, cargo), one
           row per trip. cell_health is battery state of health, one
-          row per day. The other metrics are sampled every few
+          row per day. charge_power is charger output in kW while
+          plugged in (drive_mode 'Charging'), four readings per
+          nightly session. The other metrics are sampled every few
           minutes while the vehicle is moving.
       unit:
         type: text
         description: Unit of metric_value.
-        allowed_values: ["A", "V", "kg", "kmph", "C", "pct", "km"]
+        allowed_values: ["A", "V", "kg", "kmph", "C", "pct", "km", "kW"]
       drive_mode:
         type: text
-        description: Drive mode active when the reading was taken.
-        allowed_values: ["eco", "city", "sport"]
+        description: >
+          Ride mode active when the reading was taken, lowest to
+          highest power. Sonic X exists only on the Volt 1 Ultra.
+          "Charging" marks charge_power readings; NULL for cell_health.
+        allowed_values: ["Eco X", "Eco", "Ride", "Air", "Sonic", "Sonic X", "Charging"]
 
   vehicles:
     description: >
@@ -83,10 +89,11 @@ tables:
     columns:
       vehicle_id:
         type: text
-        description: Vehicle identifier, e.g. "VIN-1042".
+        description: Vehicle identifier, e.g. "V-042" (V-001 to V-120).
       model_code:
         type: text
         description: Model this vehicle is. Joins to vehicle_baseline_specs.
+        allowed_values: ["Volt 1", "Volt 1 Gen 2", "Volt 1 Ultra"]
       manufactured_on:
         type: date
         description: Date of manufacture.
@@ -103,9 +110,10 @@ tables:
           Per-vehicle optional configuration. Keys vary by unit.
           Query with the JSONB operators, e.g. config->>'battery_pack'.
         json_keys:
-          battery_pack: Pack variant fitted, e.g. "3.7kWh" or "5kWh".
-          features: Object of optional feature flags.
-          firmware_version: Currently installed firmware, e.g. "2.6.0".
+          battery_pack: Total battery fitted, e.g. "3.7kWh", "5kWh", "6.4kWh".
+          features: Flags navigation, fast_charger, removable_pack (true/false).
+          firmware_version: Installed firmware, "3.1.4", "3.2.0" or "3.2.1".
+          firmware_updated_on: Date the current firmware was installed, or null.
           usage: '"private" or "fleet".'
 
   vehicle_baseline_specs:
@@ -119,10 +127,11 @@ tables:
       model_code:
         type: text
         description: Model these baselines apply to.
+        allowed_values: ["Volt 1", "Volt 1 Gen 2", "Volt 1 Ultra"]
       drive_mode:
         type: text
-        description: Drive mode the baseline is rated for.
-        allowed_values: ["eco", "city", "sport"]
+        description: Ride mode the baseline is rated for ("Charging" for charge_power).
+        allowed_values: ["Eco X", "Eco", "Ride", "Air", "Sonic", "Sonic X", "Charging"]
       metric_name:
         type: text
         description: Which metric this baseline is for.
@@ -131,7 +140,10 @@ tables:
         description: >
           Expected typical value in normal use. For metric_name =
           'payload' this is a TYPICAL load, not the limit — the limit
-          is rated_payload_kg.
+          is rated_payload_kg. For 'speed' it is the TYPICAL average
+          riding speed in that mode, NOT the mode's speed limit or the
+          model's top speed: those are in the owner manual (documents),
+          not in any table.
       tolerance_pct:
         type: double precision
         description: >
@@ -221,7 +233,9 @@ tables:
         type: text
         description: >
           Model sold. Set on every row, including sales not linked
-          to a tracked vehicle.
+          to a tracked vehicle. The Volt 1 Ultra went on sale in the
+          south on 2026-06-01 and in other regions on 2026-08-15.
+        allowed_values: ["Volt 1", "Volt 1 Gen 2", "Volt 1 Ultra"]
       channel:
         type: text
         allowed_values: ["showroom", "online", "fleet", "partner"]
@@ -258,7 +272,7 @@ tables:
         type: text
       doc_type:
         type: text
-        allowed_values: ["service_bulletin", "manual", "kb_article", "success_story", "policy"]
+        allowed_values: ["service_bulletin", "manual", "kb_article", "success_story", "policy", "blog_article"]
       domain:
         type: text
         allowed_values: ["diagnostic", "business"]

@@ -11,26 +11,31 @@ read from the trouble-code table in data/documents/manual_error_codes.md.
 
 What gets seeded:
 
-  vehicles            N vehicles across four model codes and several
-                      cities, private and fleet usage
-  baselines           nominal values per model, drive mode and metric
-  telemetry           trip-based readings every few minutes for D days
+  vehicles            N vehicles (V-001, V-002, ...) across the three
+                      Volt 1 models and several cities, private and
+                      fleet usage
+  baselines           nominal values per model, ride mode and metric
+  telemetry           trip-based readings every few minutes for D days,
+                      plus a nightly charging session
   planted scenarios   vehicles with a deliberate, explainable story:
                         overload       payload above rating, current
                                        draw up, cell health normal
-                        cell_wear      cell health falling, current
-                                       draw normal
-                        firmware       2.6.0 update raises sport-mode
-                                       motor temperature
-                        undocumented   current draw up on a model
-                                       with no service documents
+                        cell_wear      removable pack wearing: cell
+                                       health falling, current normal
+                        speed_cap      firmware 3.2.0 holds Sonic and
+                                       Sonic X to 45 km/h
+                        charger_fault  charger delivers under half its
+                                       rated power
+                        undocumented   current draw up for no reason
+                                       any document explains
   service_events      12 months of scheduled visits and complaints
-  sales               24 months, following the public monthly curve
+  sales               24 months, following the monthly curve; the
+                      Ultra launches in the south first
   error_codes         parsed from the service manual's code table
 
 Usage:
+  python scripts/seed_synthetic_data.py --vehicles 120 --days 90 --reset
   python scripts/seed_synthetic_data.py --vehicles 50 --days 30 --reset
-  python scripts/seed_synthetic_data.py --vehicles 300 --days 90 --reset
   python scripts/seed_synthetic_data.py --csv-dir data/processed --no-db
 """
 
@@ -58,10 +63,13 @@ ERROR_CODE_DOC = DOCS_DIR / "manual_error_codes.md"
 MANIFEST = ROOT / "data" / "seed_manifest.json"
 
 IST = timezone(timedelta(hours=5, minutes=30))
-MODES = ("eco", "city", "sport")
-FLEET_MODELS = ("SC-F50", "SC-F45", "SC-F50G1", "SC-C37")
+FLEET_MODELS = ("Volt 1", "Volt 1 Gen 2", "Volt 1 Ultra")
+# Readings taken while plugged in carry this in place of a ride mode,
+# so charging has a baseline row like everything else.
+CHARGING = "Charging"
 
 UNITS = {
+    "charge_power": "kW",
     "current_draw": "A",
     "pack_voltage": "V",
     "payload": "kg",
@@ -73,18 +81,30 @@ UNITS = {
     "cell_health": "pct",
 }
 
-# Vehicle numbers that carry a planted story. Picked so the README
-# example (VIN-1042) is one of them at the default fleet size.
+# Vehicle numbers that carry a planted story. V-042 is the README
+# example. With a smaller --vehicles, numbers wrap around (55 of 50 is
+# V-005), so the stories survive but land on different ids than
+# docs/DATA_GUIDE.md lists; the manifest always has the real ones.
 PLANTED = {
     "overload": [42, 7, 29],
     "cell_wear": [17, 36],
+    "speed_cap": [12, 55, 88],
+    "charger_fault": [64, 91],
     "undocumented": [23],
 }
-FIRMWARE_OLD, FIRMWARE_BAD, FIRMWARE_FIXED = "2.5.3", "2.6.0", "2.6.1"
+SCENARIO_MODEL = {
+    "cell_wear": "Volt 1",
+    "speed_cap": "Volt 1 Ultra",
+    "charger_fault": "Volt 1 Gen 2",
+    "undocumented": "Volt 1",
+}
+FIRMWARE_OLD, FIRMWARE_BAD, FIRMWARE_FIXED = "3.1.4", "3.2.0", "3.2.1"
+# Modes firmware 3.2.0 wrongly holds to the Eco X limit.
+CAPPED_MODES = ("Sonic", "Sonic X")
+STANDARD_CHARGER_KW = 0.75
 
 ISSUE_CODES = {
     "Real-world range well below claimed range": [None, None, "ERR_601"],
-    "Scooter surges forward briefly after throttle is released": ["ERR_202"],
     "Front brake feels weak; pads wearing quickly": ["ERR_501"],
     "Noise from front fork over bumps": [None],
     "Ride mode only changes after stopping and restarting": ["ERR_701", None],
@@ -92,10 +112,10 @@ ISSUE_CODES = {
     "Charging slower than expected": ["ERR_302", "ERR_301"],
     "Dashboard freezes or reboots": ["ERR_701"],
     "Rattle from body panels": [None],
+    "Removable battery hard to lock into its dock": ["ERR_405", None],
 }
 ISSUE_RESOLUTIONS = {
-    "Real-world range well below claimed range": "Checked tyre pressure and cell health; advised on riding mode",
-    "Scooter surges forward briefly after throttle is released": "Firmware updated to 2.6.1",
+    "Real-world range well below claimed range": "Checked tyre pressure and cell health; advised on ride mode",
     "Front brake feels weak; pads wearing quickly": "Front brake pads replaced",
     "Noise from front fork over bumps": "Fork bushes lubricated",
     "Ride mode only changes after stopping and restarting": "Explained mode-change behaviour; dashboard firmware updated",
@@ -103,14 +123,25 @@ ISSUE_RESOLUTIONS = {
     "Charging slower than expected": "Charger and socket tested; within spec",
     "Dashboard freezes or reboots": "Dashboard firmware updated",
     "Rattle from body panels": "Panel clips replaced",
+    "Removable battery hard to lock into its dock": "Dock latch cleaned and adjusted",
 }
+
+# How often each kind of rider uses each mode. A model's missing
+# modes (Sonic X outside the Ultra) are dropped when a rider is built.
+FLEET_MODE_WEIGHTS = {"Eco X": 0.10, "Eco": 0.25, "Ride": 0.45, "Air": 0.15, "Sonic": 0.05, "Sonic X": 0.0}
+PRIVATE_MODE_WEIGHTS = [
+    {"Eco X": 0.15, "Eco": 0.30, "Ride": 0.35, "Air": 0.15, "Sonic": 0.05, "Sonic X": 0.0},
+    {"Eco X": 0.05, "Eco": 0.15, "Ride": 0.40, "Air": 0.25, "Sonic": 0.10, "Sonic X": 0.05},
+    {"Eco X": 0.0, "Eco": 0.05, "Ride": 0.25, "Air": 0.30, "Sonic": 0.25, "Sonic X": 0.15},
+]
+MOTOR_TEMP_C = {"Eco X": 40.0, "Eco": 42.0, "Ride": 48.0, "Air": 54.0, "Sonic": 60.0, "Sonic X": 66.0}
 
 
 # ── reference data ───────────────────────────────────────────
 
 
 def load_reference() -> dict[str, Any]:
-    with open(REFERENCE) as f:
+    with open(REFERENCE, encoding="utf-8") as f:
         return yaml.safe_load(f)
 
 
@@ -158,15 +189,15 @@ def full_range_km(spec: dict[str, Any], mode: str, health: float = 97.0) -> floa
 
 
 def baseline_motor_temp(mode: str) -> float:
-    return {"eco": 43.0, "city": 50.0, "sport": 60.0}[mode]
+    return MOTOR_TEMP_C[mode]
 
 
-def build_baselines(models: dict[str, Any]) -> list[tuple]:
+def build_baselines(ref: dict[str, Any]) -> list[tuple]:
+    rated = ref["common"]["rated_payload_kg"]
     rows = []
     for code in FLEET_MODELS:
-        spec = models[code]
-        rated = spec["rated_payload_kg"]
-        for mode in MODES:
+        spec = ref["models"][code]
+        for mode in spec["modes"]:
             rows += [
                 (code, mode, "current_draw", round(baseline_current(spec, mode), 1), 10.0, rated),
                 (code, mode, "speed", float(spec["avg_speed_kmph"][mode]), 15.0, rated),
@@ -176,6 +207,7 @@ def build_baselines(models: dict[str, Any]) -> list[tuple]:
                 (code, mode, "cell_health", 97.0, 3.0, rated),
                 (code, mode, "payload", 95.0, 60.0, rated),
             ]
+        rows.append((code, CHARGING, "charge_power", STANDARD_CHARGER_KW, 10.0, rated))
     return rows
 
 
@@ -193,7 +225,7 @@ class Vehicle:
     manufactured_on: date
     firmware: str
     firmware_updated_on: Optional[date]
-    mode_weights: tuple[float, float, float]
+    mode_weights: dict[str, float]
     health_start: float
     scenario: Optional[str] = None
     onset: Optional[date] = None
@@ -206,7 +238,9 @@ class Vehicle:
 
 
 def vin(n: int, total: int) -> str:
-    return f"VIN-{1000 + ((n - 1) % total) + 1}"
+    # Short on purpose, with a dash: grounding reads "V-042" as a name,
+    # where a bare "V042" would have its digits checked as a claim.
+    return f"V-{((n - 1) % total) + 1:03d}"
 
 
 def weighted(rng: random.Random, items: dict[str, float]) -> str:
@@ -228,17 +262,13 @@ def build_vehicles(ref: dict[str, Any], n: int, start: date, end: date, rng: ran
         vid = vin(i, n)
         scenario = scenario_of.get(vid)
         if scenario == "overload":
-            model = "SC-F50" if vid == "VIN-1042" else rng.choice(["SC-F50", "SC-F45"])
-        elif scenario == "cell_wear":
-            model = "SC-F50G1"
-        elif scenario == "undocumented":
-            model = "SC-C37"
+            model = "Volt 1 Gen 2" if vid == "V-042" else rng.choice(["Volt 1", "Volt 1 Gen 2"])
+        elif scenario in SCENARIO_MODEL:
+            model = SCENARIO_MODEL[scenario]
         else:
             model = weighted(rng, {m: models[m]["fleet_share"] for m in FLEET_MODELS})
         spec = models[model]
 
-        zone = weighted(rng, {z: r["share"] for z, r in regions.items()})
-        city = rng.choice(regions[zone]["cities"])
         usage = "fleet" if (scenario == "overload" or rng.random() < 0.3) else "private"
 
         sold_from = date.fromisoformat(spec["sold_from"])
@@ -247,20 +277,25 @@ def build_vehicles(ref: dict[str, Any], n: int, start: date, end: date, rng: ran
         sold_on = sold_from + timedelta(days=rng.randrange(span))
         manufactured_on = sold_on - timedelta(days=rng.randint(12, 60))
 
-        firmware, fw_date = FIRMWARE_OLD, None
-        if model in ("SC-F50", "SC-F45"):
-            r = rng.random()
-            if r < 0.35:
-                firmware, fw_date = FIRMWARE_BAD, end - timedelta(days=rng.randint(8, 14))
-            elif r < 0.55:
-                firmware, fw_date = FIRMWARE_FIXED, end - timedelta(days=rng.randint(1, 5))
-        if scenario == "overload":
-            firmware, fw_date = FIRMWARE_OLD, None    # keep the story clean
+        zone = weighted(rng, {z: r["share"] for z, r in regions.items()})
+        elsewhere = spec.get("launched_elsewhere")
+        if elsewhere and sold_on < date.fromisoformat(elsewhere):
+            zone = "south"                    # only sold there before
+        city = rng.choice(regions[zone]["cities"])
 
-        if usage == "fleet":
-            mode_weights = (0.25, 0.60, 0.15)
-        else:
-            mode_weights = rng.choice([(0.5, 0.4, 0.1), (0.3, 0.5, 0.2), (0.15, 0.45, 0.4)])
+        # Firmware 3.2.0 reaches only the planted vehicles, so every
+        # vehicle on it tells the same story.
+        firmware, fw_date = FIRMWARE_OLD, None
+        if scenario == "speed_cap":
+            firmware, fw_date = FIRMWARE_BAD, end - timedelta(days=10)
+        elif scenario is None and model != "Volt 1" and rng.random() < 0.5:
+            firmware, fw_date = FIRMWARE_FIXED, end - timedelta(days=rng.randint(1, 5))
+
+        base = FLEET_MODE_WEIGHTS if usage == "fleet" else rng.choice(PRIVATE_MODE_WEIGHTS)
+        mode_weights = {m: base[m] for m in spec["modes"]}
+        if scenario == "speed_cap":
+            # Riders who use the fast modes, or the cap never shows.
+            mode_weights = {m: w for m, w in PRIVATE_MODE_WEIGHTS[2].items() if m in spec["modes"]}
 
         age_days = (end - sold_on).days
         health_start = 99.5 - age_days * rng.uniform(0.004, 0.008)
@@ -272,6 +307,10 @@ def build_vehicles(ref: dict[str, Any], n: int, start: date, end: date, rng: ran
             onset = end - timedelta(days=9)
         elif scenario == "cell_wear":
             onset = start
+        elif scenario == "speed_cap":
+            onset = fw_date
+        elif scenario == "charger_fault":
+            onset = end - timedelta(days=12)
 
         daily_km = 70 if usage == "fleet" else 28
         odometer = max(age_days - (end - start).days, 0) * daily_km * rng.uniform(0.7, 1.2)
@@ -286,11 +325,12 @@ def build_vehicles(ref: dict[str, Any], n: int, start: date, end: date, rng: ran
         v.config = {
             "battery_pack": f"{spec['battery_kwh']:g}kWh",
             "firmware_version": firmware,
+            "firmware_updated_on": fw_date.isoformat() if fw_date else None,
             "usage": usage,
             "features": {
-                "tft_dash": model != "SC-C37",
                 "navigation": rng.random() < 0.7,
-                "fast_charger": rng.random() < 0.3,
+                "fast_charger": scenario == "charger_fault" or rng.random() < 0.3,
+                "removable_pack": True,
             },
         }
         vehicles.append(v)
@@ -323,8 +363,10 @@ def telemetry_for(
 ) -> Iterable[tuple]:
     spec = ref["models"][v.model_code]
     zone_c = ref["regions"][v.zone]["ambient_c"]
-    rated = spec["rated_payload_kg"]
+    rated = ref["common"]["rated_payload_kg"]
     cap_wh = spec["battery_kwh"] * 1000 * 0.95
+    modes = list(v.mode_weights)
+    weights = list(v.mode_weights.values())
 
     for d in range(days):
         day = start + timedelta(days=d)
@@ -336,7 +378,7 @@ def telemetry_for(
         hours = sorted(rng.sample(range(7, 22), trips))
         for hour in hours:
             t = datetime.combine(day, time(hour, rng.randrange(0, 60, 5)), IST)
-            mode = rng.choices(MODES, weights=v.mode_weights)[0]
+            mode = rng.choices(modes, weights=weights)[0]
             minutes = rng.randint(20, 60) if v.usage == "fleet" else rng.randint(10, 40)
 
             if is_active(v, "overload", day):
@@ -345,23 +387,26 @@ def telemetry_for(
                 payload = min(rng.gauss(92, 18), rated - 5)
             excess = max(0.0, (payload - rated) / rated)
             load_factor = 1 + 1.35 * excess
-            fw_bad = v.firmware == FIRMWARE_BAD and v.firmware_updated_on and day >= v.firmware_updated_on
             fault_factor = 1.30 if is_active(v, "undocumented", day) else 1.0
-            fw_factor = 1.06 if (fw_bad and mode == "sport") else 1.0
+            capped = is_active(v, "speed_cap", day) and mode in CAPPED_MODES
             wear_sag = max(0.0, 97 - health) * 0.25        # volts lost under load
 
             yield (v.vehicle_id, t, "payload", round(payload, 1), mode)
 
-            wh_per_km = spec["wh_per_km"][mode] * load_factor * fault_factor * fw_factor
+            wh_per_km = spec["wh_per_km"][mode] * load_factor * fault_factor
+            mode_cap = min(ref["ride_modes"][mode]["speed_cap_kmph"], spec["top_speed_kmph"])
             for step in range(0, minutes, interval):
                 ts = t + timedelta(minutes=step)
                 amb = ambient(zone_c, ts, rng)
-                speed = min(max(rng.gauss(spec["avg_speed_kmph"][mode], 6), 5), spec["top_speed_kmph"])
+                speed = min(max(rng.gauss(spec["avg_speed_kmph"][mode], 6), 5), mode_cap)
+                if capped:
+                    # 3.2.0 applies the Eco X limit: the rider holds the
+                    # throttle open and the scooter sits just under 45.
+                    speed = min(rng.gauss(42, 2), ref["ride_modes"]["Eco X"]["speed_cap_kmph"])
                 current = wh_per_km * speed / spec["pack_nominal_v"] * rng.gauss(1, 0.06)
                 voltage = spec["pack_nominal_v"] * (0.93 + 0.1 * soc / 100) - wear_sag * rng.uniform(0.8, 1.2)
                 motor_t = (
-                    amb + (baseline_motor_temp(mode) - 28)
-                    + 10 * excess + (12 if (fw_bad and mode == "sport") else 0)
+                    amb + (baseline_motor_temp(mode) - 28) + 10 * excess
                     + rng.gauss(0, 1.5)
                 )
                 km = speed * interval / 60
@@ -383,6 +428,15 @@ def telemetry_for(
             yield (v.vehicle_id, end_ts, "range_estimate", round(projected, 1), mode)
             if soc < 25:
                 soc = rng.uniform(85, 100)           # midday top-up
+
+        # Nightly charge: power readings every 30 minutes for the first
+        # two hours. A faulty charger delivers under half its rating,
+        # so the same top-up takes more than twice as long.
+        power = 0.34 if is_active(v, "charger_fault", day) else STANDARD_CHARGER_KW
+        plug_in = datetime.combine(day, time(22, rng.randrange(0, 60, 5)), IST)
+        for k in range(4):
+            yield (v.vehicle_id, plug_in + timedelta(minutes=30 * k), "charge_power",
+                   round(max(rng.gauss(power, 0.03), 0.05), 3), CHARGING)
 
 
 # ── real-world flaws ─────────────────────────────────────────
@@ -479,24 +533,30 @@ def service_events_for(v: Vehicle, ref: dict[str, Any], end: date, rng: random.R
     elif v.scenario == "undocumented":
         rows.append((v.vehicle_id, end - timedelta(days=2), "complaint",
                      "Battery drains faster than usual", None, None))
-
-    if v.firmware == FIRMWARE_BAD and v.firmware_updated_on and rng.random() < 0.5:
-        when = v.firmware_updated_on + timedelta(days=rng.randint(1, 6))
-        if when < end:
-            rows.append((v.vehicle_id, when, "complaint",
-                         "Scooter surges forward briefly after throttle is released", "ERR_202", None))
+    elif v.scenario == "speed_cap" and v.onset:
+        rows.append((v.vehicle_id, v.onset + timedelta(days=rng.randint(1, 3)), "complaint",
+                     "Scooter will not go above 45 km/h in Sonic mode", "ERR_205", None))
+    elif v.scenario == "charger_fault" and v.onset:
+        rows.append((v.vehicle_id, v.onset + timedelta(days=4), "complaint",
+                     "Charging takes much longer than it used to", "ERR_303", None))
     return rows
 
 
 # ── sales ────────────────────────────────────────────────────
 
 
-def model_mix(day: date) -> dict[str, float]:
-    if day < date(2025, 11, 1):
-        return {"SC-F50G1": 0.62, "SC-C37": 0.38}
-    if day < date(2026, 1, 1):
-        return {"SC-F50G1": 0.25, "SC-F50": 0.35, "SC-F45": 0.20, "SC-C37": 0.20}
-    return {"SC-F50": 0.50, "SC-F45": 0.30, "SC-C37": 0.20}
+def ultra_on_sale(ref: dict[str, Any], day: date, zone: str) -> bool:
+    ultra = ref["models"]["Volt 1 Ultra"]
+    first = date.fromisoformat(ultra["sold_from"] if zone == "south" else ultra["launched_elsewhere"])
+    return day >= first
+
+
+def model_mix(ref: dict[str, Any], day: date, zone: str) -> dict[str, float]:
+    if day < date.fromisoformat(ref["models"]["Volt 1 Gen 2"]["sold_from"]):
+        return {"Volt 1": 1.0}
+    if not ultra_on_sale(ref, day, zone):
+        return {"Volt 1": 0.45, "Volt 1 Gen 2": 0.55}
+    return {"Volt 1": 0.28, "Volt 1 Gen 2": 0.42, "Volt 1 Ultra": 0.30}
 
 
 def zone_mix(ref: dict[str, Any], day: date) -> dict[str, float]:
@@ -506,6 +566,10 @@ def zone_mix(ref: dict[str, Any], day: date) -> dict[str, float]:
     growth = 1 + months * 0.02
     for z in ("west", "north", "east"):
         shares[z] *= growth
+    # The Ultra launched in the south first: demand there jumps until
+    # the other regions get it.
+    if ultra_on_sale(ref, day, "south") and not ultra_on_sale(ref, day, "west"):
+        shares["south"] *= 1.45
     return shares
 
 
@@ -519,8 +583,8 @@ def sale_row(
     vehicle: Optional[Vehicle] = None,
 ) -> tuple:
     models = ref["models"]
-    model = vehicle.model_code if vehicle else weighted(rng, model_mix(day))
     zone = vehicle.zone if vehicle else weighted(rng, zone_mix(ref, day))
+    model = vehicle.model_code if vehicle else weighted(rng, model_mix(ref, day, zone))
     city = vehicle.city if vehicle else rng.choice(ref["regions"][zone]["cities"])
 
     channels = dict(CHANNELS)
@@ -651,7 +715,8 @@ def measure(conn: Any, vid: str, since: date) -> dict[str, Any]:
           ON b.model_code = v.model_code AND b.drive_mode = t.drive_mode
          AND b.metric_name = t.metric_name
         WHERE t.vehicle_id = %s AND t.recorded_at >= %s
-          AND t.metric_name IN ('current_draw', 'payload', 'range_estimate', 'motor_temp')
+          AND t.metric_name IN ('current_draw', 'payload', 'range_estimate', 'motor_temp',
+                                'speed', 'charge_power')
         GROUP BY t.metric_name
     """
     out: dict[str, Any] = {}
@@ -679,16 +744,29 @@ EXPECTED = {
         "error_codes": ["ERR_601"],
     },
     "cell_wear": {
-        "finding": "Cell health falling ~2% per week; current draw near baseline",
-        "cause": "Cell imbalance / capacity loss",
-        "documents": ["SB-121_cell_imbalance"],
+        "finding": "Cell health falling ~0.6% per week; current draw near baseline",
+        "cause": "Removable pack capacity loss / cell imbalance",
+        "documents": ["SB-121_removable_pack_cell_wear"],
         "error_codes": ["ERR_402", "ERR_403"],
+    },
+    "speed_cap": {
+        "finding": "Speed in Sonic / Sonic X held near 42 km/h (baseline 62 / 70) since the 3.2.0 update",
+        "cause": "Firmware 3.2.0 applies the Eco X speed limit to Sonic and Sonic X",
+        "documents": ["SB-135_firmware_sonic_speed_cap"],
+        "error_codes": ["ERR_205"],
+    },
+    "charger_fault": {
+        "finding": "Charging power ~0.34 kW against a 0.75 kW baseline; riding metrics normal",
+        "cause": "Fast charger delivering under half its rated power",
+        "documents": ["SB-140_charger_low_power"],
+        "error_codes": ["ERR_303"],
     },
     "undocumented": {
         "finding": "Current draw ~30% above baseline; payload and cell health normal",
         "cause": None,
         "documents": [],
-        "note": "No service documents cover this model; the correct answer is partial.",
+        "note": "No document explains high current with normal payload and cell health; "
+                "the correct answer is partial.",
     },
 }
 
@@ -709,16 +787,6 @@ def write_manifest(conn: Any, vehicles: list[Vehicle], args: argparse.Namespace,
             entry["measured_since_onset"] = measure(conn, v.vehicle_id, v.onset or start)
         scenarios.append(entry)
 
-    fw = [v.vehicle_id for v in vehicles if v.firmware == FIRMWARE_BAD]
-    scenarios.append({
-        "scenario": "firmware",
-        "vehicle_ids": fw,
-        "finding": "Motor temperature ~12 C above baseline in sport mode after the 2.6.0 update",
-        "cause": "Firmware 2.6.0 throttle map",
-        "documents": ["SB-127_firmware_throttle_surge"],
-        "error_codes": ["ERR_202"],
-    })
-
     MANIFEST.write_text(json.dumps({
         "generated_with": {
             "vehicles": args.vehicles, "days": args.days, "seed": args.seed,
@@ -735,8 +803,8 @@ def write_manifest(conn: Any, vehicles: list[Vehicle], args: argparse.Namespace,
 
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    p.add_argument("--vehicles", type=int, default=50)
-    p.add_argument("--days", type=int, default=30)
+    p.add_argument("--vehicles", type=int, default=120)
+    p.add_argument("--days", type=int, default=90)
     p.add_argument("--end-date", type=date.fromisoformat, default=date.today(),
                    help="last day of telemetry (default: today)")
     p.add_argument("--interval-minutes", type=int, default=5,
@@ -778,7 +846,7 @@ def main() -> None:
     counts["vehicle_baseline_specs"] = sink.write(
         "vehicle_baseline_specs",
         ["model_code", "drive_mode", "metric_name", "nominal_value", "tolerance_pct", "rated_payload_kg"],
-        build_baselines(ref["models"]),
+        build_baselines(ref),
     )
 
     vehicles = build_vehicles(ref, args.vehicles, start, end, rng)
@@ -813,7 +881,7 @@ def main() -> None:
             for vid, ts, metric, value, mode in readings
         ]
         telemetry_rows += sink.write("vehicle_telemetry", tele_cols, batch)
-        print(f"  {v.vehicle_id} {v.model_code:<9} {v.scenario or '':<12} {len(batch):>7} readings", flush=True)
+        print(f"  {v.vehicle_id} {v.model_code:<13} {v.scenario or '':<14} {len(batch):>7} readings", flush=True)
     counts["vehicle_telemetry"] = telemetry_rows
 
     if conn is not None:
