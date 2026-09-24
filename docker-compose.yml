@@ -6,7 +6,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-opscopilot}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_me_locally}
       POSTGRES_DB: ${POSTGRES_DB:-opscopilot}
-      # Read by migrations/002b_readonly_password.sh on first boot.
+      # Read by migrations/004_readonly_password.sh on first boot.
       DB_READONLY_PASSWORD: ${DB_READONLY_PASSWORD:?set DB_READONLY_PASSWORD in .env}
     ports:
       - "5432:5432"

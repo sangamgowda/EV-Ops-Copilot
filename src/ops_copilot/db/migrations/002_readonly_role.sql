@@ -8,7 +8,7 @@
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'copilot_readonly') THEN
-        -- No password here: 002b_readonly_password.sh sets it from
+        -- No password here: 004_readonly_password.sh sets it from
         -- DB_READONLY_PASSWORD, so .env is the only place it lives.
         CREATE ROLE copilot_readonly LOGIN;
     END IF;
