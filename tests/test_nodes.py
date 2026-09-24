@@ -13,7 +13,7 @@ from ops_copilot.agent.nodes.groundedness import (
 from ops_copilot.agent.nodes.observe import compare
 from ops_copilot.agent.nodes.plan import dedupe
 from ops_copilot.agent.nodes.reflect import decide
-from ops_copilot.agent.nodes.synthesize import AnswerStreamer
+from ops_copilot.agent.nodes.synthesize import citations_from_tags, derive_confidence
 from ops_copilot.agent.state import (
     Citation,
     Evidence,
@@ -77,13 +77,43 @@ class TestGrounding:
         assert unsupported_causal_claims(text, [], []) == []
 
 
-class TestAnswerStreamer:
-    def test_decodes_across_arbitrary_chunk_boundaries(self):
-        payload = '{"answer": "Line one\\nsays \\"hi\\" \\u00e9 done", "citations": []}'
-        for size in (1, 2, 3, 5, 11):
-            s = AnswerStreamer()
-            out = "".join(s.feed(payload[i:i + size]) for i in range(0, len(payload), size))
-            assert out == 'Line one\nsays "hi" é done', size
+class TestSynthesisStructure:
+    """Option A: the model writes prose; citations, confidence and gaps
+    are built in code from the inline tags and the loop's own state."""
+
+    def test_citations_come_from_inline_tags_per_sentence(self):
+        text = ("Current draw is 36.4% above baseline [e1]. Payload was 190 kg [e2][e3].\n"
+                "Battery health is normal [e4].")
+        cites = citations_from_tags(text)
+        assert [(c.evidence_id, c.claim) for c in cites] == [
+            ("e1", "Current draw is 36.4% above baseline ."),
+            ("e2", "Payload was 190 kg ."),
+            ("e3", "Payload was 190 kg ."),
+            ("e4", "Battery health is normal ."),
+        ]
+
+    def test_untagged_text_has_no_citations(self):
+        assert citations_from_tags("Nothing cited here.") == []
+
+    def _state(self, **kw):
+        state = {"evidence": [ev(1, "a"), ev(2, "b"),
+                              ev(3, "none", status=EvidenceStatus.EMPTY)]}
+        state.update(kw)
+        return state
+
+    def test_high_needs_complete_and_two_usable_sources(self):
+        cites = [Citation(claim="x", evidence_id="e1"), Citation(claim="y", evidence_id="e2")]
+        assert derive_confidence(self._state(stop_reason="complete"), cites) == "high"
+
+    def test_medium_when_support_is_thin(self):
+        cites = [Citation(claim="x", evidence_id="e1")]
+        assert derive_confidence(self._state(stop_reason="complete"), cites) == "medium"
+
+    def test_low_when_partial_or_citing_only_empty_results(self):
+        cites = [Citation(claim="x", evidence_id="e1"), Citation(claim="y", evidence_id="e2")]
+        assert derive_confidence(self._state(stop_reason="exhausted", partial=True), cites) == "low"
+        assert derive_confidence(self._state(stop_reason="complete"),
+                                 [Citation(claim="z", evidence_id="e3")]) == "low"
 
 
 class TestReflectDecision:

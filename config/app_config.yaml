@@ -36,6 +36,12 @@ agent:
   # Used when a comparison row carries no tolerance of its own.
   default_tolerance_pct: 10.0
 
+api:
+  # Ceiling on one turn, loop + answer. A runaway turn otherwise holds a
+  # connection indefinitely. On the ceiling the turn stops and answers
+  # from the evidence gathered so far, marked partial.
+  turn_timeout_seconds: 45
+
 llm:
   # Which tier each node runs on. Router and Reflect are
   # classification under a fixed schema — they do not need the

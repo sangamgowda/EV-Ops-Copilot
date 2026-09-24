@@ -11,10 +11,9 @@ from __future__ import annotations
 import functools
 import hashlib
 from pathlib import Path
-from typing import Any, Literal, Optional
+from typing import Any, Literal, cast
 
 import yaml
-from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -64,6 +63,13 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     api_host: str = "0.0.0.0"
     api_port: int = 8000
+    # Browser origins allowed to call the API, comma-separated. Always an
+    # explicit list, never "*": the chat stream carries operational data.
+    cors_origins: str = "http://localhost:3000,http://localhost:5173"
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
 
     @property
     def tracing_configured(self) -> bool:
@@ -82,15 +88,17 @@ def get_settings() -> Settings:
 @functools.lru_cache
 def get_config() -> dict[str, Any]:
     """Runtime thresholds from config/app_config.yaml."""
-    with open(CONFIG_DIR / "app_config.yaml") as f:
-        return yaml.safe_load(f)
+    # Explicit UTF-8: the Windows default codec would mangle (or fail on)
+    # any non-ASCII character in the file.
+    with open(CONFIG_DIR / "app_config.yaml", encoding="utf-8") as f:
+        return cast(dict[str, Any], yaml.safe_load(f))
 
 
 @functools.lru_cache
 def get_schema_config() -> dict[str, Any]:
     """Schema grounding from config/schema_config.yaml."""
-    with open(CONFIG_DIR / "schema_config.yaml") as f:
-        return yaml.safe_load(f)
+    with open(CONFIG_DIR / "schema_config.yaml", encoding="utf-8") as f:
+        return cast(dict[str, Any], yaml.safe_load(f))
 
 
 @functools.lru_cache

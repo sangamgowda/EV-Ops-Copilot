@@ -67,10 +67,10 @@ class FakeMCP:
         return {"turn_id": turn_id, "tool": name, "result": self.handler(name, args)}
 
 
-def answer(text: str, cites: list[str], confidence: str = "high") -> str:
-    return json.dumps({"answer": text,
-                       "citations": [{"claim": text[:40], "evidence_id": c} for c in cites],
-                       "confidence": confidence, "gaps": []})
+def answer(text: str, cites: list[str] | None = None, confidence: str | None = None) -> str:
+    """Synthesize writes plain prose now; citations and confidence are
+    derived in code from the inline tags, so only the text matters."""
+    return text
 
 
 @pytest.fixture

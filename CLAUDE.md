@@ -178,7 +178,13 @@ in the second list.
 ## Conventions
 
 - Type hints everywhere; `from __future__ import annotations` at top
-- Pydantic for every structured LLM output — never parse free text
+- Pydantic for every structured LLM output — never parse free text.
+  One deliberate exception: Synthesize streams plain prose, because the
+  provider delivers JSON-mode output in a single piece and a JSON answer
+  cannot stream. Its structure is built in code — citations from the
+  inline `[eN]` tags (checked by grounding tier 1), confidence from how
+  the loop ended, gaps from Reflect — and validated as `SynthesisOutput`.
+  Only the tags are read; nothing is interpreted from the prose.
 - No secrets in code; everything through `settings.py`
 - Every threshold in `config/app_config.yaml`, never inline
 - Every prompt in `config/prompts/*.md`, hashed into traces

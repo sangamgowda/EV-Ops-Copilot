@@ -238,11 +238,27 @@ uvicorn ops_copilot.main:app --reload
 
 | Endpoint | What it does |
 |---|---|
-| `POST /chat` | ask a question |
-| `POST /ingest` | add a document |
-| `POST /eval` | run the sample questions and report quality |
-| `POST /feedback` | rate an answer |
-| `GET /health` | check the service is running |
+| `POST /chat` | ask a question; the answer streams back as it is written |
+| `POST /ingest` | add a document (markdown, text or PDF) |
+| `POST /eval` | run the sample questions and report quality *(arrives with the evaluation phase)* |
+| `POST /feedback` | rate an answer, using the `turn_id` from `/chat` |
+| `GET /health` | check the service and each thing it depends on |
+
+`/chat` streams [Server-Sent Events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events):
+
+| Event | Carries |
+|---|---|
+| `progress` | one plain sentence per step: "Checking current_draw and payload against normal values" |
+| `token` | the next piece of the answer |
+| `reset` | discard the answer shown so far; a corrected one follows |
+| `done` | the answer, citations, confidence, gaps, evidence and the `turn_id` |
+| `error` | the turn failed, and why |
+
+Send `"stream": false` for a single JSON reply instead. A turn is capped
+at 45 seconds (`config/app_config.yaml`); at the cap it answers from what
+it found so far, marked partial. Behind a reverse proxy, streaming needs
+buffering off (for nginx, `proxy_buffering off;` — the API also sends
+`X-Accel-Buffering: no`).
 
 ---
 
