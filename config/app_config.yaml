@@ -98,6 +98,14 @@ chunking:
   emit_row_chunks_for_lookup_tables: true
   prepend_context_header: true
 
+db:
+  owner_pool_size: 5
+  owner_max_overflow: 5
+  # Small on purpose: the agent must never be able to exhaust
+  # connections the rest of the system needs.
+  readonly_pool_size: 3
+  readonly_max_overflow: 0
+
 sql_validation:
   max_joins: 3
   max_subquery_depth: 2

@@ -9,7 +9,10 @@ services:
       # Read by migrations/004_readonly_password.sh on first boot.
       DB_READONLY_PASSWORD: ${DB_READONLY_PASSWORD:?set DB_READONLY_PASSWORD in .env}
     ports:
-      - "5432:5432"
+      # Host side is 5433, not 5432: a PostgreSQL installed directly on
+      # the host commonly owns 5432, and host tools would silently reach
+      # that one instead. Containers still use postgres:5432.
+      - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       # Migrations run in filename order on first boot.
