@@ -19,3 +19,6 @@ tests/
 .cache/
 data/
 evaluation_runs/
+# UI: dependencies are installed and the bundle built inside the image.
+ui/node_modules/
+ui/dist/

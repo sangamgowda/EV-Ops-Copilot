@@ -54,3 +54,10 @@ Thumbs.db
 # Logs
 *.log
 logs/
+
+# UI
+ui/node_modules/
+ui/dist/
+
+# Scratch request bodies for curl
+question.json

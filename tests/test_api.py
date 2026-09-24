@@ -193,3 +193,32 @@ class TestTurnCeilingAndRecording:
         await turn_mod.run_turn("why?", "s", turn_id="t2")
         assert [c[0] for c in recorded] == ["start", "end"]
         assert recorded[0][1]["turn_id"] == "t2"
+
+
+class TestLapStory:
+    def test_done_payload_tells_each_lap_and_where_each_fact_came_from(self):
+        state = new_state("q", "s", "t")
+        state.update(
+            iteration=2, answer="x", stop_reason="complete",
+            lap_log=[
+                {"lap": 1, "kind": "plan", "reasoning": "need readings",
+                 "tools": [{"tool": "structured_query_tool", "args": {"sql": "SELECT 1"}}]},
+                {"lap": 1, "kind": "reflect", "decision": "continue", "missing": ["alternative"],
+                 "next_question": "cell health?"},
+                {"lap": 2, "kind": "plan", "reasoning": "check battery", "tools": []},
+                {"lap": 2, "kind": "reflect", "decision": "complete", "missing": [],
+                 "next_question": None},
+            ],
+            evidence=[Evidence(id="e1", tool="structured_query_tool", summary="a", iteration=1,
+                               tool_args={"sql": "SELECT 1"}),
+                      Evidence(id="e2", tool="rag_retrieval_tool", summary="b", iteration=2,
+                               tool_args={"query": "overload"}, source_doc="SB-114",
+                               rerank_score=0.91)],
+        )
+        body = routes_chat.to_response(state).model_dump()
+        assert [(lap["lap"], lap["decision"], lap["found"]) for lap in body["laps"]] == [
+            (1, "continue", ["e1"]), (2, "complete", ["e2"])]
+        assert body["laps"][0]["next_question"] == "cell health?"
+        e1, e2 = body["evidence"]
+        assert e1["sql"] == "SELECT 1" and e1["lap"] == 1
+        assert (e2["query"], e2["source_doc"], e2["score"]) == ("overload", "SB-114", 0.91)

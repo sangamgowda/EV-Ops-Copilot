@@ -25,17 +25,18 @@ from __future__ import annotations
 import asyncio
 import logging
 import sys
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
 from ops_copilot.api import routes_chat, routes_eval, routes_feedback, routes_ingest
 from ops_copilot.db.engine import dispose_all, owner_engine
 from ops_copilot.mcp_client.client import get_client
-from ops_copilot.settings import get_settings
+from ops_copilot.settings import ROOT, get_settings
 
 log = logging.getLogger("ops_copilot")
 
@@ -46,7 +47,7 @@ if sys.platform == "win32":
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     logging.basicConfig(level=get_settings().log_level,
                         format="%(asctime)s %(levelname)s %(name)s %(message)s")
     if sys.platform == "win32" and get_settings().mcp_transport == "stdio":
@@ -87,6 +88,19 @@ app.include_router(routes_feedback.router, tags=["feedback"])
 app.include_router(routes_eval.router, tags=["eval"])
 
 
+def _mount_ui() -> None:
+    """Serve the built UI (ui/dist) at /, when it exists.
+
+    Mounted after every API route, so /chat, /health and the rest always
+    win. In production the Docker build puts the UI here and browser and
+    API share one origin; in development the Vite server on :5173
+    serves the UI instead and this directory is simply absent.
+    """
+    dist = ROOT / "ui" / "dist"
+    if dist.is_dir():
+        app.mount("/", StaticFiles(directory=dist, html=True), name="ui")
+
+
 @app.get("/health")
 async def health() -> dict:
     s = get_settings()
@@ -104,3 +118,6 @@ async def health() -> dict:
         "llm_configured": bool(s.groq_api_key),
         "tracing": s.tracing_configured,
     }
+
+
+_mount_ui()

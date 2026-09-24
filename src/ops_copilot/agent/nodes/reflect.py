@@ -91,7 +91,10 @@ def _fallback(state: AgentState, exc: Exception) -> dict:
     # what exists". Partial, because nobody judged the evidence complete.
     return {"stop_reason": StopReason.EXHAUSTED.value, "partial": True,
             "open_gaps": state.get("open_gaps") or ["evidence review failed"],
-            "next_question": None}
+            "next_question": None,
+            "lap_log": [{"lap": state.get("iteration", 1), "kind": "reflect",
+                         "decision": StopReason.EXHAUSTED.value,
+                         "missing": ["evidence review failed"], "next_question": None}]}
 
 @traced("reflect")
 @guarded("reflect", _fallback)
@@ -116,6 +119,10 @@ async def reflect_node(state: AgentState, config: Any = None) -> dict:
                   "llm_calls": state.get("llm_calls", 0) + 1,
                   "prompt_versions": {**state.get("prompt_versions", {}), "reflect": version}}
 
+    result["lap_log"] = [{"lap": iteration, "kind": "reflect",
+                          "decision": result["stop_reason"] or "continue",
+                          "missing": result.get("open_gaps", []),
+                          "next_question": result.get("next_question")}]
     await emit(config, "reflect", {"iteration": iteration, "stop_reason": result["stop_reason"],
                                    "missing": result.get("open_gaps", []),
                                    "next_question": result.get("next_question")})

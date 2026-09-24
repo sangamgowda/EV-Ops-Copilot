@@ -20,7 +20,20 @@ RUN pip install --upgrade pip \
       -r requirements.txt
 
 
-# ── Stage 2: runtime ─────────────────────────────────────────
+# ── Stage 2: build the UI ────────────────────────────────────
+# npm ci installs exactly what package-lock.json pins, so the UI
+# builds the same way every time — no surprise upgrade the day
+# before a demo. Only the static output is carried forward.
+FROM node:22-slim AS ui
+
+WORKDIR /ui
+COPY ui/package.json ui/package-lock.json ./
+RUN npm ci --no-audit --no-fund
+COPY ui/ ./
+RUN npm run build
+
+
+# ── Stage 3: runtime ─────────────────────────────────────────
 FROM python:3.11-slim AS runtime
 
 ENV PYTHONUNBUFFERED=1 \
@@ -46,6 +59,8 @@ RUN pip install --no-index --find-links=/wheels -r requirements.txt \
 COPY --chown=copilot:copilot src/ ./src/
 COPY --chown=copilot:copilot config/ ./config/
 COPY --chown=copilot:copilot scripts/ ./scripts/
+# The built UI; the API serves it at / (same origin, no CORS needed).
+COPY --from=ui --chown=copilot:copilot /ui/dist ./ui/dist
 
 RUN mkdir -p /app/.cache/huggingface && chown -R copilot:copilot /app/.cache
 

@@ -38,7 +38,7 @@ from sse_starlette.sse import EventSourceResponse
 from ops_copilot.agent.state import AgentState
 from ops_copilot.agent.turn import run_turn
 from ops_copilot.api.progress import to_progress
-from ops_copilot.api.schemas import ChatRequest, ChatResponse, EvidenceView
+from ops_copilot.api.schemas import ChatRequest, ChatResponse, EvidenceView, LapView
 from ops_copilot.llm.client import LLMNotConfigured
 
 log = logging.getLogger(__name__)
@@ -47,6 +47,23 @@ router = APIRouter()
 # Turns outlive a disconnected client; the event loop holds only weak
 # references to tasks, so these keep them alive until they finish.
 _background: set[asyncio.Task[Any]] = set()
+
+
+def _laps(state: AgentState) -> list[LapView]:
+    laps: dict[int, LapView] = {}
+    for entry in state.get("lap_log", []):
+        lap = laps.setdefault(entry["lap"], LapView(lap=entry["lap"]))
+        if entry["kind"] == "plan":
+            lap.reasoning = entry.get("reasoning")
+            lap.tools = entry.get("tools", [])
+        else:
+            lap.decision = entry.get("decision")
+            lap.missing = entry.get("missing", [])
+            lap.next_question = entry.get("next_question")
+    for e in state.get("evidence", []):
+        if e.iteration in laps:
+            laps[e.iteration].found.append(e.id)
+    return [laps[k] for k in sorted(laps)]
 
 
 def to_response(state: AgentState) -> ChatResponse:
@@ -60,7 +77,11 @@ def to_response(state: AgentState) -> ChatResponse:
         stop_reason=state.get("stop_reason"), partial=state.get("partial", False),
         grounded=None if g is None else g.passed,
         evidence=[EvidenceView(id=e.id, tool=e.tool, status=e.status.value, summary=e.summary,
-                               source_doc=e.source_doc) for e in state.get("evidence", [])],
+                               lap=e.iteration, source_doc=e.source_doc,
+                               sql=e.tool_args.get("sql"), query=e.tool_args.get("query"),
+                               score=e.rerank_score)
+                  for e in state.get("evidence", [])],
+        laps=_laps(state),
     )
 
 

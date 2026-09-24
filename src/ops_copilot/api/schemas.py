@@ -20,11 +20,28 @@ class ChatRequest(BaseModel):
 
 
 class EvidenceView(BaseModel):
+    """One piece of evidence, with enough to show where it came from:
+    the SQL that ran, or the search query and the document it matched."""
     id: str
     tool: str
     status: str
     summary: str
+    lap: int = 0
     source_doc: str | None = None
+    sql: str | None = None
+    query: str | None = None
+    score: float | None = None
+
+
+class LapView(BaseModel):
+    """One lap of the loop: what it decided, found and concluded."""
+    lap: int
+    reasoning: str | None = None
+    tools: list[dict] = Field(default_factory=list)
+    found: list[str] = Field(default_factory=list)       # evidence ids
+    decision: str | None = None                          # continue | complete | exhausted | ...
+    missing: list[str] = Field(default_factory=list)
+    next_question: str | None = None
 
 
 class ChatResponse(BaseModel):
@@ -39,6 +56,7 @@ class ChatResponse(BaseModel):
     partial: bool = False
     grounded: bool | None = None
     evidence: list[EvidenceView] = Field(default_factory=list)
+    laps: list[LapView] = Field(default_factory=list)
 
 
 class FeedbackRequest(BaseModel):

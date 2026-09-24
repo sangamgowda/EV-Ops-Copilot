@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from sqlalchemy import insert, select
+from sqlalchemy import insert, select, update
 
 from ops_copilot.db.engine import owner_engine
 from ops_copilot.db.models import conversation_turns, flagged_interactions
@@ -30,15 +30,31 @@ class UnknownTurnError(LookupError):
 
 async def record(turn_id: str, rating: Rating, category: str | None = None,
                  comment: str | None = None) -> int:
+    """One explicit rating per turn. A second call UPDATES it — a user who
+    clicks thumbs-down and then adds a comment, or changes their mind,
+    produces one row, not two. A later comment never erases an earlier one
+    by being absent."""
+    f = flagged_interactions
     async with owner_engine().begin() as conn:
         exists = (await conn.execute(
             select(conversation_turns.c.turn_id).where(conversation_turns.c.turn_id == turn_id)
         )).first()
         if exists is None:
             raise UnknownTurnError(turn_id)
+        current = (await conn.execute(
+            select(f.c.id).where(f.c.turn_id == turn_id, f.c.rating.in_(("up", "down")))
+            .order_by(f.c.id.desc()).limit(1)
+        )).scalar()
+        if current is not None and rating in ("up", "down"):
+            values: dict[str, str] = {"rating": rating}
+            if category is not None:
+                values["category"] = category
+            if comment is not None:
+                values["comment"] = comment
+            await conn.execute(update(f).where(f.c.id == current).values(**values))
+            return int(current)
         row_id = (await conn.execute(
-            insert(flagged_interactions)
-            .values(turn_id=turn_id, rating=rating, category=category, comment=comment)
-            .returning(flagged_interactions.c.id)
+            insert(f).values(turn_id=turn_id, rating=rating, category=category, comment=comment)
+            .returning(f.c.id)
         )).scalar_one()
     return int(row_id)

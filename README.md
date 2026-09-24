@@ -234,6 +234,26 @@ uvicorn ops_copilot.main:app --reload
 
 ---
 
+## Using the app
+
+Open **http://localhost:8000** once the containers are up. Type a
+question, or click one of the examples.
+
+- While it works, a line shows what it is doing ("Checking current_draw
+  against normal values…"), then the answer appears as it is written.
+- Small chips like **e1** mark where each fact came from — click one to
+  see the database query that ran or the document passage it used.
+- An answer with an **amber edge** is partial: it lists what it could not
+  confirm. Treat it as a lead, not a conclusion.
+- **How I got this** (closed by default) shows each round of the
+  investigation.
+- 👍 / 👎 rates an answer; a comment box appears after 👎.
+- **New conversation** clears the screen and starts fresh.
+
+To work on the interface itself: `cd ui`, `npm install`, then `npm run dev`
+and open http://localhost:5173 (the API must be running on port 8000).
+`npm test` runs its tests.
+
 ## API
 
 | Endpoint | What it does |

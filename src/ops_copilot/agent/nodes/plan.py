@@ -101,6 +101,8 @@ async def plan_node(state: AgentState, config: Any = None) -> dict:
         "iteration": iteration,
         "pending_tool_calls": calls,
         "plan_reasoning": out.reasoning,
+        "lap_log": [{"lap": iteration, "kind": "plan", "reasoning": out.reasoning,
+                     "tools": [c.model_dump() for c in calls]}],
         # A new lap starts undecided; last lap's verdict must not leak.
         "stop_reason": None,
         "llm_calls": state.get("llm_calls", 0) + 1,

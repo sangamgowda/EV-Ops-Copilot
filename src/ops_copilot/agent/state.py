@@ -213,6 +213,10 @@ class AgentState(TypedDict, total=False):
     iteration: int
     evidence: Annotated[list[Evidence], add]
     tool_history: Annotated[list[str], add]
+    # One entry per decision, appended: Plan's reasoning and tools, then
+    # Reflect's verdict, lap by lap. It is what the UI's "how I got this"
+    # panel shows; nothing in the loop reads it.
+    lap_log: Annotated[list[dict[str, Any]], add]
     open_gaps: list[str]
     next_question: Optional[str]
     stop_reason: Optional[str]
@@ -251,6 +255,7 @@ def new_state(question: str, session_id: str, turn_id: str) -> AgentState:
         iteration=0,
         evidence=[],
         tool_history=[],
+        lap_log=[],
         open_gaps=[],
         entity_notes=[],
         resolved_entities={},
