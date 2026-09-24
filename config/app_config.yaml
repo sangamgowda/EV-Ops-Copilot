@@ -79,6 +79,13 @@ retrieval:
   # VIN filter would discard exactly the documents we want.
   entity_boost: 0.15
 
+  # Cross-encoder cost scales with sequence length, so candidates are
+  # truncated before scoring. 512 tokens is the model's limit.
+  rerank_max_length: 512
+  # Small batches, scored shortest-first: padding to the longest pair
+  # in a batch is what makes large CPU batches slow.
+  rerank_batch_size: 8
+
 entity_resolution:
   # Below exact match, how close a fuzzy match must be before we
   # accept it and say so in the answer.
@@ -86,6 +93,11 @@ entity_resolution:
   # Between these, we ask the user which one they meant.
   disambiguate_score: 78
   max_suggestions: 3
+  # pg_trgm prefilter before rapidfuzz scores in Python. Loose on
+  # purpose: it only has to keep the right answer in the candidate
+  # set; rapidfuzz makes the actual decision.
+  trigram_prefilter: 0.2
+  max_candidates: 50
 
 chunking:
   prose_chunk_size: 800
