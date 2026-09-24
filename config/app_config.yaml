@@ -25,6 +25,17 @@ agent:
   # summaries, not raw rows, so this is generous in practice.
   max_evidence_entries: 20
 
+  # Plan may request several tools per lap; they run in parallel.
+  # Beyond a handful it is fishing, not planning.
+  max_tool_calls_per_lap: 4
+
+  # Result rows shown in an evidence summary. The rest stay in
+  # evidence_raw, reachable by raw_ref, never paid for in tokens.
+  summary_max_rows: 8
+
+  # Used when a comparison row carries no tolerance of its own.
+  default_tolerance_pct: 10.0
+
 llm:
   # Which tier each node runs on. Router and Reflect are
   # classification under a fixed schema — they do not need the
@@ -36,6 +47,7 @@ llm:
     reflect: cheap
     synthesize: strong
     judge: strong        # evaluation only, never the live path
+    groundedness: strong # tier 4 only, fires on a flagged claim
 
   temperature:
     router: 0.0
@@ -43,13 +55,32 @@ llm:
     reflect: 0.0
     synthesize: 0.2      # a little warmth in prose, nothing more
     judge: 0.0           # determinism matters more than style here
+    groundedness: 0.0
 
+  # Reasoning models spend part of this on thinking before the reply,
+  # so it is sized for thinking + answer, not the answer alone. A reply
+  # cut off by the limit fails JSON validation.
   max_tokens:
-    router: 512
-    plan: 1024
-    reflect: 512
-    synthesize: 2048
-    judge: 1024
+    router: 2048
+    plan: 4096
+    reflect: 2048
+    synthesize: 4096
+    judge: 2048
+    groundedness: 2048
+
+  # How long reasoning models think. "low" is plenty for classification
+  # and keeps latency and the free-tier token budget down.
+  reasoning_effort:
+    router: low
+    plan: low
+    reflect: low
+    synthesize: low
+    judge: low
+    groundedness: low
+
+  # A reply that fails schema validation gets this many retries, each
+  # shown the validation error. Then the node fails, loudly.
+  json_repair_attempts: 1
 
 retrieval:
   # Hybrid search pulls this many candidates before reranking.
@@ -189,6 +220,15 @@ groundedness:
   # empty or below-threshold retrieval result.
   block_causal_language_without_support: true
   causal_markers: ["because", "due to", "caused by", "the cause is", "results from"]
+  # A sentence naming a gap is the honest partial answer, not a causal
+  # claim: "cannot be established because no document covers it" must
+  # not be flagged for its "because".
+  causal_exempt_markers: ["cannot", "can't", "could not", "unable", "not established",
+                          "no documentation", "no evidence", "not confirmed", "unknown",
+                          "insufficient"]
+  # Integers below this are counts and ordinals ("3 laps"), not
+  # measurements; checking them is noise.
+  ignore_integers_below: 10
   escalate_to_llm_on_flag: true
 
 evaluation:

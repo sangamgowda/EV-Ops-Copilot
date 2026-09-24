@@ -31,8 +31,8 @@ class Settings(BaseSettings):
     groq_api_key: str = ""
     llm_provider: str = "groq"
     llm_base_url: str = "https://api.groq.com/openai/v1"
-    llm_model_cheap: str = "llama-3.1-8b-instant"
-    llm_model_strong: str = "llama-3.3-70b-versatile"
+    llm_model_cheap: str = "openai/gpt-oss-20b"
+    llm_model_strong: str = "openai/gpt-oss-120b"
     llm_timeout_seconds: int = 60
     llm_max_retries: int = 2
 

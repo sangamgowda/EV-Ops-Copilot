@@ -128,7 +128,10 @@ tables:
         description: Which metric this baseline is for.
       nominal_value:
         type: double precision
-        description: Expected value under rated conditions.
+        description: >
+          Expected typical value in normal use. For metric_name =
+          'payload' this is a TYPICAL load, not the limit — the limit
+          is rated_payload_kg.
       tolerance_pct:
         type: double precision
         description: >
@@ -136,7 +139,9 @@ tables:
           this, the reading is flagged as above or below normal.
       rated_payload_kg:
         type: double precision
-        description: Payload the nominal value assumes.
+        description: >
+          Maximum rated payload for the model (rider, pillion and cargo).
+          A payload above this is an overload.
         unit: kg
 
   error_codes:

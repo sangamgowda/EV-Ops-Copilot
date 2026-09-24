@@ -196,6 +196,9 @@ async def retrieve(query: str, domain: str, entity_id: str | None = None) -> dic
                 "effective_date": c["effective_date"].isoformat() if c["effective_date"] else None,
                 "rerank_score": round(c["rerank_score"], 4),
                 "boosted": c.get("boost", 0.0) > 0,
+                # Returned so the agent can tell a document that covers
+                # the vehicle's model from one that merely ranked well.
+                "applies_to_models": c["applies_to_models"] or [],
             }
             for c in kept
         ],

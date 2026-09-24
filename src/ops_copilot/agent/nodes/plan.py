@@ -15,33 +15,94 @@ On lap 2+ the prompt carries `next_question` from Reflect, so the
 model is answering a narrower question than the original — that is
 what stops later laps from repeating the first.
 
-TODO(build): implement.
-  1. build context: question + resolved_entities + schema_config
-     + evidence summaries + tool_history + next_question
-  2. call LLM, parse PlanOutput
-  3. dedupe tool_calls against tool_history before returning
+Plan also owns the lap counter: a lap begins here, so `iteration`
+is incremented here and nowhere else.
+
+Today's date is part of the context. "Last week" means nothing to a
+model without it, and it would otherwise guess from training data.
 """
 
 from __future__ import annotations
 
-import logging
+import json
+from datetime import date
+from typing import Any
 
-from ops_copilot.agent.state import AgentState, ToolCall
+from ops_copilot.agent.context import call_key, emit, evidence_block, guarded
+from ops_copilot.agent.state import AgentState, PlanOutput, ToolCall
+from ops_copilot.llm.client import complete_json
+from ops_copilot.observability.tracing import traced
+from ops_copilot.settings import get_config, load_prompt
+from ops_copilot.sql.schema_loader import prompt_block
 
-log = logging.getLogger(__name__)
+
+def build_context(state: AgentState, iteration: int) -> str:
+    cfg = get_config()["agent"]
+    parts = [
+        f"## Question\n{state['question']}",
+        f"## Today\n{date.today().isoformat()}",
+        f"## Domains\n{', '.join(state.get('domains', []))}",
+        f"## Resolved entities\n{json.dumps(state.get('resolved_entities', {}))}",
+    ]
+    if state.get("entity_notes"):
+        parts.append("## Entity notes\n" + "\n".join(f"- {n}" for n in state["entity_notes"]))
+    if state.get("hypothesis_to_test"):
+        parts.append(f"## Claim to test against data\n{state['hypothesis_to_test']}")
+    parts.append(f"## Database schema\n{prompt_block()}")
+    parts.append(f"## Evidence so far\n{evidence_block(state.get('evidence', []))}")
+    if state.get("tool_history"):
+        parts.append("## Already run this turn — do not repeat\n"
+                     + "\n".join(f"- {k}" for k in state["tool_history"]))
+    if iteration > 1 and state.get("next_question"):
+        parts.append(f"## This lap's narrower question\n{state['next_question']}")
+    if state.get("open_gaps"):
+        parts.append("## Still missing\n" + ", ".join(state["open_gaps"]))
+    parts.append(f"## Lap\n{iteration} of {cfg['max_iterations']}")
+    return "\n\n".join(parts)
 
 
-# PHASE 3 SKELETON — a fixed stand-in that proves the loop's shape.
-# Replaced with the real logic described above in a later phase.
-async def plan_node(state: AgentState) -> dict:
-    # A lap begins here, so the lap counter is advanced here and nowhere else.
+def dedupe(calls: list[ToolCall], history: list[str], domains: list[str], cap: int) -> list[ToolCall]:
+    seen = set(history)
+    out: list[ToolCall] = []
+    for call in calls:
+        if call.tool == "rag_retrieval_tool":
+            # Domain is a hard filter downstream; a missing or invented
+            # one would silently match nothing.
+            if call.args.get("domain") not in ("diagnostic", "business"):
+                call.args["domain"] = domains[0] if domains else "diagnostic"
+        key = call_key(call)
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(call)
+    return out[:cap]
+
+
+def _fallback(state: AgentState, exc: Exception) -> dict:
+    # No tool calls: this lap adds no evidence, so Reflect stops the loop
+    # with no_new_evidence and Synthesize answers from what exists.
+    return {"iteration": state.get("iteration", 0) + 1, "pending_tool_calls": [],
+            "plan_reasoning": f"planning failed: {type(exc).__name__}", "stop_reason": None}
+
+@traced("plan")
+@guarded("plan", _fallback)
+async def plan_node(state: AgentState, config: Any = None) -> dict:
     iteration = state.get("iteration", 0) + 1
-    call = ToolCall(tool="structured_query_tool", args={"sql": f"SELECT 'fake query, lap {iteration}'"})
-    log.info("plan: lap %d, fixed tool call (skeleton, no LLM)", iteration)
+    await emit(config, "status", {"node": "plan", "iteration": iteration,
+                                  "message": f"Planning lap {iteration}"})
+    system, version = load_prompt("plan")
+    out = await complete_json("plan", system, build_context(state, iteration), PlanOutput)
+
+    calls = dedupe(out.tool_calls, state.get("tool_history", []), state.get("domains", []),
+                   get_config()["agent"]["max_tool_calls_per_lap"])
+    await emit(config, "plan", {"iteration": iteration, "reasoning": out.reasoning,
+                                "tools": [c.model_dump() for c in calls]})
     return {
         "iteration": iteration,
-        "pending_tool_calls": [call],
-        "plan_reasoning": "skeleton",
-        # A new lap starts undecided; last lap's verdict must not leak into it.
+        "pending_tool_calls": calls,
+        "plan_reasoning": out.reasoning,
+        # A new lap starts undecided; last lap's verdict must not leak.
         "stop_reason": None,
+        "llm_calls": state.get("llm_calls", 0) + 1,
+        "prompt_versions": {**state.get("prompt_versions", {}), "plan": version},
     }

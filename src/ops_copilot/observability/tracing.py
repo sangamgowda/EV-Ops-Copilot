@@ -30,3 +30,9 @@ def traced(node_name: str):
     def decorator(fn):
         return fn
     return decorator
+
+
+def record_generation(node: str, model: str, messages: list[dict], output: str,
+                      usage: dict[str, int], latency_ms: int) -> None:
+    """One LLM call. No-op until tracing is built; the LLM client already
+    reports every call here, so tracing plugs in without touching it."""
