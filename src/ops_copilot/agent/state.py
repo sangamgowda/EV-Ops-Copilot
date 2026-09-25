@@ -19,14 +19,13 @@ paid for in tokens.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
-from typing import Annotated, Any, Literal, Optional
 from operator import add
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, Field
 from typing_extensions import TypedDict
-
 
 # ── enums ────────────────────────────────────────────────────
 
@@ -85,31 +84,31 @@ class Evidence(BaseModel):
     iteration: int = 1
 
     summary: str = Field(description="What goes in the prompt. Short.")
-    raw_ref: Optional[str] = Field(
+    raw_ref: str | None = Field(
         default=None,
         description="Key into the raw store. Full rows live there, not here.",
     )
 
     # Structured comparison, when the evidence is a measurement.
-    metric: Optional[str] = None
-    actual: Optional[float] = None
-    baseline: Optional[float] = None
-    unit: Optional[str] = None
-    delta_pct: Optional[float] = None
-    verdict: Optional[Verdict] = None
+    metric: str | None = None
+    actual: float | None = None
+    baseline: float | None = None
+    unit: str | None = None
+    delta_pct: float | None = None
+    verdict: Verdict | None = None
 
     # Retrieval provenance.
-    source_doc: Optional[str] = None
+    source_doc: str | None = None
     chunk_ids: list[int] = Field(default_factory=list)
-    rerank_score: Optional[float] = None
+    rerank_score: float | None = None
 
     # Execution provenance — what was actually run.
     tool_args: dict[str, Any] = Field(default_factory=dict)
-    error: Optional[str] = None
-    latency_ms: Optional[int] = None
+    error: str | None = None
+    latency_ms: int | None = None
 
     created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc)
+        default_factory=lambda: datetime.now(UTC)
     )
 
     def is_usable(self) -> bool:
@@ -134,9 +133,9 @@ class RouterOutput(BaseModel):
         description="A LIST. Cross-domain questions return both."
     )
     query_type: QueryType
-    entities: dict[str, Optional[str]] = Field(default_factory=dict)
+    entities: dict[str, str | None] = Field(default_factory=dict)
     complexity_hint: QueryType
-    hypothesis_to_test: Optional[str] = Field(
+    hypothesis_to_test: str | None = Field(
         default=None,
         description="A checkable claim in the question, if present.",
     )
@@ -157,8 +156,8 @@ class ReflectOutput(BaseModel):
     partial: bool = False
     satisfied: list[str] = Field(default_factory=list)
     missing: list[str] = Field(default_factory=list)
-    next_question: Optional[str] = None
-    stop_reason: Optional[StopReason] = None
+    next_question: str | None = None
+    stop_reason: StopReason | None = None
 
 
 class Citation(BaseModel):
@@ -196,14 +195,14 @@ class AgentState(TypedDict, total=False):
     question: str
     session_id: str
     turn_id: str          # tagged onto tool results; stale ones are dropped
-    trace_id: Optional[str]
+    trace_id: str | None
 
     # Router output
     domains: list[str]
     query_type: str
-    entities: dict[str, Optional[str]]
+    entities: dict[str, str | None]
     complexity_hint: str
-    hypothesis_to_test: Optional[str]
+    hypothesis_to_test: str | None
 
     # Resolved entities — after fuzzy matching against real rows
     resolved_entities: dict[str, Any]
@@ -218,12 +217,12 @@ class AgentState(TypedDict, total=False):
     # panel shows; nothing in the loop reads it.
     lap_log: Annotated[list[dict[str, Any]], add]
     open_gaps: list[str]
-    next_question: Optional[str]
-    stop_reason: Optional[str]
+    next_question: str | None
+    stop_reason: str | None
     partial: bool
 
     # Planning
-    plan_reasoning: Optional[str]
+    plan_reasoning: str | None
     pending_tool_calls: list[ToolCall]
 
     # Execute -> Observe hand-off. Replaced every lap, never
@@ -231,20 +230,21 @@ class AgentState(TypedDict, total=False):
     raw_results: list[dict[str, Any]]
 
     # Output
-    answer: Optional[str]
+    answer: str | None
     citations: list[Citation]
-    confidence: Optional[str]
+    confidence: str | None
     gaps: list[str]
-    groundedness: Optional[GroundednessResult]
+    groundedness: GroundednessResult | None
     # Set by synthesize when it is rewriting after a failed grounding
     # check; graph.route_after_groundedness reads it to allow exactly
     # one retry. Without a writer the retry path loops forever.
     _grounding_retried: bool
 
     # Bookkeeping
+    node_errors: Annotated[list[str], add]   # steps that fell back, appended
     prompt_versions: dict[str, str]  # node -> prompt hash, into the trace
     llm_calls: int
-    started_at: Optional[datetime]
+    started_at: datetime | None
 
 
 def new_state(question: str, session_id: str, turn_id: str) -> AgentState:
@@ -256,6 +256,7 @@ def new_state(question: str, session_id: str, turn_id: str) -> AgentState:
         evidence=[],
         tool_history=[],
         lap_log=[],
+        node_errors=[],
         open_gaps=[],
         entity_notes=[],
         resolved_entities={},
@@ -267,7 +268,7 @@ def new_state(question: str, session_id: str, turn_id: str) -> AgentState:
         pending_tool_calls=[],
         raw_results=[],
         _grounding_retried=False,
-        started_at=datetime.now(timezone.utc),
+        started_at=datetime.now(UTC),
     )
 
 

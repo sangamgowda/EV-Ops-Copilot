@@ -29,7 +29,7 @@ import time
 import uuid
 from typing import Any, cast
 
-from sqlalchemy import update
+from sqlalchemy import func, update
 from sqlalchemy.dialects.postgresql import insert
 
 from ops_copilot.agent.context import Emit
@@ -57,9 +57,15 @@ async def _record_start(turn_id: str, session_id: str, question: str) -> None:
             ).on_conflict_do_nothing())
     except Exception as exc:
         log.warning("could not record start of turn %s: %s", turn_id, exc)
+        return
+    # Asking the same thing again right after an answer is a thumbs-down
+    # nobody clicked; it flags the previous turn. Best effort.
+    from ops_copilot.feedback.capture import detect_implicit_negative
+
+    await detect_implicit_negative(session_id, turn_id, question)
 
 
-async def _record_end(state: AgentState) -> None:
+async def _record_end(state: AgentState, fields: dict[str, Any]) -> None:
     from ops_copilot.db.engine import owner_engine
     from ops_copilot.db.models import conversation_turns
 
@@ -73,7 +79,10 @@ async def _record_end(state: AgentState) -> None:
                                        iterations=state.get("iteration"),
                                        stop_reason=state.get("stop_reason"),
                                        partial=state.get("partial", False),
-                                       prompt_versions=state.get("prompt_versions")))
+                                       prompt_versions=state.get("prompt_versions"),
+                                       # The trace's own filterable fields, so the
+                                       # feedback loop can cluster failures from here.
+                                       outcome=fields, ended_at=func.now()))
     except Exception as exc:
         log.warning("could not record end of turn %s: %s", state.get("turn_id"), exc)
 
@@ -131,12 +140,12 @@ async def run_turn(question: str, session_id: str | None = None, *, turn_id: str
             error = exc
             raise
         finally:
+            fields = outcome(latest, int((time.perf_counter() - started) * 1000), error)
             update_turn(output={"answer": latest.get("answer"),
-                                "citations": latest.get("citations", [])},
-                        **outcome(latest, int((time.perf_counter() - started) * 1000), error))
+                                "citations": latest.get("citations", [])}, **fields)
 
     if record:
-        await _record_end(latest)
+        await _record_end(latest, fields)
     return latest
 
 
@@ -160,5 +169,6 @@ def outcome(state: AgentState, latency_ms: int, error: BaseException | None = No
         "llm_calls": state.get("llm_calls", 0),
         "latency_ms": latency_ms,
         "prompt_versions": state.get("prompt_versions", {}),
+        "node_errors": state.get("node_errors", []),
         "error": f"{type(error).__name__}: {error}" if error else None,
     }

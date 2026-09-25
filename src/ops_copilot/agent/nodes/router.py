@@ -35,8 +35,8 @@ from ops_copilot.agent.state import (
     RouterOutput,
 )
 from ops_copilot.llm.client import complete_json
-from ops_copilot.observability.tracing import traced
 from ops_copilot.mcp_client.client import get_client
+from ops_copilot.observability.tracing import traced
 from ops_copilot.settings import load_prompt
 
 log = logging.getLogger(__name__)

@@ -354,7 +354,11 @@ async def doc_cases(conn: Any, limit_overlap: float, holdout: set[str]) -> tuple
 # ── curated and traps ────────────────────────────────────────
 
 def curated_cases(conn: Any) -> list[dict[str, Any]]:
-    cases = yaml.safe_load((GOLDEN / "curated.yaml").read_text(encoding="utf-8"))
+    cases = []
+    for name in ("curated.yaml", "promoted.yaml"):   # hand-written, and promoted after review
+        path = GOLDEN / name
+        if path.exists():
+            cases += yaml.safe_load(path.read_text(encoding="utf-8")) or []
     for case in cases:
         values = {}
         for fact in case.get("expected", {}).get("facts", []):

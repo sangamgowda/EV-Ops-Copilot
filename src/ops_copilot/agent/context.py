@@ -62,7 +62,10 @@ def guarded(name: str, fallback: Callable[[Any, Exception], dict[str, Any]]) -> 
                 record_node_error(name, exc)
                 await emit(config, "node_error", {"node": name,
                                                   "error": f"{type(exc).__name__}: {exc}"[:300]})
-                return fallback(state, exc)
+                # Recorded in state too, so the turn row (and the feedback
+                # loop reading it) can see that this step fell back.
+                return {**fallback(state, exc),
+                        "node_errors": [f"{name}: {type(exc).__name__}: {str(exc)[:200]}"]}
         return wrapper
     return decorator
 

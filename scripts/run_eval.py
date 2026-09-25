@@ -4,6 +4,7 @@
     python scripts/run_eval.py --smoke            # 8 varied cases, ~10 minutes
     python scripts/run_eval.py --resume 20260925-101500
     python scripts/run_eval.py --only syn_overload_V-042,adv_typo_vehicle
+    python scripts/run_eval.py --promoted         # the merge gate: promoted cases only
     python scripts/run_eval.py --agreement        # judge vs your labels
 
 Needs the running stack (MCP server and database, as for /chat).
@@ -56,7 +57,11 @@ async def main() -> int:
     p.add_argument("--resume", metavar="RUN_ID", help="finish an earlier run")
     p.add_argument("--only", help="comma-separated case ids")
     p.add_argument("--smoke", action="store_true", help="a quick, varied subset")
+    p.add_argument("--promoted", action="store_true",
+                   help="only cases promoted from real failures: the gate for prompt/config changes")
     p.add_argument("--limit", type=int)
+    p.add_argument("--gate", action="store_true",
+                   help="exit 1 if ANY case fails (not only regressions); for CI, where no previous run exists")
     p.add_argument("--no-judge", action="store_true")
     p.add_argument("--no-traps", action="store_true")
     p.add_argument("--pause", type=float, help="seconds between cases (default from config)")
@@ -93,6 +98,10 @@ async def main() -> int:
         cases += load_cases(cfg["trap_path"])
     if args.smoke:
         cases = [c for c in cases if c["id"] in SMOKE]
+    if args.promoted:
+        # Every one of these was a real failure a person reviewed. A
+        # change that makes one fail again exits 1 and should not merge.
+        cases = [c for c in cases if c["source"] == "promoted"]
     if args.only:
         wanted = set(args.only.split(","))
         cases = [c for c in cases if c["id"] in wanted]
@@ -124,6 +133,15 @@ async def main() -> int:
     if not rep["complete"]:
         print(f"Incomplete. Finish later with:  python scripts/run_eval.py --resume {run_id}")
     regressions = (rep["diff"] or {}).get("regressions", [])
+    if args.gate:
+        if not rep["complete"]:
+            print("GATE: incomplete run (rate limits) — cannot pass what did not run.")
+            return 3
+        if rep["failures"]:
+            print(f"GATE: {len(rep['failures'])} case(s) failing: " + ", ".join(f["id"] for f in rep["failures"]))
+            return 1
+        print("GATE: all cases pass.")
+        return 0
     return 1 if regressions else 0
 
 

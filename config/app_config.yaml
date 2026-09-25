@@ -332,4 +332,14 @@ feedback:
   # negative. There are far more of these than explicit
   # thumbs-down.
   implicit_negative_window_seconds: 30
+  # How alike two questions must be (0-100, word-set similarity) to
+  # count as a rephrase rather than a new question. "Why did range drop
+  # on V-042?" -> "why is V-042's range so low" is a rephrase; "and
+  # V-017?" is a follow-up.
+  implicit_negative_min_similarity: 55
   cluster_min_size: 3
+  # A turn slower than this with nothing else wrong is "correct but slow".
+  slow_ms: 20000
+  # Promoted cases per cluster before the review tool warns that another
+  # one probably adds run time, not coverage.
+  max_promoted_per_cluster: 3

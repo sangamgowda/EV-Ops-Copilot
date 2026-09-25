@@ -273,6 +273,15 @@ def _rate(rows: list[dict[str, Any]], key: str = "pass") -> float | None:
     return None if not rows else round(100 * sum(bool(r.get(key)) for r in rows) / len(rows), 1)
 
 
+def _by_cluster(rows: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
+    out: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for r in rows:
+        for tag in r.get("tags", []):
+            if tag.startswith("cluster:"):
+                out[tag].append(r)
+    return out
+
+
 def previous_run(run_id: str) -> str | None:
     older = sorted(p.name for p in runs_dir().iterdir()
                    if p.is_dir() and p.name < run_id and (p / "report.json").exists()) \
@@ -340,7 +349,10 @@ def build_report(run_id: str, cases: list[dict[str, Any]], results: list[dict[st
         # believe is 60: the headline is the LOWER of the two.
         "headline_pass_rate": min(present) if present else None,
         "pass_rate": {**rates, "all": _rate(scored), "code_checks": _rate(scored, "code_pass"),
-                      **{f"source:{k}": _rate(v) for k, v in sorted(by_source.items())}},
+                      **{f"source:{k}": _rate(v) for k, v in sorted(by_source.items())},
+                      # Promoted cases by the failure cluster they guard: a
+                      # fix is judged by whether its whole cluster passes.
+                      **{k: _rate(v) for k, v in sorted(_by_cluster(scored).items())}},
         "traps": {"n": len(traps), "abstention_rate": _rate(traps, "abstained"),
                   "ungrounded_truth_rate": _rate(traps, "ungrounded_truth")},
         "check_failures": dict(sorted(check_failures.items(), key=lambda kv: -kv[1])),

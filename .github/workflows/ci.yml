@@ -1,0 +1,82 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  # Every push: unit tests and the golden set's own checks. No database
+  # or model is needed; tests that need a database skip themselves.
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install (CPU-only torch, as in the Dockerfile)
+        run: |
+          pip install --upgrade pip
+          pip install --extra-index-url https://download.pytorch.org/whl/cpu -r requirements.txt
+      - name: Tests
+        env:
+          PYTHONPATH: src
+          TRACING_ENABLED: "false"
+        run: pytest tests/ -q
+      - name: Lint the evaluation and feedback code
+        run: ruff check src/ops_copilot/evaluation src/ops_copilot/feedback scripts/run_eval.py scripts/review_feedback.py scripts/build_golden.py
+
+  # Pull requests that change how the agent behaves: every case promoted
+  # from a real failure runs through the real system. One failing blocks
+  # the merge. Needs the stack (Docker), seeded data and a model key.
+  promoted-gate:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Only when prompts, config or agent code changed
+        id: changed
+        run: |
+          git fetch --depth=1 origin "${{ github.base_ref }}"
+          if git diff --name-only "origin/${{ github.base_ref }}" HEAD | grep -qE '^(config/|src/ops_copilot/(agent|llm|sql|rag|mcp_server)/)'; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No prompt, config or agent change: gate not needed."
+          fi
+      - name: Needs a model key
+        if: steps.changed.outputs.run == 'true' && env.GROQ_API_KEY == ''
+        run: echo "::warning::GROQ_API_KEY secret not set; promoted-case gate skipped."
+      - uses: actions/setup-python@v5
+        if: steps.changed.outputs.run == 'true' && env.GROQ_API_KEY != ''
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Start the stack, load data
+        if: steps.changed.outputs.run == 'true' && env.GROQ_API_KEY != ''
+        run: |
+          cp .env.example .env
+          sed -i "s|^GROQ_API_KEY=.*|GROQ_API_KEY=${GROQ_API_KEY}|" .env
+          sed -i "s|^TRACING_ENABLED=.*|TRACING_ENABLED=false|" .env
+          docker compose up -d --build --wait
+          pip install --extra-index-url https://download.pytorch.org/whl/cpu -r requirements.txt
+          export POSTGRES_HOST=localhost POSTGRES_PORT=5433 DATABASE_URL=""
+          set -a; . ./.env; set +a
+          export POSTGRES_HOST=localhost POSTGRES_PORT=5433 DATABASE_URL=""
+          python scripts/seed_synthetic_data.py --reset
+          export DATABASE_URL="postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5433/${POSTGRES_DB}"
+          python scripts/ingest_documents.py data/documents
+          python scripts/build_golden.py --no-generate
+      - name: Promoted cases must pass
+        if: steps.changed.outputs.run == 'true' && env.GROQ_API_KEY != ''
+        env:
+          MCP_TRANSPORT: http
+          MCP_SERVER_HOST: localhost
+          TRACING_ENABLED: "false"
+        run: |
+          set -a; . ./.env; set +a
+          export MCP_TRANSPORT=http MCP_SERVER_HOST=localhost
+          python scripts/run_eval.py --promoted --no-traps --gate

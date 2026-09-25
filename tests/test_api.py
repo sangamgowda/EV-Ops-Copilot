@@ -185,8 +185,12 @@ class TestTurnCeilingAndRecording:
         async def start(turn_id, session_id, question):
             calls.append(("start", {"turn_id": turn_id}))
 
-        async def end(state):
-            calls.append(("end", {"answer": state.get("answer")}))
+        async def end(state, fields):
+            # The turn row carries the trace's outcome fields for the
+            # feedback loop to cluster on.
+            calls.append(("end", {"answer": state.get("answer"), "stop_reason": fields["stop_reason"],
+                                  "has_outcome": {"tools_selected", "grounded", "latency_ms",
+                                                  "node_errors"} <= set(fields)}))
 
         monkeypatch.setattr(turn_mod, "_record_start", start)
         monkeypatch.setattr(turn_mod, "_record_end", end)
@@ -211,6 +215,7 @@ class TestTurnCeilingAndRecording:
         await turn_mod.run_turn("why?", "s", turn_id="t2")
         assert [c[0] for c in recorded] == ["start", "end"]
         assert recorded[0][1]["turn_id"] == "t2"
+        assert recorded[1][1]["has_outcome"]          # what feedback clustering reads
 
 
 class TestLapStory:

@@ -39,7 +39,9 @@ conversation_turns = Table(
     Column("stop_reason", Text),
     Column("partial", Boolean, default=False),
     Column("prompt_versions", JSONB),
+    Column("outcome", JSONB),                        # the trace's filterable fields
     Column("created_at", DateTime(timezone=True), server_default=func.now(), nullable=False),
+    Column("ended_at", DateTime(timezone=True)),
 )
 
 flagged_interactions = Table(
@@ -52,4 +54,8 @@ flagged_interactions = Table(
     Column("cluster_id", Text),                      # failure signature
     Column("promoted", Boolean, default=False),
     Column("created_at", DateTime(timezone=True), server_default=func.now(), nullable=False),
+    Column("review_status", Text, nullable=False, server_default="new"),  # new | promoted | dismissed
+    Column("review_note", Text),
+    Column("reviewed_at", DateTime(timezone=True)),
+    Column("golden_case_id", Text),
 )
