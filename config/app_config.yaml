@@ -52,7 +52,8 @@ llm:
     plan: strong
     reflect: cheap
     synthesize: strong
-    judge: strong        # evaluation only, never the live path
+    judge: judge         # evaluation only; its own model (settings.llm_model_judge)
+    eval_generate: cheap # writes synthetic test questions, offline
     groundedness: strong # tier 4 only, fires on a flagged claim
 
   temperature:
@@ -72,6 +73,7 @@ llm:
     reflect: 2048
     synthesize: 4096
     judge: 2048
+    eval_generate: 4096
     groundedness: 2048
 
   # How long reasoning models think. "low" is plenty for classification
@@ -82,6 +84,7 @@ llm:
     reflect: low
     synthesize: low
     judge: low
+    eval_generate: low
     groundedness: low
 
   # A reply that fails schema validation gets this many retries, each
@@ -282,6 +285,10 @@ groundedness:
   escalate_to_llm_on_flag: true
 
 evaluation:
+  golden_path: src/ops_copilot/evaluation/golden/golden.jsonl
+  trap_path: src/ops_copilot/evaluation/golden/trap_cases.jsonl
+  labels_path: src/ops_copilot/evaluation/golden/human_labels.jsonl
+  runs_dir: evaluation_runs
   judge_temperature: 0.0
   judge_position_swap: true       # run both orderings, require agreement
   compare_against_reference: true # kills verbosity bias
@@ -289,6 +296,16 @@ evaluation:
   # chunk. Above this the question is testing string matching,
   # not retrieval.
   max_question_chunk_overlap: 0.6
+  # Documents never shown to the question generator. Questions about
+  # them are hand-written, so retrieval cannot be flattered by shared
+  # vocabulary.
+  holdout_documents: [SB-130_front_brake_pad_wear, policy_fleet_discounts, story_fleet_delivery_partner]
+  # Free tier: the strong model allows ~8,000 tokens a minute and one
+  # case uses most of that. Waiting between cases keeps a slow
+  # rate-limit retry from being scored as the system timing out.
+  pause_between_cases_s: 45
+  # A case passes on the judge when every dimension scores at least this.
+  judge_pass_score: 3
 
 observability:
   # Successes sent to Langfuse. Start at 1.0 (trace everything); lower

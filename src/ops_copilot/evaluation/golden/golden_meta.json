@@ -1,0 +1,46 @@
+{
+  "built_at": "2026-09-25T06:02:37+00:00",
+  "seed_manifest_sha": "24e06ecaffed",
+  "data_ends": "2026-09-25",
+  "counts": {
+    "synthetic_data": 19,
+    "synthetic_doc": 7,
+    "adversarial": 14,
+    "promoted": 5
+  },
+  "traps": 8,
+  "holdout_documents": [
+    "SB-130_front_brake_pad_wear",
+    "policy_fleet_discounts",
+    "story_fleet_delivery_partner"
+  ],
+  "max_question_chunk_overlap": 0.6,
+  "generator_prompt_version": "88e7aca82102",
+  "rejected_document_questions": [
+    {
+      "doc_id": "kb_range_shortfall_faq",
+      "question": "What should I compare the scooter’s payload to, and what percentage of the certified range must be exceeded before I file a field report?",
+      "overlap": 0.62
+    },
+    {
+      "doc_id": "sales_q2_2026_review",
+      "question": "How many new showrooms opened in the south between January and June?",
+      "overlap": 0.62
+    },
+    {
+      "doc_id": "sales_q3_2026_midquarter",
+      "question": "When did the Volt 1 Ultra start selling in the west, north and east regions?",
+      "overlap": 0.67
+    },
+    {
+      "doc_id": "sales_q3_2026_midquarter",
+      "question": "What percentage of south sales was the Ultra after its launch?",
+      "overlap": 0.83
+    },
+    {
+      "doc_id": "sales_q3_2026_midquarter",
+      "question": "What percentage of south sales was the Ultra after its launch?",
+      "overlap": 0.83
+    }
+  ]
+}

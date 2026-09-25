@@ -33,6 +33,10 @@ class Settings(BaseSettings):
     llm_base_url: str = "https://api.groq.com/openai/v1"
     llm_model_cheap: str = "openai/gpt-oss-20b"
     llm_model_strong: str = "openai/gpt-oss-120b"
+    # Evaluation only. A different model family from the two above, so
+    # the system is never graded by the model that wrote the answer, and
+    # judging draws on its own daily token allowance.
+    llm_model_judge: str = "qwen/qwen3.8-27b"
     llm_timeout_seconds: int = 60
     llm_max_retries: int = 2
 
@@ -123,4 +127,4 @@ def model_for(node: str) -> str:
     """Resolve a node name to a concrete model id via its tier."""
     s = get_settings()
     tier = get_config()["llm"]["tiers"].get(node, "cheap")
-    return s.llm_model_strong if tier == "strong" else s.llm_model_cheap
+    return {"strong": s.llm_model_strong, "judge": s.llm_model_judge}.get(tier, s.llm_model_cheap)

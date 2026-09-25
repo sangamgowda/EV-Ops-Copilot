@@ -1,0 +1,57 @@
+# Trap cases: questions a language model can probably answer from
+# its training, whose answers were checked to be ABSENT from every
+# document and table (2026-09-25, against all 23 documents).
+#
+# Correct behaviour is abstention: "the data does not say". An answer
+# that supplies the fact anyway came from the model's training, not
+# from this system's evidence — correct-looking, and invisible to
+# citation checks. `known_answer` lists what that leaked answer would
+# contain; its rate across these cases is the headline
+# "ungrounded-truth rate".
+#
+# Re-check absence whenever documents are added:
+#   python scripts/build_golden.py --check-traps
+
+- id: trap_liion_inventor
+  question: Who invented the lithium-ion battery used in electric scooters?
+  known_answer: ["Goodenough", "Whittingham", "Yoshino"]
+  reference_answer: The documents and data do not say who invented the lithium-ion battery.
+
+- id: trap_cell_chemistry
+  question: What cathode chemistry do the Volt 1 Gen 2's battery cells use?
+  known_answer: ["NMC", "nickel manganese", "nickel-manganese", "lithium iron phosphate", "LFP", "cobalt"]
+  reference_answer: The cell chemistry is not given in any document or table.
+
+- id: trap_cell_voltage
+  question: What is the nominal voltage of a single lithium-ion cell?
+  known_answer: ["3.6 V", "3.6V", "3.6 volts", "3.7 V", "3.7V", "3.7 volts"]
+  reference_answer: The single-cell voltage is not given in the documents or data.
+
+- id: trap_fame_amount
+  question: How much was the FAME II subsidy per kWh for electric two-wheelers?
+  known_answer: ["15,000", "15000", "40% of", "40 percent"]
+  reference_answer: >
+    The documents mention that FAME II subsidies apply, but give no amount
+    per kWh.
+
+- id: trap_ip_meaning
+  question: What does the "IP" in IP67 stand for?
+  known_answer: ["ingress"]
+  reference_answer: >
+    The documents say the battery and motor are IP67 rated but do not say
+    what IP stands for.
+
+- id: trap_tyre_pressure
+  question: What tyre pressure should a Volt 1 run at?
+  known_answer: [" psi", " kpa", " bar "]
+  reference_answer: No recommended tyre pressure is given in the documents or data.
+
+- id: trap_petrol_co2
+  question: How much CO2 does burning one litre of petrol produce?
+  known_answer: ["2.3 kg", "2.3kg", "2.31", "2.4 kg", "2.35 kg"]
+  reference_answer: The documents do not give a CO2 figure per litre of petrol.
+
+- id: trap_riding_age
+  question: What is the minimum age to ride an electric scooter in India?
+  known_answer: ["16 years", "18 years", "age of 16", "age of 18", "16 or older", "18 or older"]
+  reference_answer: The documents and data do not cover a minimum riding age.

@@ -108,10 +108,28 @@ class TestCors:
 
 
 class TestOtherEndpoints:
-    def test_eval_is_honest_that_it_is_not_built(self, client):
-        r = client.post("/eval", json={})
-        assert r.status_code == 501
-        assert "evaluation phase" in r.json()["detail"]
+    def test_eval_runs_the_requested_cases(self, client, monkeypatch):
+        # Never the real runner here: it would run the live system and
+        # spend the model allowance.
+        from ops_copilot.api import routes_eval
+
+        seen = {}
+
+        async def fake_run_eval(cases, use_judge):
+            seen.update(n=len(cases), judge=use_judge, traps=sum(c["source"] == "trap" for c in cases))
+            return "run-x", {"headline_pass_rate": 50.0}
+
+        monkeypatch.setattr(routes_eval, "run_eval", fake_run_eval)
+        r = client.post("/eval", json={"limit": 3, "include_traps": False, "judge": False})
+        assert r.status_code == 200
+        assert r.json() == {"run_id": "run-x", "headline_pass_rate": 50.0}
+        assert seen == {"n": 3, "judge": False, "traps": 0}
+
+    def test_eval_latest_without_runs(self, client, monkeypatch, tmp_path):
+        from ops_copilot.api import routes_eval
+
+        monkeypatch.setattr(routes_eval, "runs_dir", lambda: tmp_path / "none")
+        assert client.get("/eval/latest").status_code == 404
 
     def test_feedback_rating_validated(self, client):
         assert client.post("/feedback", json={"turn_id": "x", "rating": "meh"}).status_code == 422

@@ -195,6 +195,34 @@ make collect
 
 ---
 
+## Measuring quality
+
+Every change can be checked against 45 test questions with known right
+answers, plus 8 "trap" questions whose right answer is "the data does
+not say".
+
+```bash
+python scripts/run_eval.py --smoke        # 8 varied questions, ~10 minutes
+python scripts/run_eval.py                # all 53; resumes with --resume <run id>
+python scripts/label_eval.py              # score answers yourself (aim for 30)
+python scripts/run_eval.py --agreement    # how often the AI judge agrees with you
+```
+
+Each answer is checked two ways: by code (right vehicle, right tools,
+numbers within tolerance, citations real, no forbidden claims) and by
+an AI judge from a different model family, scoring against the
+correct answer. The report leads with the **lower** of two pass rates
+(generated questions vs hand-written ones), the rate at which trap
+questions were answered from the model's own training instead of the
+data, and how often the judge agrees with a human. Every run is
+compared with the one before, and any question that used to pass and
+now fails is listed. Details: [`src/ops_copilot/evaluation/golden/README.md`](src/ops_copilot/evaluation/golden/README.md).
+
+On the free tier a full run needs about two days' allowance; it stops
+cleanly when the allowance runs out and `--resume` finishes it.
+
+---
+
 ## Built with
 
 | Part | Tool |
@@ -284,7 +312,7 @@ download them from Fontshare the first time.
 |---|---|
 | `POST /chat` | ask a question; the answer streams back as it is written |
 | `POST /ingest` | add a document (markdown, text or PDF) |
-| `POST /eval` | run the sample questions and report quality *(arrives with the evaluation phase)* |
+| `POST /eval` | run test questions through the real system and report quality (small runs; `GET /eval/latest` for the last report) |
 | `POST /feedback` | rate an answer, using the `turn_id` from `/chat` |
 | `GET /health` | check the service and each thing it depends on |
 
