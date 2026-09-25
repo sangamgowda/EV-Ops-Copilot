@@ -15,10 +15,10 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
-      - name: Install (CPU-only torch, as in the Dockerfile)
+      - name: Install (CPU-only torch, as in the Dockerfile; dev tools for pytest and ruff)
         run: |
           pip install --upgrade pip
-          pip install --extra-index-url https://download.pytorch.org/whl/cpu -r requirements.txt
+          pip install --extra-index-url https://download.pytorch.org/whl/cpu -r requirements-dev.txt
       - name: Tests
         env:
           PYTHONPATH: src
