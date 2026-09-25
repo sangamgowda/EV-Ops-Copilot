@@ -48,6 +48,10 @@ def _local(url: str) -> str:
 @pytest.fixture
 async def engines():
     s = get_settings()
+    if not s.database_url or not s.database_url_readonly:
+        # A clean checkout (CI) has no .env: no database is configured,
+        # which is the same situation as one that is not reachable.
+        pytest.skip("no database configured")
     owner = make_owner_engine(_local(s.database_url))
     readonly = make_readonly_engine(_local(s.database_url_readonly))
     try:
