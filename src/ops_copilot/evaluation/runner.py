@@ -73,6 +73,13 @@ def _git_commit() -> str | None:
         return None
 
 
+def _models() -> dict[str, str]:
+    from ops_copilot.settings import get_settings
+
+    st = get_settings()
+    return {"cheap": st.llm_model_cheap, "strong": st.llm_model_strong, "judge": st.llm_model_judge}
+
+
 # ── rate limits are not system failures ──────────────────────
 
 class _RateLimitWatch(logging.Handler):
@@ -84,8 +91,10 @@ class _RateLimitWatch(logging.Handler):
 
     def __init__(self) -> None:
         super().__init__(logging.INFO)
-        self.per_minute = False
+        self.per_minute = False      # a request was refused and retried
+        self.rate_failed = False     # a step gave up on a refusal and fell back
         self.per_day = False
+        self.seen: list[str] = []
 
     def emit(self, record: logging.LogRecord) -> None:
         text = record.getMessage()
@@ -93,8 +102,17 @@ class _RateLimitWatch(logging.Handler):
             text += " " + str(record.exc_info[1])
         if "tokens per day" in text or "(TPD)" in text:
             self.per_day = True
-        elif "429" in text or "RateLimitError" in text or "Rate limit" in text:
+            self.seen.append(text[:300])
+        elif any(m in text for m in ("RateLimitError", "Rate limit reached", "Error code: 429",
+                                     "rate_limit_exceeded", "Request too large")):
+            # The exception's text, not its class name, is what gets logged:
+            # "Error code: 429 - {... 'code': 'rate_limit_exceeded'}".
+            self.rate_failed = True
+            self.seen.append(text[:200])
+        elif "429 Too Many Requests" in text:
+            # Exact provider wording: a bare "429" also matches ids and hashes.
             self.per_minute = True
+            self.seen.append(text[:200])
 
 
 # ── one case ─────────────────────────────────────────────────
@@ -105,16 +123,24 @@ async def run_case(case: dict[str, Any], run_id: str, *, use_judge: bool, judge_
     watch = _RateLimitWatch()
     root = logging.getLogger()
     root.addHandler(watch)
+    # The client's "429 ... retrying" messages are INFO. Under a default
+    # WARNING root level they are never created, and a case slowed by the
+    # provider's per-minute limit gets scored as the system timing out.
+    noisy = {name: logging.getLogger(name).level for name in ("openai", "httpx")}
+    for name in noisy:
+        logging.getLogger(name).setLevel(logging.INFO)
     started = time.perf_counter()
     state: dict[str, Any]
     try:
         state = dict(await run_turn(case["question"], f"eval-{run_id}", turn_id=uuid.uuid4().hex,
-                                    record=False))
+                                    record=False, timeout_s=get_config()["evaluation"]["turn_timeout_s"]))
     except Exception as exc:     # a crash IS a system failure; score it
         log.exception("case %s crashed", case["id"])
         state = {"answer": "", "stop_reason": f"crashed: {type(exc).__name__}: {exc}"}
     finally:
         root.removeHandler(watch)
+        for name, level in noisy.items():
+            logging.getLogger(name).setLevel(level)
     latency = round(time.perf_counter() - started, 1)
 
     o = outcome_from_state(state)
@@ -126,20 +152,25 @@ async def run_case(case: dict[str, Any], run_id: str, *, use_judge: bool, judge_
         "turn_id": state.get("turn_id"),
         "outcome": {k: v for k, v in asdict(o).items() if k != "answer"},
         "checks": [asdict(c) for c in checks], "code_pass": code_pass,
-        "latency_s": latency, "status": "ok",
+        "latency_s": latency, "status": "ok", "throttled": False,
         "prompt_versions": state.get("prompt_versions", {}),
     }
     if case["source"] == "trap":
         result["abstained"] = says_it_cannot_tell(o)
         result["ungrounded_truth"] = any(contains(o.answer, t) for t in case["known_answer"])
 
+    result["throttled"] = watch.per_minute
     tool_statuses = o.tool_evidence_statuses
     if watch.per_day:
         result["status"] = "budget"      # nothing more will run today
+        result["rate_limit_evidence"] = watch.seen[-2:]
     elif tool_statuses and all(st == "failed" for st in tool_statuses):
         result["status"] = "infra"       # every tool call failed: the stack, not the agent
-    elif watch.per_minute and (o.stop_reason == "timeout" or not code_pass):
-        result["status"] = "infra"       # slowed by retries; re-run it
+    elif watch.rate_failed or (watch.per_minute and o.stop_reason == "timeout"):
+        # A step gave up on a refusal, or throttling ate the whole time
+        # allowance: the provider decided this case, not the agent.
+        result["status"] = "infra"
+        result["rate_limit_evidence"] = watch.seen[:3]
 
     if use_judge and result["status"] == "ok":
         try:
@@ -194,6 +225,14 @@ async def run_eval(cases: list[dict[str, Any]], *, run_id: str | None = None, us
     folder.mkdir(parents=True, exist_ok=True)
     results_path = folder / "results.jsonl"
 
+    meta_file = folder / "meta.json"
+    if meta_file.exists():
+        started_on = json.loads(meta_file.read_text(encoding="utf-8")).get("models")
+        if started_on and started_on != _models():
+            # Finishing a run on other models would mix two systems in
+            # one report. Start a new run instead.
+            raise RuntimeError(f"run {run_id} was started on {started_on}; the current models are "
+                               f"{_models()}. Start a new run, or switch the models back to resume.")
     done = {r["id"]: r for r in _read(results_path) if r["status"] == "ok"}
     todo = [c for c in cases if c["id"] not in done]
     meta_path = folder / "meta.json"
@@ -202,6 +241,9 @@ async def run_eval(cases: list[dict[str, Any]], *, run_id: str | None = None, us
             "run_id": run_id, "started_at": datetime.now(UTC).isoformat(timespec="seconds"),
             "git_commit": _git_commit(), "case_ids": [c["id"] for c in cases],
             "judge_version": judging.judge_version() if use_judge else None,
+            # A pass-rate change between runs on different models is the
+            # models, not the code; the report says so.
+            "models": _models(),
         }, indent=2) + "\n", encoding="utf-8")
 
     stopped_for_budget = False
@@ -306,8 +348,13 @@ def build_report(run_id: str, cases: list[dict[str, Any]], results: list[dict[st
                   "agreement": latest_agreement(judge_versions)},
         "mean_iterations": round(sum(r["outcome"]["iterations"] for r in scored) / len(scored), 2) if scored else None,
         "mean_latency_s": round(sum(r["latency_s"] for r in ok) / len(ok), 1) if ok else None,
+        "turn_timeout_s": get_config()["evaluation"]["turn_timeout_s"],
+        "app_turn_timeout_s": get_config()["api"]["turn_timeout_seconds"],
+        "throttled_cases": sum(bool(r.get("throttled")) for r in ok),
         "compared_to": prev_id,
         "judge_comparable": bool(prev_id) and prev_meta.get("judge_version") == this_meta.get("judge_version"),
+        "models": this_meta.get("models"),
+        "models_changed": bool(prev_id) and prev_meta.get("models") != this_meta.get("models"),
         "diff": diff_runs(results, prev_results) if prev_id else None,
         "failures": [{"id": r["id"], "source": r["source"],
                       "failed": [c["name"] + ": " + c["detail"] for c in r["checks"] if not c["passed"]]
@@ -337,7 +384,8 @@ def render_markdown(rep: dict[str, Any]) -> str:
     lines = [
         f"# Evaluation run {rep['run_id']}",
         "",
-        f"Commit {rep['git_commit']} · {rep['counts']['scored']} of {rep['counts']['cases']} cases scored"
+        f"Commit {rep['git_commit']} · models {rep.get('models')} · "
+        f"{rep['counts']['scored']} of {rep['counts']['cases']} cases scored"
         + ("" if rep["complete"] else " · **incomplete — resume to finish**"),
         "",
         "| Headline | |",
@@ -345,6 +393,12 @@ def render_markdown(rep: dict[str, Any]) -> str:
         f"| Pass rate (lower of synthetic / hand-written) | **{_pct(rep['headline_pass_rate'])}** |",
         f"| Ungrounded-truth rate on traps (lower is better) | **{_pct(tr['ungrounded_truth_rate'])}** |",
         f"| Trap abstention rate | {_pct(tr['abstention_rate'])} |",
+        "",
+        f"Time limit per question: {rep['turn_timeout_s']} s in this evaluation "
+        f"(the app uses {rep['app_turn_timeout_s']} s). {rep['throttled_cases']} of "
+        f"{rep['counts']['scored']} scored cases were slowed by the provider's rate limit"
+        + (f" and would likely have hit the app's {rep['app_turn_timeout_s']} s limit."
+           if rep["throttled_cases"] else "."),
         "",
         "| Pass rate by source | |",
         "|---|---|",
@@ -367,7 +421,9 @@ def render_markdown(rep: dict[str, Any]) -> str:
     if rep["diff"] is not None:
         d = rep["diff"]
         lines += [f"## Compared with {rep['compared_to']}"
-                  + ("" if rep["judge_comparable"] else " (judge changed — judge scores not comparable)"), ""]
+                  + ("" if rep["judge_comparable"] else " (judge changed — judge scores not comparable)")
+                  + (" (MODELS CHANGED — differences may be the models, not the code)"
+                     if rep.get("models_changed") else ""), ""]
         lines += [f"- **REGRESSION** {x['id']}: now failing {', '.join(x['now_failing'])}" for x in d["regressions"]]
         lines += [f"- fixed: {x}" for x in d["fixed"]]
         if not d["regressions"] and not d["fixed"]:

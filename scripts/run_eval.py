@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -79,6 +80,14 @@ async def main() -> int:
         return 0
 
     cfg = get_config()["evaluation"]
+    # More patience with the provider's per-minute limit than the app
+    # has (see evaluation.llm_max_retries); read by the LLM client.
+    os.environ["LLM_MAX_RETRIES"] = str(cfg["llm_max_retries"])
+    from ops_copilot.llm import client as llm_client
+    from ops_copilot.settings import get_settings
+
+    get_settings.cache_clear()
+    llm_client._client.cache_clear()
     cases = load_cases(cfg["golden_path"])
     if not args.no_traps:
         cases += load_cases(cfg["trap_path"])

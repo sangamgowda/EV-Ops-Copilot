@@ -87,10 +87,13 @@ async def _notify(emit: Emit | None, event: str, data: dict[str, Any]) -> None:
 
 
 async def run_turn(question: str, session_id: str | None = None, *, turn_id: str | None = None,
-                   emit: Emit | None = None, mcp: Any = None, record: bool = True) -> AgentState:
+                   emit: Emit | None = None, mcp: Any = None, record: bool = True,
+                   timeout_s: float | None = None) -> AgentState:
     session_id = session_id or uuid.uuid4().hex
     turn_id = turn_id or uuid.uuid4().hex
-    timeout = get_config()["api"]["turn_timeout_seconds"]
+    # Evaluation may pass a longer ceiling (see evaluation.turn_timeout_s);
+    # every live request uses the configured one.
+    timeout = timeout_s or get_config()["api"]["turn_timeout_seconds"]
 
     configurable: dict[str, Any] = {}
     if emit is not None:

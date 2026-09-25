@@ -132,7 +132,9 @@ def story_cases(conn: Any) -> list[dict[str, Any]]:
             f"so current draw is about {delta:.0f}% above baseline ({cur:.1f} A vs {cur_b:.1f} A). "
             f"Battery health is normal ({health}%), so wear is ruled out. SB-114: reduce the load.",
             [{"label": "current draw above baseline pct", "value": delta, "tolerance": 6},
-             {"label": "payload kg", "value": r(pay, 0), "tolerance": 8}],
+             # ±5, not wider: the answer also carries range numbers (~184 km)
+             # that a looser tolerance would accept as the payload.
+             {"label": "payload kg", "value": r(pay, 0), "tolerance": 5}],
             [["overload", "overloaded", "above the rated", "exceeds the rated", "over the rated"]],
             ["current_draw"], ["battery degradation is the cause", "caused by battery wear"],
             ["story:overload"]))

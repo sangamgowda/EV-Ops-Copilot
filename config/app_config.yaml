@@ -72,7 +72,9 @@ llm:
     plan: 4096
     reflect: 2048
     synthesize: 4096
-    judge: 2048
+    # qwen allows 1,000 output tokens a minute on the free tier; a larger
+    # cap is rejected outright ("Request too large"), before any reply.
+    judge: 800
     eval_generate: 4096
     groundedness: 2048
 
@@ -83,7 +85,8 @@ llm:
     plan: low
     reflect: low
     synthesize: low
-    judge: low
+    judge: default      # qwen: "low" thinks for ~400 tokens and overruns its
+                        # 1,000-a-minute output limit; "default" answers in ~55
     eval_generate: low
     groundedness: low
 
@@ -304,6 +307,13 @@ evaluation:
   # case uses most of that. Waiting between cases keeps a slow
   # rate-limit retry from being scored as the system timing out.
   pause_between_cases_s: 45
+  # On the free tier one question needs more tokens per minute than a
+  # model allows, so the provider throttles it mid-turn. The app's 45 s
+  # ceiling then cuts the answer off and the score measures throttling,
+  # not the agent. Evaluation lets a throttled question wait and finish,
+  # and the report says so. The app itself keeps api.turn_timeout_seconds.
+  turn_timeout_s: 120
+  llm_max_retries: 6
   # A case passes on the judge when every dimension scores at least this.
   judge_pass_score: 3
 

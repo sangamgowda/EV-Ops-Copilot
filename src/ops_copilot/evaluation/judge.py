@@ -48,7 +48,16 @@ class PairwiseVerdict(BaseModel):
 
 
 def judge_version() -> str:
-    return load_prompt("judge")[1]
+    """Prompt, model and generation settings together: changing any of
+    them makes a different judge, whose scores are not comparable."""
+    import hashlib
+
+    from ops_copilot.settings import get_config, model_for
+
+    llm = get_config()["llm"]
+    parts = [load_prompt("judge")[1], model_for("judge"), str(llm["temperature"].get("judge")),
+             str(llm["max_tokens"].get("judge")), str(llm.get("reasoning_effort", {}).get("judge"))]
+    return hashlib.sha256("|".join(parts).encode()).hexdigest()[:12]
 
 
 def _facts(case: dict[str, Any]) -> str:
@@ -60,11 +69,11 @@ def _facts(case: dict[str, Any]) -> str:
 
 
 async def score(case: dict[str, Any], answer: str) -> dict[str, Any]:
-    system, version = load_prompt("judge")
+    system, _ = load_prompt("judge")
     user = (f"## Question\n{case['question']}\n\n## Reference answer\n{case['reference_answer']}\n\n"
             f"## Expected facts\n{_facts(case)}\n\n## Generated answer\n{answer or '(empty)'}")
     out = await complete_json("judge", system, user, JudgeScore)
-    return {**out.model_dump(), "judge_version": version}
+    return {**out.model_dump(), "judge_version": judge_version()}
 
 
 async def pairwise(case: dict[str, Any], first: str, second: str) -> dict[str, Any]:
