@@ -35,7 +35,6 @@ sqlglot==26.0.1                # AST parsing for the validator
 sentence-transformers==3.3.1
 torch==2.5.1                   # CPU wheel; see Dockerfile
 transformers==4.47.1
-rank-bm25==0.2.2               # keyword half of hybrid search
 
 # ── Document parsing (structure-aware chunking) ──────────────
 markdown-it-py==3.0.0
