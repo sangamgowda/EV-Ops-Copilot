@@ -403,17 +403,6 @@ Design decisions and their reasons: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.m
 - An evaluation suite (45 test cases and 8 trap cases) with regression
   comparison between runs.
 - A feedback loop that turns flagged answers into reviewed test cases.
-- One-command start with Docker, and automated tests in CI.
-
-## Roadmap
-
-- Voice input
-- Separate data per customer
-- Usage and cost dashboards
-- Automatic detection of database changes
-- Answer caching
-
----
 
 ## License
 
