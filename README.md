@@ -46,7 +46,10 @@ synthetic dataset is described in
 [`docs/SAMPLE_DATASET.md`](docs/SAMPLE_DATASET.md).
 
 ---
+## Product Architecture
+![Product Architecture](docs/architecture.svg)
 
+---
 ## How it works
 
 It works the way a person investigating a problem would: look at
