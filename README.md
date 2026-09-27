@@ -1,28 +1,49 @@
 # EV Ops Copilot
 
-An AI assistant for teams that run electric vehicles.
+[![ci](https://github.com/sangamgowda/EV-Ops-Copilot/actions/workflows/ci.yml/badge.svg)](https://github.com/sangamgowda/EV-Ops-Copilot/actions/workflows/ci.yml)
 
-You ask it a question in plain English. It looks at your vehicle
-data and your service documents, works out the answer, and tells
-you where each part of the answer came from.
+EV Ops Copilot is an assistant for electric-vehicle operations teams.
+Staff ask questions in plain English, about a specific vehicle's
+behaviour or about business performance, and get an answer backed by
+the company's own data and documents, with every claim linked to its
+source.
+
+- **Diagnoses vehicle issues** by comparing live readings against normal
+  values, and explains the likely cause using service bulletins and
+  manuals.
+- **Answers business questions** about sales, regions and models, using
+  both sales records and reports.
+- **Investigates in steps.** It checks what it has found and looks
+  further when that isn't enough, instead of answering from the first
+  lookup.
+- **Says "I don't know."** When the data can't explain something, it
+  says what it found and what's missing, rather than guessing.
+- **Shows its work.** The investigation is visible live, and every point
+  links to its source.
+- **Handles typos** in vehicle IDs.
+- **Keeps company data safe.** Every database query is checked before it
+  runs, access is read-only, and credentials are kept apart from the AI.
+- **Measures its own quality** against a test set, and turns user
+  feedback into new tests.
+- **Plugs into any EV company's data** through configuration, and runs
+  with one command.
 
 ---
 
 ## What you can ask it
 
 **Vehicle questions**
-- "Why did range drop on V-042 this week?"
-- "Why won't V-012 go above 45 km/h in Sonic mode?"
+- "Why did range drop on this vehicle this week?"
 - "What does error code ERR_205 mean?"
+- "What ride modes does the Volt 1 Ultra have?"
 
 **Business questions**
-- "Why did the south outsell the other regions this quarter?"
-- "Which model sold the most this year?"
+- "How are sales tracking this quarter?"
+- "Which region sold the most, and why?"
 
-[`docs/DATA_GUIDE.md`](docs/DATA_GUIDE.md) lists what is in the
-sample data and 24 questions with the answer you should expect.
-
-Some questions are both, and it handles those too.
+Some questions are both, and it handles those too. The bundled
+synthetic dataset is described in
+[`docs/SAMPLE_DATASET.md`](docs/SAMPLE_DATASET.md).
 
 ---
 
@@ -148,15 +169,14 @@ With the default 120 vehicles and 90 days:
 | sales_transactions | ~20,000 | two years of sales across four regions |
 | error_codes | 16 | trouble codes, read from the service manual |
 
-Model specs follow figures the maker of a real scooter family has
-published, with brand and product names replaced by neutral ones
-(`data/reference/ev_models.yaml`). Full details are in
-[`docs/DATA_GUIDE.md`](docs/DATA_GUIDE.md).
+Model figures and sales volumes are set in
+`data/reference/ev_models.yaml`; all names are fictional. Full details
+are in [`docs/SAMPLE_DATASET.md`](docs/SAMPLE_DATASET.md).
 
-### Built-in test cases
+### Test scenarios
 
-Some vehicles have a known problem planted in their data, so answers
-can be checked:
+A few vehicles carry a known fault, so answers can be checked against
+ground truth:
 
 | Vehicle | Problem | Explained by |
 |---|---|---|
@@ -174,9 +194,9 @@ Full details, with measured numbers, are written to
 `data/documents/` holds made-up service bulletins, manuals, a help
 article and business reports, ready to add with `POST /ingest`.
 
-Eleven public blog articles about the real scooters can be added on
-top. They are fetched onto your machine and never committed — see
-[`docs/DATA_GUIDE.md`](docs/DATA_GUIDE.md#5-where-it-all-comes-from).
+Public web pages can be added as extra documents; their text stays on
+your machine and is never committed — see
+[`docs/SAMPLE_DATASET.md`](docs/SAMPLE_DATASET.md#adding-public-web-pages-optional).
 
 ### Collecting web pages
 
@@ -233,7 +253,8 @@ cleanly when the allowance runs out and `--resume` finishes it.
 | Document search | keyword + meaning-based search, then re-ranking |
 | Tool access | MCP server (a separate service that holds the database connection) |
 | Query checking | sqlglot |
-| Tracing | Langfuse |
+| Tracing | Langfuse (OpenTelemetry) |
+| Continuous integration | GitHub Actions |
 | API | FastAPI |
 
 ---
@@ -364,16 +385,25 @@ src/ops_copilot/
 data/              reference figures, sample documents, sample dataset
 scripts/           data generation, web collection, setup and test scripts
 tests/             automated tests
-docs/              design notes
+docs/              architecture and the sample dataset
 ```
+
+Design decisions and their reasons: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ---
 
-## Status
+## What works today
 
-Under active development. The database setup, query checking,
-workflow structure and configuration are in place; the remaining
-steps are being built next.
+- The full investigation loop, end to end, with streaming answers in
+  the web interface and the API.
+- Hybrid document search with re-ranking, and exact error-code lookup.
+- Three-layer protection on every generated database query.
+- Per-question tracing in Langfuse, with prompt versions and a
+  configuration snapshot.
+- An evaluation suite (45 test cases and 8 trap cases) with regression
+  comparison between runs.
+- A feedback loop that turns flagged answers into reviewed test cases.
+- One-command start with Docker, and automated tests in CI.
 
 ## Roadmap
 
@@ -387,4 +417,4 @@ steps are being built next.
 
 ## License
 
-MIT
+[MIT](LICENSE)

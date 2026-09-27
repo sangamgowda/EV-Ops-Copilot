@@ -16,7 +16,7 @@ name what it cannot establish, identify the strongest signal WITHOUT
 asserting it as the cause, and say what would confirm it.
 
 Plain text, not JSON — a deliberate exception to "Pydantic for every
-structured LLM output" (see CLAUDE.md). The provider delivers JSON-mode
+structured LLM output" (see docs/ARCHITECTURE.md). The provider delivers JSON-mode
 output in one piece, so a JSON answer cannot stream at all. The model
 therefore writes prose with inline [eN] tags, and the structure is
 built in code:

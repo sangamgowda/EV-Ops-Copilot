@@ -67,3 +67,6 @@ ui/playwright-report/
 
 # Scratch request bodies for curl
 question.json
+
+# Local instructions for an AI coding assistant; not product documentation.
+CLAUDE.md

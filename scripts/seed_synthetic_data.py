@@ -84,7 +84,7 @@ UNITS = {
 # Vehicle numbers that carry a planted story. V-042 is the README
 # example. With a smaller --vehicles, numbers wrap around (55 of 50 is
 # V-005), so the stories survive but land on different ids than
-# docs/DATA_GUIDE.md lists; the manifest always has the real ones.
+# docs/SAMPLE_DATASET.md lists; the manifest always has the real ones.
 PLANTED = {
     "overload": [42, 7, 29],
     "cell_wear": [17, 36],

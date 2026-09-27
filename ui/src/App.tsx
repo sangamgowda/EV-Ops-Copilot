@@ -5,13 +5,13 @@ import { ArrowUp, Plus } from "./components/icons";
 import { isNearBottom } from "./scroll";
 import type { AssistantMessage, Message } from "./types";
 
-// One per kind of question the seeded data can answer; the full list,
-// with expected answers, is in docs/DATA_GUIDE.md.
+// One per kind of question: a vehicle check, an exact lookup, a
+// specification and a business question.
 const EXAMPLES = [
-  "Why did range drop on V-042 this week?",
-  "Why won't V-012 go above 45 km/h in Sonic mode?",
-  "Why did the south outsell the other regions this quarter?",
+  "How is V-001 doing against its normal values this week?",
+  "What does error code ERR_205 mean?",
   "What ride modes does the Volt 1 Ultra have?",
+  "Which region sold the most scooters this quarter, and why?",
 ];
 
 const newId = () =>
