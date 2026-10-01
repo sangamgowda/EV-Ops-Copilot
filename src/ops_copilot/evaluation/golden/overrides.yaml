@@ -1,0 +1,35 @@
+# Hand-reviewed corrections to GENERATED cases, applied by
+# scripts/build_golden.py after generation. Generated expectations are
+# rebuilt on every run, so a fix edited into golden.jsonl would be lost;
+# it goes here, with the reason, instead.
+#
+# Each entry replaces the named keys of the case's `expected` block.
+# `remove` lists keys to delete.
+
+doc_SB-121_removable_pack_cell_wear:
+  reason: >
+    The generator required the warranty terms (3 years, 30,000 km). They
+    are in the reference but are not part of what the question asks
+    (which steps to take); a correct answer without them failed.
+    (Evaluation run 20261001-132338.)
+  expected:
+    facts:
+      - {label: wait hours, value: 48, tolerance: 0}
+      - {label: capacity test threshold pct, value: 85, tolerance: 0}
+
+doc_sales_q2_2026_review:
+  reason: >
+    The generator required 14, a number the report never states (it says
+    the network grew from 38 to 52 outlets). An answer quoting the report
+    failed. Either the two figures or their difference is correct.
+  expected:
+    facts:
+      - {label: outlets before, value: 38, tolerance: 0}
+      - {label: outlets after, value: 52, tolerance: 0}
+
+syn_city_V-064:
+  reason: >
+    Which city a vehicle is registered in is neither a diagnostic nor a
+    business question; requiring one domain label tested the label, not
+    the answer. (Evaluation run 20261001-132338.)
+  remove: [domains]

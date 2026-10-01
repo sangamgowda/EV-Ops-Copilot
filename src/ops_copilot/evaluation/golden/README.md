@@ -10,6 +10,7 @@ answer is "the data does not say".
 |---|---|---|
 | `curated.yaml` | hand | adversarial cases and cases promoted from real failures |
 | `traps.yaml` | hand | trap questions and the leaked answers to watch for |
+| `overrides.yaml` | hand | reviewed corrections to generated cases, each with its reason |
 | `golden.jsonl` | `scripts/build_golden.py` | every scored case |
 | `trap_cases.jsonl` | `scripts/build_golden.py` | the traps, in case form |
 | `golden_meta.json` | `scripts/build_golden.py` | counts, data version, rejected questions |

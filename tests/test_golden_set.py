@@ -57,3 +57,11 @@ def test_no_near_duplicate_questions():
             score = fuzz.token_set_ratio(a["question"].lower(), b["question"].lower())
             same_answer = a["reference_answer"] == b["reference_answer"]
             assert score < 95 or not same_answer, f"{a['id']} duplicates {b['id']}"
+
+
+def test_every_override_targets_a_case_and_gives_a_reason():
+    overrides = yaml.safe_load((GOLDEN / "overrides.yaml").read_text(encoding="utf-8")) or {}
+    ids = {c["id"] for c in cases()}
+    for case_id, fix in overrides.items():
+        assert case_id in ids, f"override for {case_id}, which no longer exists"
+        assert str(fix.get("reason", "")).strip(), f"override for {case_id} gives no reason"

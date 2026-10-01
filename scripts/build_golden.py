@@ -421,6 +421,25 @@ def check_traps(conn: Any, traps: list[dict[str, Any]]) -> list[str]:
     return leaks
 
 
+def apply_overrides(cases: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Hand-reviewed corrections to generated cases (golden/overrides.yaml).
+    Each names its reason; an override for a case that no longer exists
+    is reported rather than silently ignored."""
+    path = GOLDEN / "overrides.yaml"
+    overrides = yaml.safe_load(path.read_text(encoding="utf-8")) if path.exists() else {}
+    by_id = {c["id"]: c for c in cases}
+    for case_id, fix in (overrides or {}).items():
+        case = by_id.get(case_id)
+        if case is None:
+            print(f"  override for {case_id} matches no generated case (stale?)")
+            continue
+        case["expected"].update(fix.get("expected", {}))
+        for key in fix.get("remove", []):
+            case["expected"].pop(key, None)
+        case["override"] = " ".join(str(fix.get("reason", "")).split())
+    return cases
+
+
 # ── main ─────────────────────────────────────────────────────
 
 def write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
@@ -458,7 +477,7 @@ async def main() -> int:
     else:
         docs, rejected = await doc_cases(conn, cfg["max_question_chunk_overlap"], set(cfg["holdout_documents"]))
     curated = curated_cases(conn)
-    cases = synthetic + docs + curated
+    cases = apply_overrides(synthetic + docs) + curated
 
     ids = [c["id"] for c in cases]
     dupes = {i for i in ids if ids.count(i) > 1}
