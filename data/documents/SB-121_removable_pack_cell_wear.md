@@ -2,7 +2,7 @@
 title: SB-121 — Removable pack cell wear and gradual range loss
 doc_type: service_bulletin
 domain: diagnostic
-applies_to_models: [Volt 1]
+applies_to_models: [EVX Standard]
 effective_date: 2025-11-20
 ---
 
@@ -14,7 +14,7 @@ Range getting shorter every week, with normal riding and normal load,
 usually means battery degradation: the pack is losing capacity and
 battery health (cell health) is falling.
 
-On a small number of Volt 1 scooters from early production, the
+On a small number of EVX Standard scooters from early production, the
 removable battery pack develops cell imbalance after frequent fast
 top-ups away from home. Cell health falls steadily over several weeks
 and usable range drops with it. The fixed pack is not affected, but

@@ -10,7 +10,7 @@ import type { AssistantMessage, Message } from "./types";
 const EXAMPLES = [
   "How is V-001 doing against its normal values this week?",
   "What does error code ERR_205 mean?",
-  "What ride modes does the Volt 1 Ultra have?",
+  "What ride modes does the EVX Max have?",
   "Which region sold the most scooters this quarter, and why?",
 ];
 

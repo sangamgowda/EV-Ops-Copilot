@@ -1,10 +1,10 @@
 # ─────────────────────────────────────────────────────────────
 # Reference catalogue for the synthetic dataset.
 #
-# One fictional scooter family, three models:
-#   "Volt 1"        the smaller-battery model
-#   "Volt 1 Gen 2"  the flagship
-#   "Volt 1 Ultra"  the top-of-range model
+# One fictional scooter family, three models. Each has a `role`;
+# scripts/seed_synthetic_data.py refers to models only by role and to
+# ride modes only by their order below, so every name lives in this
+# file alone and a rename touches nothing else in the generator.
 #
 # Figures are representative of electric scooters sold in India;
 # consumption and speed profiles are engineering estimates.
@@ -15,17 +15,18 @@
 currency: INR
 market: India
 
-# Six ride modes, lowest power to highest. Each model offers the
-# modes up to its own top speed: Sonic X exists only on the Ultra.
-# speed_cap is the most the controller allows in that mode; torque
-# is the peak the controller allows the motor to deliver.
+# Six ride modes, lowest power to highest; the order matters. Each
+# model offers the modes up to its own top speed: the last mode exists
+# only on the top model. speed_cap is the most the controller allows in
+# that mode; torque is the peak the controller allows the motor to
+# deliver; motor_temp_c is the typical motor temperature in the mode.
 ride_modes:
-  Eco X:   {speed_cap_kmph: 45,  torque_nm: 25, character: "very low torque, maximum range"}
-  Eco:     {speed_cap_kmph: 50,  torque_nm: 35, character: "low torque, a little livelier than Eco X"}
-  Ride:    {speed_cap_kmph: 70,  torque_nm: 50, character: "everyday mode, good torque"}
-  Air:     {speed_cap_kmph: 90,  torque_nm: 60, character: "high speed, strong pull"}
-  Sonic:   {speed_cap_kmph: 100, torque_nm: 72, character: "full performance"}
-  Sonic X: {speed_cap_kmph: 115, torque_nm: 80, character: "Ultra only; unlocks the top speed"}
+  Saver:  {speed_cap_kmph: 45,  torque_nm: 25, motor_temp_c: 40, character: "very low torque, maximum range"}
+  Eco:    {speed_cap_kmph: 50,  torque_nm: 35, motor_temp_c: 42, character: "low torque, a little livelier than Saver"}
+  Normal: {speed_cap_kmph: 70,  torque_nm: 50, motor_temp_c: 48, character: "everyday mode, good torque"}
+  Sport:  {speed_cap_kmph: 90,  torque_nm: 60, motor_temp_c: 54, character: "high speed, strong pull"}
+  Sport+: {speed_cap_kmph: 100, torque_nm: 72, motor_temp_c: 60, character: "full performance"}
+  Ultra:  {speed_cap_kmph: 115, torque_nm: 80, motor_temp_c: 66, character: "top model only; unlocks the top speed"}
 
 # Shared by every model.
 common:
@@ -43,58 +44,63 @@ common:
   rated_payload_kg: 150          # rider + pillion + cargo
   tyres: 12-inch tubeless
 
+# role: entry | flagship | top. Scenarios and the sales mix pick
+# models by role, never by name.
 models:
 
-  Volt 1:
+  EVX Standard:
+    role: entry
     status: on_sale
     fleet_share: 0.30            # share of seeded vehicles
-    battery_kwh: 3.7
-    idc_range_km: 155
-    top_speed_kmph: 100          # set by the ride-mode table (Sonic)
+    battery_kwh: 3.5
+    idc_range_km: 150
+    top_speed_kmph: 100          # set by the ride-mode table (Sport+)
     motor_peak_kw: 8.5           # same motor family
     peak_torque_nm: 72
     accel_0_40_s: 2.55
     kerb_weight_kg: 126
-    price_inr: 124999
+    price_inr: 120000
     pack_nominal_v: 48.0
-    modes: [Eco X, Eco, Ride, Air, Sonic]
-    wh_per_km:      {Eco X: 18, Eco: 20, Ride: 24, Air: 29, Sonic: 34}
-    avg_speed_kmph: {Eco X: 32, Eco: 36, Ride: 46, Air: 55, Sonic: 62}
+    modes: [Saver, Eco, Normal, Sport, Sport+]
+    wh_per_km:      {Saver: 18, Eco: 20, Normal: 24, Sport: 29, Sport+: 34}
+    avg_speed_kmph: {Saver: 32, Eco: 36, Normal: 46, Sport: 55, Sport+: 62}
     sold_from: "2024-10-01"
 
-  Volt 1 Gen 2:
+  EVX Pro:
+    role: flagship
     status: on_sale
     fleet_share: 0.45
-    battery_kwh: 5.0             # fixed + removable pack
-    idc_range_km: 212
-    top_speed_kmph: 100          # set by the ride-mode table (Sonic)
+    battery_kwh: 4.8             # fixed + removable pack
+    idc_range_km: 200
+    top_speed_kmph: 100          # set by the ride-mode table (Sport+)
     motor_peak_kw: 8.5
     motor_continuous_kw: 4.5
     peak_torque_nm: 72
     accel_0_40_s: 2.77
     kerb_weight_kg: 134
-    price_inr: 145000            # ex-showroom
+    price_inr: 140000            # ex-showroom
     pack_nominal_v: 51.8
-    modes: [Eco X, Eco, Ride, Air, Sonic]
-    wh_per_km:      {Eco X: 19, Eco: 21, Ride: 26, Air: 31, Sonic: 36}
-    avg_speed_kmph: {Eco X: 32, Eco: 36, Ride: 46, Air: 55, Sonic: 62}
+    modes: [Saver, Eco, Normal, Sport, Sport+]
+    wh_per_km:      {Saver: 19, Eco: 21, Normal: 26, Sport: 31, Sport+: 36}
+    avg_speed_kmph: {Saver: 32, Eco: 36, Normal: 46, Sport: 55, Sport+: 62}
     sold_from: "2025-06-01"
 
-  Volt 1 Ultra:
+  EVX Max:
+    role: top
     status: on_sale
     fleet_share: 0.25
-    battery_kwh: 6.4
-    idc_range_km: 248
-    top_speed_kmph: 115          # Sonic X
+    battery_kwh: 6.0
+    idc_range_km: 240
+    top_speed_kmph: 115          # Ultra mode
     motor_peak_kw: 10.5
     peak_torque_nm: 80
     accel_0_40_s: 2.4
     kerb_weight_kg: 139
-    price_inr: 174999
+    price_inr: 170000
     pack_nominal_v: 51.8
-    modes: [Eco X, Eco, Ride, Air, Sonic, Sonic X]
-    wh_per_km:      {Eco X: 19, Eco: 21, Ride: 26, Air: 31, Sonic: 36, Sonic X: 42}
-    avg_speed_kmph: {Eco X: 32, Eco: 36, Ride: 46, Air: 55, Sonic: 62, Sonic X: 70}
+    modes: [Saver, Eco, Normal, Sport, Sport+, Ultra]
+    wh_per_km:      {Saver: 19, Eco: 21, Normal: 26, Sport: 31, Sport+: 36, Ultra: 42}
+    avg_speed_kmph: {Saver: 32, Eco: 36, Normal: 46, Sport: 55, Sport+: 62, Ultra: 70}
     # Launched in the south first; other regions from launched_elsewhere.
     sold_from: "2026-06-01"
     launched_elsewhere: "2026-08-15"

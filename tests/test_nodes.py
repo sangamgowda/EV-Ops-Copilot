@@ -192,14 +192,14 @@ class TestDocumentCoverage:
     def test_uncovered_model_is_stated_in_the_evidence(self):
         from ops_copilot.agent.nodes.observe import _coverage
 
-        chunk = {"applies_to_models": ["Volt 1 Gen 2", "Volt 1"], "boosted": False}
+        chunk = {"applies_to_models": ["EVX Pro", "EVX Standard"], "boosted": False}
         note = _coverage(chunk, {"entity_id": "V-023"})
-        assert "Volt 1 Gen 2, Volt 1" in note and "does NOT list" in note
+        assert "EVX Pro, EVX Standard" in note and "does NOT list" in note
 
     def test_covered_model_is_not_flagged(self):
         from ops_copilot.agent.nodes.observe import _coverage
 
-        chunk = {"applies_to_models": ["Volt 1 Gen 2"], "boosted": True}
+        chunk = {"applies_to_models": ["EVX Pro"], "boosted": True}
         assert "does NOT" not in _coverage(chunk, {"entity_id": "V-042"})
         # No vehicle asked about: nothing to flag.
         assert "does NOT" not in _coverage({"applies_to_models": [], "boosted": False}, {})

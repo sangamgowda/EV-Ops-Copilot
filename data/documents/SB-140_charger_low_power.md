@@ -2,7 +2,7 @@
 title: SB-140 — Standard charger delivering under half its rated power
 doc_type: service_bulletin
 domain: diagnostic
-applies_to_models: [Volt 1, Volt 1 Gen 2, Volt 1 Ultra]
+applies_to_models: [EVX Standard, EVX Pro, EVX Max]
 effective_date: 2026-09-05
 ---
 

@@ -2,7 +2,7 @@
 title: Policy — Fleet and Partner Pricing
 doc_type: policy
 domain: business
-applies_to_models: [Volt 1, Volt 1 Gen 2, Volt 1 Ultra]
+applies_to_models: [EVX Standard, EVX Pro, EVX Max]
 effective_date: 2026-01-01
 ---
 

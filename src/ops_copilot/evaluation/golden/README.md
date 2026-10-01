@@ -10,6 +10,7 @@ answer is "the data does not say".
 |---|---|---|
 | `curated.yaml` | hand | adversarial cases and cases promoted from real failures |
 | `traps.yaml` | hand | trap questions and the leaked answers to watch for |
+| `overrides.yaml` | hand | reviewed corrections to generated cases, each with its reason |
 | `golden.jsonl` | `scripts/build_golden.py` | every scored case |
 | `trap_cases.jsonl` | `scripts/build_golden.py` | the traps, in case form |
 | `golden_meta.json` | `scripts/build_golden.py` | counts, data version, rejected questions |
@@ -90,7 +91,7 @@ The automated versions of these, with exact tolerances, are in
 | Question | A correct answer |
 |---|---|
 | Why did range drop on V-042 this week? | Overloaded: ~190 kg against a 150 kg limit, current draw ~38% above normal, battery healthy (SB-114). |
-| Why won't V-012 go above 45 km/h in Sonic mode? | Firmware 3.2.0 applies the Eco X limit to Sonic and Sonic X; speed ~42 against 62 normal. Fix: 3.2.1 (SB-135). |
+| Why won't V-012 go above 45 km/h in Sport+ mode? | Firmware 3.2.0 applies the Saver limit to Sport+ and Ultra; speed ~42 against 62 normal. Fix: 3.2.1 (SB-135). |
 | Why is V-064 taking so long to charge? | Charger delivering ~0.34 kW instead of ~0.75; battery fine. Replace the charger (SB-140). |
 | Why is the range on V-017 getting shorter every week? | Battery wear: cell health down to ~84%, current normal. Balance charge, then capacity test (SB-121). |
 | Why is V-023 using more power than normal? | Current ~30% high; overload and battery wear ruled out; no document explains it. Must not claim a cause. |
@@ -100,9 +101,9 @@ The automated versions of these, with exact tolerances, are in
 
 | Question | A correct answer |
 |---|---|
-| What ride modes does the Volt 1 Ultra have and how fast does each go? | Eco X 45, Eco 50, Ride 70, Air 90, Sonic 100, Sonic X 115 km/h. |
+| What ride modes does the EVX Max have and how fast does each go? | Saver 45, Eco 50, Normal 70, Sport 90, Sport+ 100, Ultra 115 km/h. |
 | How long does the removable battery take to charge to 80%? | About 2 h 7 min (fixed pack about 3 h 47 min). |
-| How much does the Volt 1 Gen 2 cost? | ₹1,45,000 ex-showroom. |
+| How much does the EVX Pro cost? | ₹1,40,000 ex-showroom. |
 | What does combined braking (CBS) do? | The rear lever brakes both wheels together. |
 
 ### Error codes
@@ -116,9 +117,9 @@ The automated versions of these, with exact tolerances, are in
 
 | Question | A correct answer |
 |---|---|
-| Why did the south outsell the other regions between July and September 2026? | The Ultra launched in the south on 1 June, ten weeks before elsewhere; south sales rose from ~2,060 (Q2) to ~2,270 (Q3) while the rest stayed flat. |
-| Which model sold the most in 2026? | Volt 1 Gen 2 (~6,000), ahead of Volt 1 (~4,700). |
-| Which model has sold the most of all time? | Volt 1 (~10,000): it was the only model for its first eight months. |
+| Why did the south outsell the other regions between July and September 2026? | The EVX Max launched in the south on 1 June, ten weeks before elsewhere; south sales rose from ~2,060 (Q2) to ~2,270 (Q3) while the rest stayed flat. |
+| Which model sold the most in 2026? | EVX Pro (~6,000), ahead of EVX Standard (~4,700). |
+| Which model has sold the most of all time? | EVX Standard (~10,000): it was the only model for its first eight months. |
 | What is the maximum discount on a fleet deal? | 10%, for 25 units or more. |
 
 ### Questions it must not invent an answer to
@@ -127,7 +128,7 @@ The automated versions of these, with exact tolerances, are in
 |---|---|
 | Why did range drop on V-999? | There is no vehicle V-999. |
 | Why did range drop on V42? | Treats it as V-042 (same vehicle, different spelling). |
-| What is the top speed of the Volt 2? | There is no such model. |
+| What is the top speed of the EVX Lite? | There is no such model. |
 
 ## Running on the free tier
 

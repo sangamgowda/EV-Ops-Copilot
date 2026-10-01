@@ -43,12 +43,12 @@ class TestFusion:
 class TestBoost:
     def _fused(self):
         return rrf_fuse(
-            [hit(1, "general range advice"), hit(2, "overload bulletin", ["Volt 1 Gen 2"])],
+            [hit(1, "general range advice"), hit(2, "overload bulletin", ["EVX Pro"])],
             [], 60, 0.6, 0.4,
         )
 
     def test_boost_reorders_by_model(self):
-        out = apply_boost(self._fused(), {"V-042", "Volt 1 Gen 2"}, 0.15)
+        out = apply_boost(self._fused(), {"V-042", "EVX Pro"}, 0.15)
         assert [c["chunk_id"] for c in out] == [2, 1]
 
     def test_boost_never_filters(self):

@@ -2,7 +2,7 @@
 title: Owner Manual — Models, Ride Modes, Range and Charging
 doc_type: manual
 domain: diagnostic
-applies_to_models: [Volt 1, Volt 1 Gen 2, Volt 1 Ultra]
+applies_to_models: [EVX Standard, EVX Pro, EVX Max]
 effective_date: 2026-09-01
 ---
 
@@ -12,9 +12,9 @@ effective_date: 2026-09-01
 
 | Model | Battery | Certified range | Top speed | 0–40 km/h | Peak power | Peak torque | Kerb weight | Price (ex-showroom) |
 |---|---|---|---|---|---|---|---|---|
-| Volt 1 | 3.7 kWh | 155 km | 100 km/h | 2.55 s | 8.5 kW | 72 Nm | 126 kg | ₹1,24,999 |
-| Volt 1 Gen 2 | 5.0 kWh | 212 km | 100 km/h | 2.77 s | 8.5 kW | 72 Nm | 134 kg | ₹1,45,000 |
-| Volt 1 Ultra | 6.4 kWh | 248 km | 115 km/h | 2.4 s | 10.5 kW | 80 Nm | 139 kg | ₹1,74,999 |
+| EVX Standard | 3.5 kWh | 150 km | 100 km/h | 2.55 s | 8.5 kW | 72 Nm | 126 kg | ₹1,20,000 |
+| EVX Pro | 4.8 kWh | 200 km | 100 km/h | 2.77 s | 8.5 kW | 72 Nm | 134 kg | ₹1,40,000 |
+| EVX Max | 6.0 kWh | 240 km | 115 km/h | 2.4 s | 10.5 kW | 80 Nm | 139 kg | ₹1,70,000 |
 
 Every model has a fixed battery pack plus a removable pack, a 30-litre
 boot under the seat, a 7-inch touchscreen with navigation and
@@ -26,15 +26,15 @@ rear mono-shock. Rated payload is 150 kg (rider, pillion and cargo).
 
 | Mode | Speed limit | Torque | Character | Available on |
 |---|---|---|---|---|
-| Eco X | 45 km/h | 25 Nm | very low torque, maximum range | all models |
-| Eco | 50 km/h | 35 Nm | low torque, a little livelier than Eco X | all models |
-| Ride | 70 km/h | 50 Nm | everyday mode, good torque | all models |
-| Air | 90 km/h | 60 Nm | high speed, strong pull | all models |
-| Sonic | 100 km/h | 72 Nm | full performance | all models |
-| Sonic X | 115 km/h | 80 Nm | unlocks the top speed | Volt 1 Ultra only |
+| Saver | 45 km/h | 25 Nm | very low torque, maximum range | all models |
+| Eco | 50 km/h | 35 Nm | low torque, a little livelier than Saver | all models |
+| Normal | 70 km/h | 50 Nm | everyday mode, good torque | all models |
+| Sport | 90 km/h | 60 Nm | high speed, strong pull | all models |
+| Sport+ | 100 km/h | 72 Nm | full performance | all models |
+| Ultra | 115 km/h | 80 Nm | unlocks the top speed | EVX Max only |
 
-Energy use rises with each mode. A Volt 1 Gen 2 uses about 19 Wh per
-km in Eco X, 26 in Ride and 36 in Sonic; Sonic X on the Ultra uses
+Energy use rises with each mode. An EVX Pro uses about 19 Wh per
+km in Saver, 26 in Normal and 36 in Sport+; Ultra mode on the EVX Max uses
 about 42.
 
 ## Why real-world range is lower than certified range
@@ -43,7 +43,7 @@ Certified range is measured on a standard test cycle at low speed with
 a light rider. Expect 65–80% of it in daily use. Range falls further
 with:
 
-- Air, Sonic or Sonic X, or sustained high speed;
+- Sport, Sport+ or Ultra, or sustained high speed;
 - load above the rated payload;
 - very hot or very cold weather;
 - low tyre pressure.

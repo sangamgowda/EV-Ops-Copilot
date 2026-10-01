@@ -20,7 +20,7 @@ class TestFrontMatter:
     def test_parsed(self):
         meta, body = split_front_matter(MANUAL.read_text(encoding="utf-8"))
         assert meta["domain"] == "diagnostic"
-        assert meta["applies_to_models"] == ["Volt 1", "Volt 1 Gen 2", "Volt 1 Ultra"]
+        assert meta["applies_to_models"] == ["EVX Standard", "EVX Pro", "EVX Max"]
         assert meta["effective_date"] == date(2026, 9, 1)
         assert body.lstrip().startswith("# Service Manual")
 

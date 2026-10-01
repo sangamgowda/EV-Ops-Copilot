@@ -184,7 +184,7 @@ class TestLoopControl:
         to keep looping."""
         s = Script(
             router=[routed("explain")],
-            plan=[PlanOutput(reasoning="", tool_calls=[sql(1), rag("why is current high on Volt 1 Ultra")])],
+            plan=[PlanOutput(reasoning="", tool_calls=[sql(1), rag("why is current high on EVX Max")])],
             reflect=[ReflectOutput(sufficient=True, partial=True, missing=["mechanism"],
                                    stop_reason="exhausted")],
             synthesize=[answer("ERR_601 was logged [e1]. The cause cannot be established because "

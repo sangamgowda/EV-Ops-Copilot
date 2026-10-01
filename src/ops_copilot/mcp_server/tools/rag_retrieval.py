@@ -44,7 +44,7 @@ async def rag_retrieval(query: str, domain: str, entity_id: str | None = None) -
     resolution = None
     boost_id = None
     if entity_id:
-        # Model names ("Volt 1 Gen 2") are not vehicles; they boost as
+        # Model names ("EVX Pro") are not vehicles; they boost as
         # given. Anything else is a vehicle id and is resolved first.
         # Judged against the known models, not an id format, so the
         # check survives a change of id scheme.

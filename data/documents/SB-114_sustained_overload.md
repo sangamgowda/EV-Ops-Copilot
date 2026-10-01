@@ -2,7 +2,7 @@
 title: SB-114 — Sustained overload raises drive current and reduces range
 doc_type: service_bulletin
 domain: diagnostic
-applies_to_models: [Volt 1, Volt 1 Gen 2, Volt 1 Ultra]
+applies_to_models: [EVX Standard, EVX Pro, EVX Max]
 effective_date: 2026-02-10
 ---
 
@@ -18,7 +18,7 @@ and a lower range estimate. Battery cell health is not affected.
 ## Symptoms
 
 - Average current draw 25–40% above the model baseline in the same
-  ride mode (most visible in Ride and Air).
+  ride mode (most visible in Normal and Sport).
 - Range estimate 20–30% below normal.
 - Trouble codes ERR_601 (sustained over-current) or ERR_801 (load
   above rated payload) may be logged.
@@ -26,7 +26,7 @@ and a lower range estimate. Battery cell health is not affected.
 
 ## Cause
 
-Rated payload on every Volt 1 model is 150 kg (rider, pillion and
+Rated payload on every EVX model is 150 kg (rider, pillion and
 cargo). Above this, the controller supplies more current to hold
 speed, particularly on inclines and when pulling away. Energy use per
 kilometre rises roughly in line with the excess load.
