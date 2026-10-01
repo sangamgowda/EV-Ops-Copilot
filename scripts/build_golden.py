@@ -163,7 +163,7 @@ def story_cases(conn: Any) -> list[dict[str, Any]]:
             f"{vid} is on firmware 3.2.0, which applies the {low} 45 km/h limit to {high} and {top} "
             f"(SB-135). Its speed in those modes averages about {spd:.0f} km/h against a baseline of "
             f"{spd_b:.0f}. Updating to 3.2.1 restores the limits.",
-            [{"label": "top modes speed kmh", "value": r(spd, 0), "tolerance": 4}],
+            [{"label": "top modes speed kmh", "value": r(spd, 0), "tolerance": 2}],  # 45 (the cap) must not count as 42
             [["firmware", "3.2.0"]], ["speed"], tags=["story:speed_cap"]))
     pw, pw_b = vs_baseline(conn, "V-091", "charge_power")
     out.append(diag(
