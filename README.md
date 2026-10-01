@@ -251,7 +251,7 @@ cleanly when the allowance runs out and `--resume` finishes it.
 | Part | Tool |
 |---|---|
 | Agent workflow | LangGraph |
-| AI models | Groq (free tier) — a small model for quick decisions, a larger one for writing |
+| AI models | Groq (free tier) — gpt-oss-20b for quick decisions (routing, review), gpt-oss-120b for planning and writing answers; qwen3.8-27b as the evaluation judge |
 | Database | PostgreSQL with pgvector |
 | Document search | keyword + meaning-based search, then re-ranking |
 | Tool access | MCP server (a separate service that holds the database connection) |
@@ -268,7 +268,8 @@ cleanly when the allowance runs out and `--resume` finishes it.
 git clone <your-repo-url> && cd ev-ops-copilot
 
 cp .env.example .env
-# Add a free Groq API key from https://console.groq.com/keys
+# Add a free Groq API key from https://console.groq.com/keys,
+# and set POSTGRES_PASSWORD and DB_READONLY_PASSWORD (required, no defaults)
 
 docker compose up --build
 ```

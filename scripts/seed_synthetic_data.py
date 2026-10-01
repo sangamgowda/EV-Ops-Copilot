@@ -660,9 +660,14 @@ def sales_rows(ref: dict[str, Any], vehicles: list[Vehicle], end: date, scale: f
 def database_url(arg: Optional[str]) -> str:
     url = arg or os.environ.get("DATABASE_URL", "")
     if not url or "${" in url:
+        # No default password: a known fallback is a published password
+        # for anyone who forgets to set one.
+        password = os.environ.get("POSTGRES_PASSWORD")
+        if not password:
+            sys.exit("set POSTGRES_PASSWORD (or DATABASE_URL / --database-url) for the database to seed")
         url = "postgresql://{u}:{p}@{h}:{port}/{db}".format(
             u=os.environ.get("POSTGRES_USER", "opscopilot"),
-            p=os.environ.get("POSTGRES_PASSWORD", "change_me_locally"),
+            p=password,
             h=os.environ.get("POSTGRES_HOST", "localhost"),
             port=os.environ.get("POSTGRES_PORT", "5432"),
             db=os.environ.get("POSTGRES_DB", "opscopilot"),

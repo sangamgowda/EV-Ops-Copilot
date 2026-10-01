@@ -1,13 +1,16 @@
 """Router — LLM call 1. Runs once, outside the loop.
 
-reads   question, session history
+reads   question
 returns domains[], query_type, entities, complexity_hint,
-        hypothesis_to_test, resolved_entities, entity_notes
+        hypothesis_to_test, resolved_entities, entity_notes,
+        evidence (the entity-resolution outcome)
 model   cheap tier — this is constrained classification, not
         generation, and on a free tier the cheap model has a far
         larger daily budget
-never   answers the question, calls a tool, or corrects a VIN
-        (resolution happens against real data, downstream)
+tools   resolve_entity_tool only, to check an extracted vehicle id
+        against real rows
+never   answers the question, queries data or documents, or corrects
+        a vehicle id itself (resolution happens against real data)
 
 The vehicle id the model extracted is checked against real rows
 here, before any search — through the MCP server's
