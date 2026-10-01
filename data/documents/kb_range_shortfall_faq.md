@@ -4,6 +4,7 @@ doc_type: kb_article
 domain: diagnostic
 applies_to_models: [EVX Standard, EVX Pro, EVX Max]
 effective_date: 2026-09-01
+trust: official
 ---
 
 # KB — "My range is lower than advertised"

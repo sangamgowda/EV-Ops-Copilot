@@ -99,6 +99,8 @@ class Evidence(BaseModel):
 
     # Retrieval provenance.
     source_doc: str | None = None
+    # official / internal / external, from the document's record.
+    trust_level: str | None = None
     chunk_ids: list[int] = Field(default_factory=list)
     rerank_score: float | None = None
 
@@ -120,8 +122,10 @@ class Evidence(BaseModel):
 
         Empty and below-threshold retrievals never support a cause.
         This is what the groundedness check enforces.
+        An external document (a web page, a partner's file) is never
+        enough on its own: anyone can have written it.
         """
-        return self.status == EvidenceStatus.OK and (
+        return self.status == EvidenceStatus.OK and self.trust_level != "external" and (
             self.source_doc is not None or self.verdict is not None
         )
 

@@ -46,7 +46,8 @@ from ops_copilot.settings import get_config
 
 _SELECT = """
     c.chunk_id, c.doc_id, c.chunk_type, c.section_path, c.content,
-    c.error_codes, d.title, d.doc_type, d.applies_to_models, d.effective_date
+    c.error_codes, d.title, d.doc_type, d.applies_to_models, d.effective_date,
+    d.trust_level
 """
 
 _DENSE_SQL = text(f"""
@@ -199,6 +200,7 @@ async def retrieve(query: str, domain: str, entity_id: str | None = None) -> dic
                 # Returned so the agent can tell a document that covers
                 # the vehicle's model from one that merely ranked well.
                 "applies_to_models": c["applies_to_models"] or [],
+                "trust_level": c.get("trust_level") or "internal",
             }
             for c in kept
         ],

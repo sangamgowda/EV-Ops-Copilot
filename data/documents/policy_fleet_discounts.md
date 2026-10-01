@@ -4,6 +4,7 @@ doc_type: policy
 domain: business
 applies_to_models: [EVX Standard, EVX Pro, EVX Max]
 effective_date: 2026-01-01
+trust: official
 ---
 
 # Policy — Fleet and Partner Pricing

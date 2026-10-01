@@ -73,6 +73,8 @@ class Settings(BaseSettings):
     # Browser origins allowed to call the API, comma-separated. Always an
     # explicit list, never "*": the chat stream carries operational data.
     cors_origins: str = "http://localhost:3000,http://localhost:5173"
+    # Bearer token for /ingest and /eval. Empty disables those endpoints.
+    admin_token: str = ""
 
     @property
     def cors_origin_list(self) -> list[str]:

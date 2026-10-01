@@ -122,7 +122,11 @@ def _sql_evidence(res: dict[str, Any], base: dict[str, Any]) -> list[Evidence]:
     lines = [_fmt_row(r) for r in shown]
     more = f" (+{len(rows) - len(shown)} more rows in raw store)" if len(rows) > len(shown) else ""
     summary = f"{len(rows)} row(s){more}:\n  " + "\n  ".join(lines)
-    ev = Evidence(**base, summary=summary)
+    # Rows promoted from a document (error codes carry `source_document`)
+    # keep that provenance: the answer can credit the manual, and a
+    # documented meaning can support a causal claim.
+    sources = sorted({str(r["source_document"]) for r in rows if r.get("source_document")})
+    ev = Evidence(**base, summary=summary, source_doc=", ".join(sources) or None)
     # A single scalar ("what is the average current draw") is still a
     # measurement Reflect should be able to see as one.
     if len(rows) == 1 and len(rows[0]) == 1:
@@ -179,7 +183,7 @@ def _rag_evidence(res: dict[str, Any], base: dict[str, Any]) -> list[Evidence]:
         text = " … ".join(bodies)
         if len(text) > 700:
             text = text[:697] + "..."
-        out.append(Evidence(**base, source_doc=doc_id,
+        out.append(Evidence(**base, source_doc=doc_id, trust_level=cs[0].get("trust_level"),
                             chunk_ids=[c["chunk_id"] for c in cs],
                             rerank_score=max(c["rerank_score"] for c in cs),
                             summary=f"{cs[0]['title']} ({cs[0].get('section_path') or 'body'})"

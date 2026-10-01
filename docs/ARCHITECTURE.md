@@ -145,6 +145,19 @@ system inside the free tier at all.
 - **Hybrid search.** Keyword search (Postgres full-text) finds exact
   terms and codes; vector search finds related wording. Results are
   merged, re-ranked by a cross-encoder, and weak matches are dropped.
+- **Trust and provenance.** Every document records who added it and a
+  trust level: `official` (service and product teams), `internal`
+  (reports) or `external` (web pages, partners' files). The level is
+  shown in the evidence; an external document is never enough on its
+  own to back a "because".
+- **Document text is data.** Retrieved text is labelled "untrusted
+  data" in the evidence, and the Plan, Reflect and Synthesize
+  instructions say never to follow instructions found inside it. A
+  planted "ignore your rules" in an uploaded file is reported, not
+  obeyed.
+- **Dates.** "This week", "last quarter" and the like are turned into
+  exact date ranges in code (`agent/calendar.py`) using the time zone,
+  week start and quarter definition in `config/app_config.yaml`.
 
 ---
 
@@ -161,6 +174,10 @@ Every model-written query passes three independent layers:
    measured on the actual data volume (`scripts/calibrate_cost_budget.py`).
 3. **The database itself**: a read-only role that cannot see restricted
    columns, a 5-second statement timeout, and a small connection pool.
+
+The admin endpoints (`/ingest`, `/eval`) need a bearer token, checked
+in constant time; with none configured they are closed. `/chat` is
+limited per client address (in memory, so per process).
 
 ---
 

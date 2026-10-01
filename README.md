@@ -269,7 +269,8 @@ git clone <your-repo-url> && cd ev-ops-copilot
 
 cp .env.example .env
 # Add a free Groq API key from https://console.groq.com/keys,
-# and set POSTGRES_PASSWORD and DB_READONLY_PASSWORD (required, no defaults)
+# and set POSTGRES_PASSWORD and DB_READONLY_PASSWORD (required, no defaults),
+# and ADMIN_TOKEN (needed for /ingest and /eval; see .env.example)
 
 docker compose up --build
 ```
@@ -284,7 +285,7 @@ curl localhost:8000/health
 docker compose exec api python scripts/seed_synthetic_data.py --reset
 
 # add a document
-curl -X POST localhost:8000/ingest -F "file=@data/documents/SB-114_sustained_overload.md"
+curl -X POST localhost:8000/ingest -H "Authorization: Bearer $ADMIN_TOKEN"   -F "file=@data/documents/SB-114_sustained_overload.md" -F "trust_level=official"
 
 # ask a question
 curl -X POST localhost:8000/chat \
@@ -335,11 +336,14 @@ download them from Fontshare the first time.
 
 | Endpoint | What it does |
 |---|---|
-| `POST /chat` | ask a question; the answer streams back as it is written |
-| `POST /ingest` | add a document (markdown, text or PDF) |
-| `POST /eval` | run test questions through the real system and report quality (small runs; `GET /eval/latest` for the last report) |
+| `POST /chat` | ask a question; the answer streams back as it is written (10 questions a minute per client) |
+| `POST /ingest` | add a document (markdown, text or PDF), with its trust level. **Admin token** |
+| `POST /eval` | run test questions through the real system and report quality (small runs; `GET /eval/latest` for the last report). **Admin token** |
 | `POST /feedback` | rate an answer, using the `turn_id` from `/chat` |
 | `GET /health` | check the service and each thing it depends on |
+
+Admin endpoints take `Authorization: Bearer <ADMIN_TOKEN>`. With no
+token configured they refuse every request rather than stay open.
 
 `/chat` streams [Server-Sent Events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events):
 
@@ -402,6 +406,8 @@ Design decisions and their reasons: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.m
   the web interface and the API.
 - Hybrid document search with re-ranking, and exact error-code lookup.
 - Three-layer protection on every generated database query.
+- Every document records who added it and how far it is trusted;
+  document text is shown to the model as data, never instructions.
 - Per-question tracing in Langfuse, with prompt versions and a
   configuration snapshot.
 - An evaluation suite (45 test cases and 8 trap cases) with regression

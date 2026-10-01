@@ -36,11 +36,28 @@ agent:
   # Used when a comparison row carries no tolerance of its own.
   default_tolerance_pct: 10.0
 
+calendar:
+  # How relative dates in a question become date ranges. Computed in
+  # code and given to Plan, so "this week" means one thing every turn
+  # instead of whatever the model assumes.
+  timezone: Asia/Kolkata
+  week_starts_on: monday
+  # "this week": rolling_7_days (today and the 6 days before) or
+  # calendar_week (since the last week start). Rolling suits "why did
+  # range drop this week" asked on a Monday.
+  this_week: rolling_7_days
+  # Quarters are calendar quarters (Q1 = Jan-Mar), as in the sales
+  # reports. Set to 4 for an April-March financial year.
+  year_start_month: 1
+
 api:
   # Ceiling on one turn, loop + answer. A runaway turn otherwise holds a
   # connection indefinitely. On the ceiling the turn stops and answers
   # from the evidence gathered so far, marked partial.
   turn_timeout_seconds: 45
+  # Questions per minute from one client address. Each question costs
+  # several model calls against a shared token budget.
+  chat_rate_limit_per_minute: 10
 
 llm:
   # Which tier each node runs on. Router and Reflect are
@@ -275,13 +292,21 @@ groundedness:
   # Block causal language on claims whose only support is an
   # empty or below-threshold retrieval result.
   block_causal_language_without_support: true
-  causal_markers: ["because", "due to", "caused by", "the cause is", "results from"]
-  # A sentence naming a gap is the honest partial answer, not a causal
+  causal_markers: ["because", "due to", "caused by", "the cause is", "results from",
+                   "resulting in", "resulted in", "results in", "leads to", "led to",
+                   "leading to", "responsible for", "attributable to", "attributed to",
+                   "stems from", "driven by", "triggered by", "the reason is",
+                   "the reason for", "is why", "as a result"]
+  # A clause naming a gap is the honest partial answer, not a causal
   # claim: "cannot be established because no document covers it" must
-  # not be flagged for its "because".
-  causal_exempt_markers: ["cannot", "can't", "could not", "unable", "not established",
-                          "no documentation", "no evidence", "not confirmed", "unknown",
-                          "insufficient"]
+  # not be flagged for its "because". Exemptions apply only within the
+  # clause that holds the causal phrase, so a hedge elsewhere in the
+  # sentence does not excuse an unsupported cause.
+  causal_exempt_markers: ["cannot", "can't", "could not", "couldn't", "unable",
+                          "not established", "no documentation", "no document",
+                          "no bulletin", "not documented", "no evidence", "no data",
+                          "not confirmed", "not determined", "unknown", "insufficient",
+                          "ruled out", "rules out"]
   # Integers below this are counts and ordinals ("3 laps"), not
   # measurements; checking them is noise.
   ignore_integers_below: 10

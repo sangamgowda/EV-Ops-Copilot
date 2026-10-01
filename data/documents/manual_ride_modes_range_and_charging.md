@@ -4,6 +4,7 @@ doc_type: manual
 domain: diagnostic
 applies_to_models: [EVX Standard, EVX Pro, EVX Max]
 effective_date: 2026-09-01
+trust: official
 ---
 
 # Owner Manual — Models, Ride Modes, Range and Charging

@@ -7,20 +7,22 @@ POST /eval runs cases through the same graph /chat uses and waits for
 the report, so it is for small runs (`limit`). A full run takes most of
 an hour and more than a day's free-tier allowance; that belongs to
 `python scripts/run_eval.py`, which can stop and resume. GET
-/eval/latest returns the most recent report either way.
+/eval/latest returns the most recent report either way. Both need the
+admin token.
 """
 
 from __future__ import annotations
 
 import json
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from ops_copilot.api.schemas import EvalRequest
+from ops_copilot.api.security import require_admin
 from ops_copilot.evaluation.runner import load_cases, run_eval, runs_dir
 from ops_copilot.settings import get_config
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_admin)])
 
 
 @router.post("/eval")

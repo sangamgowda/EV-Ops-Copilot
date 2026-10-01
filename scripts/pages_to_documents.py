@@ -98,7 +98,10 @@ def main() -> int:
         models = ", ".join(meta.get("applies_to_models", []))
         front = (f"---\ntitle: {title.strip()!r}\ndoc_type: {meta.get('doc_type', 'kb_article')}\n"
                  f"domain: {meta['domain']}\napplies_to_models: [{models}]\n"
-                 f"effective_date: {meta.get('effective_date', '2026-01-01')}\n---\n\n")
+                 f"effective_date: {meta.get('effective_date', '2026-01-01')}\n"
+                 # Web pages are outside text: shown to the agent as such,
+                 # and never enough on their own to back a cause.
+                 f"trust: external\n---\n\n")
         name = meta.get("name", page.stem)
         (args.out / f"{name}.md").write_text(front + f"# {title.strip()}\n\n{body}\n", encoding="utf-8")
         print(f"written  {name}  ({len(body):,} chars)")

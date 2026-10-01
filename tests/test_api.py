@@ -49,9 +49,17 @@ async def _fake_turn(question, session_id, *, turn_id="t", emit=None, **_):
     return state
 
 
+ADMIN = {"Authorization": "Bearer test-admin-token"}
+
+
 @pytest.fixture
 def client(monkeypatch):
+    from types import SimpleNamespace
+
+    from ops_copilot.api import security
     monkeypatch.setattr(main, "get_client", lambda: _NoMCP())
+    monkeypatch.setattr(security, "get_settings", lambda: SimpleNamespace(admin_token="test-admin-token"))
+    monkeypatch.setattr(security, "_chat_limiter", None)
     monkeypatch.setattr(routes_chat, "run_turn", _fake_turn)
     with TestClient(main.app) as c:
         yield c
@@ -120,7 +128,7 @@ class TestOtherEndpoints:
             return "run-x", {"headline_pass_rate": 50.0}
 
         monkeypatch.setattr(routes_eval, "run_eval", fake_run_eval)
-        r = client.post("/eval", json={"limit": 3, "include_traps": False, "judge": False})
+        r = client.post("/eval", json={"limit": 3, "include_traps": False, "judge": False}, headers=ADMIN)
         assert r.status_code == 200
         assert r.json() == {"run_id": "run-x", "headline_pass_rate": 50.0}
         assert seen == {"n": 3, "judge": False, "traps": 0}
@@ -129,14 +137,41 @@ class TestOtherEndpoints:
         from ops_copilot.api import routes_eval
 
         monkeypatch.setattr(routes_eval, "runs_dir", lambda: tmp_path / "none")
-        assert client.get("/eval/latest").status_code == 404
+        assert client.get("/eval/latest", headers=ADMIN).status_code == 404
 
     def test_feedback_rating_validated(self, client):
         assert client.post("/feedback", json={"turn_id": "x", "rating": "meh"}).status_code == 422
 
     def test_ingest_rejects_unsupported_type(self, client):
-        r = client.post("/ingest", files={"file": ("x.exe", b"MZ", "application/octet-stream")})
+        r = client.post("/ingest", files={"file": ("x.exe", b"MZ", "application/octet-stream")},
+                        headers=ADMIN)
         assert r.status_code == 415
+
+    def test_admin_endpoints_need_the_token(self, client):
+        assert client.get("/eval/latest").status_code == 401
+        assert client.get("/eval/latest", headers={"Authorization": "Bearer wrong"}).status_code == 401
+        r = client.post("/ingest", files={"file": ("a.md", b"x", "text/markdown")})
+        assert r.status_code == 401
+
+    def test_admin_endpoints_closed_when_no_token_is_set(self, client, monkeypatch):
+        from types import SimpleNamespace
+
+        from ops_copilot.api import security
+        monkeypatch.setattr(security, "get_settings", lambda: SimpleNamespace(admin_token=""))
+        assert client.get("/eval/latest", headers={"Authorization": "Bearer "}).status_code == 503
+
+    def test_ingest_rejects_unknown_trust_level(self, client):
+        r = client.post("/ingest", files={"file": ("a.md", b"x", "text/markdown")},
+                        data={"trust_level": "blessed"}, headers=ADMIN)
+        assert r.status_code == 422
+
+    def test_chat_is_rate_limited_per_client(self, client, monkeypatch):
+        from ops_copilot.api import security
+        monkeypatch.setattr(security, "get_config", lambda: {"api": {"chat_rate_limit_per_minute": 1}})
+        body = {"question": "What is ERR_401?", "stream": False}
+        assert client.post("/chat", json=body).status_code == 200
+        r = client.post("/chat", json=body)
+        assert r.status_code == 429 and int(r.headers["Retry-After"]) >= 1
 
     def test_health_reports_dependencies_separately(self, client):
         body = client.get("/health").json()
