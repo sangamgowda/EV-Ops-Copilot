@@ -18,7 +18,7 @@
   reference_answer: The documents and data do not say who invented the lithium-ion battery.
 
 - id: trap_cell_chemistry
-  question: What cathode chemistry do the Volt 1 Gen 2's battery cells use?
+  question: What cathode chemistry do the EVX Pro's battery cells use?
   known_answer: ["NMC", "nickel manganese", "nickel-manganese", "lithium iron phosphate", "LFP", "cobalt"]
   reference_answer: The cell chemistry is not given in any document or table.
 
@@ -42,7 +42,7 @@
     what IP stands for.
 
 - id: trap_tyre_pressure
-  question: What tyre pressure should a Volt 1 run at?
+  question: What tyre pressure should an EVX Standard run at?
   known_answer: [" psi", " kpa", " bar "]
   reference_answer: No recommended tyre pressure is given in the documents or data.
 

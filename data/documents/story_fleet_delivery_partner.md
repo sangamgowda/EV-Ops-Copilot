@@ -2,7 +2,7 @@
 title: Fleet Story — Last-mile delivery partner moves 120 riders to electric
 doc_type: success_story
 domain: business
-applies_to_models: [Volt 1, Volt 1 Gen 2]
+applies_to_models: [EVX Standard, EVX Pro]
 effective_date: 2026-08-20
 ---
 
@@ -27,8 +27,8 @@ second city.
 
 The first 20 units went to the busiest hub as a six-week trial. The
 remaining 100 followed in three batches once the trial numbers held.
-Riders on the heaviest routes got the Volt 1 Gen 2 for its 5 kWh
-battery; shorter routes used the Volt 1.
+Riders on the heaviest routes got the EVX Pro for its larger battery;
+shorter routes used the EVX Standard.
 
 ## Results after four months
 
@@ -43,7 +43,7 @@ battery; shorter routes used the Volt 1.
 
 - A charging point at each hub, sized so every rider could top up
   during the lunch break.
-- Riding guidance in training: Ride mode for most of the shift,
+- Riding guidance in training: Normal mode for most of the shift,
   and total load within the 150 kg rated payload. Riders who carried more saw noticeably shorter range.
 - A single service contact for the whole fleet instead of per-rider
   workshop visits.

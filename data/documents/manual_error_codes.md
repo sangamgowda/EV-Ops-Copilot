@@ -2,13 +2,13 @@
 title: Service Manual — Diagnostic Trouble Codes
 doc_type: manual
 domain: diagnostic
-applies_to_models: [Volt 1, Volt 1 Gen 2, Volt 1 Ultra]
+applies_to_models: [EVX Standard, EVX Pro, EVX Max]
 effective_date: 2026-09-01
 ---
 
 # Service Manual — Diagnostic Trouble Codes
 
-This chapter lists every trouble code a Volt 1 scooter can raise,
+This chapter lists every trouble code an EVX scooter can raise,
 which subsystem raises it, and the first action a technician should
 take. Codes are shown on the dashboard and stored in the vehicle log.
 

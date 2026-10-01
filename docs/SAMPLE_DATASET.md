@@ -13,15 +13,15 @@ The default load (`python scripts/seed_synthetic_data.py --reset`) is
 
 ## 1. The scooters
 
-| | Volt 1 | Volt 1 Gen 2 | Volt 1 Ultra |
+| | EVX Standard | EVX Pro | EVX Max |
 |---|---|---|---|
-| Battery | 3.7 kWh | 5.0 kWh | 6.4 kWh |
-| Certified range | 155 km | 212 km | 248 km |
+| Battery | 3.5 kWh | 4.8 kWh | 6.0 kWh |
+| Certified range | 150 km | 200 km | 240 km |
 | Top speed | 100 km/h | 100 km/h | 115 km/h |
 | 0–40 km/h | 2.55 s | 2.77 s | 2.4 s |
 | Peak power / torque | 8.5 kW / 72 Nm | 8.5 kW / 72 Nm | 10.5 kW / 80 Nm |
 | Weight | 126 kg | 134 kg | 139 kg |
-| Price | ₹1,24,999 | ₹1,45,000 | ₹1,74,999 |
+| Price | ₹1,20,000 | ₹1,40,000 | ₹1,70,000 |
 | On sale from | Oct 2024 | Jun 2025 | Jun 2026 (south), 15 Aug 2026 (elsewhere) |
 
 All three: fixed + removable battery, 30-litre boot, 7-inch
@@ -32,12 +32,12 @@ touchscreen, IP67 water resistance, disc brakes with combined braking
 
 | Mode | Speed limit | Torque | Character |
 |---|---|---|---|
-| Eco X | 45 km/h | 25 Nm | very low torque, longest range |
+| Saver | 45 km/h | 25 Nm | very low torque, longest range |
 | Eco | 50 km/h | 35 Nm | low torque |
-| Ride | 70 km/h | 50 Nm | everyday, good torque |
-| Air | 90 km/h | 60 Nm | high speed |
-| Sonic | 100 km/h | 72 Nm | full performance |
-| Sonic X | 115 km/h | 80 Nm | Ultra only |
+| Normal | 70 km/h | 50 Nm | everyday, good torque |
+| Sport | 90 km/h | 60 Nm | high speed |
+| Sport+ | 100 km/h | 72 Nm | full performance |
+| Ultra | 115 km/h | 80 Nm | EVX Max only |
 
 ---
 
@@ -45,7 +45,7 @@ touchscreen, IP67 water resistance, disc brakes with combined braking
 
 | Table | Rows | What one row is |
 |---|---|---|
-| `vehicles` | 120 | one scooter, **V-001 to V-120** (40 Volt 1, 48 Gen 2, 32 Ultra): city, firmware, features |
+| `vehicles` | 120 | one scooter, **V-001 to V-120** (40 EVX Standard, 48 EVX Pro, 32 EVX Max): city, firmware, features |
 | `vehicle_telemetry` | ~1.5 million | one sensor reading: speed, current draw, battery voltage, charge, motor temperature, load, range estimate, cell health, charging power |
 | `vehicle_baseline_specs` | 115 | the **normal** value per model and ride mode, which readings are compared against |
 | `service_events` | ~360 | a workshop visit or customer complaint, often with an error code |
@@ -73,12 +73,12 @@ a document describing it, except the last, which no document explains.
 | Scenario | Vehicles | What the data shows | Documented cause |
 |---|---|---|---|
 | Overload | V-042, V-007, V-029 | current draw ~38% above normal, load ~190 kg against a 150 kg rating, battery healthy | SB-114 |
-| Firmware speed cap | V-012, V-055, V-088 | since firmware 3.2.0, speed in Sonic / Sonic X held near 42 km/h; other modes normal | SB-135, ERR_205 |
+| Firmware speed cap | V-012, V-055, V-088 | since firmware 3.2.0, speed in Sport+ / Ultra held near 42 km/h; other modes normal | SB-135, ERR_205 |
 | Faulty charger | V-064, V-091 | charging power ~0.34 kW against 0.75 kW normal; riding normal | SB-140, ERR_303 |
 | Battery wear | V-017, V-036 | cell health falling from 92% to 84% over the period; current draw normal | SB-121, ERR_402/403 |
 | Unexplained consumption | V-023 | current draw ~30% above normal; load, battery and speed normal | none |
 
-Sales follow a two-year curve across four regions. The Volt 1 Ultra
+Sales follow a two-year curve across four regions. The EVX Max
 launched in the south ten weeks before the other regions, which shows
 up as the south pulling ahead in the third quarter of 2026.
 

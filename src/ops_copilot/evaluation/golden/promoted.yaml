@@ -11,30 +11,30 @@
   - promoted
   - cluster:no_signal
   failure: '2026-09-24: reported average riding speeds (32, 36, 46...) as the modes'' speed limits'
-  question: What ride modes does the Volt 1 Ultra have and how fast does each go?
+  question: What ride modes does the EVX Max have and how fast does each go?
   expected:
     facts:
-    - label: Eco X
+    - label: Saver
       value: 45
       tolerance: 0
     - label: Eco
       value: 50
       tolerance: 0
-    - label: Ride
+    - label: Normal
       value: 70
       tolerance: 0
-    - label: Air
+    - label: Sport
       value: 90
       tolerance: 0
-    - label: Sonic
+    - label: Sport+
       value: 100
       tolerance: 0
-    - label: Sonic X
+    - label: Ultra
       value: 115
       tolerance: 0
     max_iterations: 3
-  reference_answer: 'Six modes: Eco X up to 45 km/h, Eco 50, Ride 70, Air 90, Sonic 100 and Sonic X 115
-    (Sonic X is Ultra only).
+  reference_answer: 'Six modes: Saver up to 45 km/h, Eco 50, Normal 70, Sport 90, Sport+ 100 and Ultra 115
+    (Ultra is EVX Max only).
 
     '
 - id: prm_charger_doc_missed

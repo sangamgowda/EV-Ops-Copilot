@@ -77,9 +77,11 @@ tables:
         type: text
         description: >
           Ride mode active when the reading was taken, lowest to
-          highest power. Sonic X exists only on the Volt 1 Ultra.
+          highest power. Ultra exists only on the EVX Max. 'Normal' is
+          the name of a mode, not the baseline: "normal values" are in
+          vehicle_baseline_specs.
           "Charging" marks charge_power readings; NULL for cell_health.
-        allowed_values: ["Eco X", "Eco", "Ride", "Air", "Sonic", "Sonic X", "Charging"]
+        allowed_values: ["Saver", "Eco", "Normal", "Sport", "Sport+", "Ultra", "Charging"]
 
   vehicles:
     description: >
@@ -93,7 +95,7 @@ tables:
       model_code:
         type: text
         description: Model this vehicle is. Joins to vehicle_baseline_specs.
-        allowed_values: ["Volt 1", "Volt 1 Gen 2", "Volt 1 Ultra"]
+        allowed_values: ["EVX Standard", "EVX Pro", "EVX Max"]
       manufactured_on:
         type: date
         description: Date of manufacture.
@@ -127,11 +129,11 @@ tables:
       model_code:
         type: text
         description: Model these baselines apply to.
-        allowed_values: ["Volt 1", "Volt 1 Gen 2", "Volt 1 Ultra"]
+        allowed_values: ["EVX Standard", "EVX Pro", "EVX Max"]
       drive_mode:
         type: text
         description: Ride mode the baseline is rated for ("Charging" for charge_power).
-        allowed_values: ["Eco X", "Eco", "Ride", "Air", "Sonic", "Sonic X", "Charging"]
+        allowed_values: ["Saver", "Eco", "Normal", "Sport", "Sport+", "Ultra", "Charging"]
       metric_name:
         type: text
         description: Which metric this baseline is for.
@@ -233,9 +235,9 @@ tables:
         type: text
         description: >
           Model sold. Set on every row, including sales not linked
-          to a tracked vehicle. The Volt 1 Ultra went on sale in the
+          to a tracked vehicle. The EVX Max went on sale in the
           south on 2026-06-01 and in other regions on 2026-08-15.
-        allowed_values: ["Volt 1", "Volt 1 Gen 2", "Volt 1 Ultra"]
+        allowed_values: ["EVX Standard", "EVX Pro", "EVX Max"]
       channel:
         type: text
         allowed_values: ["showroom", "online", "fleet", "partner"]

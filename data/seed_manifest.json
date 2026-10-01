@@ -7,23 +7,23 @@
     "sales_scale": 1.0
   },
   "telemetry_window": {
-    "start": "2026-06-28",
-    "end": "2026-09-25"
+    "start": "2026-07-04",
+    "end": "2026-10-01"
   },
   "row_counts": {
     "error_codes": 16,
     "vehicle_baseline_specs": 115,
     "vehicles": 120,
-    "vehicle_telemetry": 1526449,
-    "service_events": 359,
+    "vehicle_telemetry": 1443818,
+    "service_events": 338,
     "sales_transactions": 20160
   },
   "scenarios": [
     {
       "scenario": "overload",
       "vehicle_id": "V-007",
-      "model_code": "Volt 1",
-      "onset": "2026-09-16",
+      "model_code": "EVX Standard",
+      "onset": "2026-09-22",
       "finding": "Current draw well above baseline; payload above rated; cell health normal",
       "cause": "Sustained overload",
       "documents": [
@@ -34,104 +34,9 @@
       ],
       "measured_since_onset": {
         "speed": {
-          "actual": 44.4,
-          "baseline": 44.4,
+          "actual": 42.9,
+          "baseline": 42.9,
           "delta_pct": -0.1
-        },
-        "charge_power": {
-          "actual": 0.8,
-          "baseline": 0.8,
-          "delta_pct": 0.1
-        },
-        "range_estimate": {
-          "actual": 109.5,
-          "baseline": 148.7,
-          "delta_pct": -26.4
-        },
-        "payload": {
-          "actual": 188.8,
-          "baseline": 95.0,
-          "delta_pct": 98.7
-        },
-        "motor_temp": {
-          "actual": 50.8,
-          "baseline": 47.3,
-          "delta_pct": 7.4
-        },
-        "current_draw": {
-          "actual": 30.3,
-          "baseline": 22.4,
-          "delta_pct": 35.0
-        },
-        "cell_health_latest": 96.14
-      }
-    },
-    {
-      "scenario": "speed_cap",
-      "vehicle_id": "V-012",
-      "model_code": "Volt 1 Ultra",
-      "onset": "2026-09-15",
-      "finding": "Speed in Sonic / Sonic X held near 42 km/h (baseline 62 / 70) since the 3.2.0 update",
-      "cause": "Firmware 3.2.0 applies the Eco X speed limit to Sonic and Sonic X",
-      "documents": [
-        "SB-135_firmware_sonic_speed_cap"
-      ],
-      "error_codes": [
-        "ERR_205"
-      ],
-      "measured_since_onset": {
-        "speed": {
-          "actual": 46.4,
-          "baseline": 52.8,
-          "delta_pct": -12.2
-        },
-        "charge_power": {
-          "actual": 0.7,
-          "baseline": 0.8,
-          "delta_pct": -0.3
-        },
-        "range_estimate": {
-          "actual": 199.9,
-          "baseline": 198.5,
-          "delta_pct": 0.7
-        },
-        "payload": {
-          "actual": 91.8,
-          "baseline": 95.0,
-          "delta_pct": -3.3
-        },
-        "motor_temp": {
-          "actual": 54.3,
-          "baseline": 53.4,
-          "delta_pct": 1.8
-        },
-        "current_draw": {
-          "actual": 27.6,
-          "baseline": 32.6,
-          "delta_pct": -15.4
-        },
-        "cell_health_latest": 98.38
-      }
-    },
-    {
-      "scenario": "cell_wear",
-      "vehicle_id": "V-017",
-      "model_code": "Volt 1",
-      "onset": "2026-06-28",
-      "finding": "Cell health falling ~0.6% per week; current draw near baseline",
-      "cause": "Removable pack capacity loss / cell imbalance",
-      "documents": [
-        "SB-121_removable_pack_cell_wear"
-      ],
-      "error_codes": [
-        "ERR_402",
-        "ERR_403"
-      ],
-      "measured_since_onset": {
-        "speed": {
-          "actual": 41.9,
-          "baseline": 42.0,
-          "delta_pct": -0.2
         },
         "charge_power": {
           "actual": 0.7,
@@ -139,123 +44,80 @@
           "delta_pct": -0.0
         },
         "range_estimate": {
-          "actual": 139.9,
-          "baseline": 154.7,
-          "delta_pct": -9.6
+          "actual": 104.5,
+          "baseline": 142.1,
+          "delta_pct": -26.4
         },
         "payload": {
-          "actual": 89.1,
+          "actual": 188.9,
           "baseline": 95.0,
-          "delta_pct": -6.2
+          "delta_pct": 98.8
         },
         "motor_temp": {
-          "actual": 46.8,
-          "baseline": 45.9,
-          "delta_pct": 2.0
+          "actual": 49.9,
+          "baseline": 46.3,
+          "delta_pct": 7.6
         },
         "current_draw": {
-          "actual": 20.6,
-          "baseline": 20.6,
-          "delta_pct": 0.2
+          "actual": 28.4,
+          "baseline": 21.2,
+          "delta_pct": 34.3
         },
-        "cell_health_latest": 84.0
+        "cell_health_latest": 96.1
       }
     },
     {
-      "scenario": "undocumented",
-      "vehicle_id": "V-023",
-      "model_code": "Volt 1",
-      "onset": "2026-09-16",
-      "finding": "Current draw ~30% above baseline; payload and cell health normal",
-      "cause": null,
-      "documents": [],
-      "note": "No document explains high current with normal payload and cell health; the correct answer is partial.",
+      "scenario": "speed_cap",
+      "vehicle_id": "V-012",
+      "model_code": "EVX Max",
+      "onset": "2026-09-21",
+      "finding": "Speed in the two highest modes held near 42 km/h (baseline 62 / 70) since the 3.2.0 update",
+      "cause": "Firmware 3.2.0 applies the lowest mode's speed limit to the two highest modes",
+      "documents": [
+        "SB-135_firmware_top_mode_speed_cap"
+      ],
+      "error_codes": [
+        "ERR_205"
+      ],
       "measured_since_onset": {
         "speed": {
-          "actual": 42.5,
-          "baseline": 42.5,
-          "delta_pct": 0.1
+          "actual": 46.7,
+          "baseline": 57.4,
+          "delta_pct": -18.6
         },
         "charge_power": {
           "actual": 0.7,
           "baseline": 0.8,
-          "delta_pct": -0.7
+          "delta_pct": -0.1
         },
         "range_estimate": {
-          "actual": 118.4,
-          "baseline": 152.5,
-          "delta_pct": -22.3
+          "actual": 174.0,
+          "baseline": 172.6,
+          "delta_pct": 0.8
         },
         "payload": {
-          "actual": 93.1,
+          "actual": 100.1,
           "baseline": 95.0,
-          "delta_pct": -2.0
+          "delta_pct": 5.4
         },
         "motor_temp": {
-          "actual": 53.5,
-          "baseline": 46.2,
-          "delta_pct": 15.9
+          "actual": 57.5,
+          "baseline": 56.3,
+          "delta_pct": 2.0
         },
         "current_draw": {
-          "actual": 27.3,
-          "baseline": 21.1,
-          "delta_pct": 29.6
+          "actual": 29.7,
+          "baseline": 37.7,
+          "delta_pct": -21.3
         },
-        "cell_health_latest": 97.67
-      }
-    },
-    {
-      "scenario": "overload",
-      "vehicle_id": "V-029",
-      "model_code": "Volt 1 Gen 2",
-      "onset": "2026-09-16",
-      "finding": "Current draw well above baseline; payload above rated; cell health normal",
-      "cause": "Sustained overload",
-      "documents": [
-        "SB-114_sustained_overload"
-      ],
-      "error_codes": [
-        "ERR_601"
-      ],
-      "measured_since_onset": {
-        "speed": {
-          "actual": 44.7,
-          "baseline": 44.4,
-          "delta_pct": 0.7
-        },
-        "charge_power": {
-          "actual": 0.8,
-          "baseline": 0.8,
-          "delta_pct": 0.2
-        },
-        "range_estimate": {
-          "actual": 135.8,
-          "baseline": 185.8,
-          "delta_pct": -26.9
-        },
-        "payload": {
-          "actual": 189.7,
-          "baseline": 95.0,
-          "delta_pct": 99.7
-        },
-        "motor_temp": {
-          "actual": 51.1,
-          "baseline": 47.2,
-          "delta_pct": 8.1
-        },
-        "current_draw": {
-          "actual": 30.3,
-          "baseline": 22.3,
-          "delta_pct": 35.7
-        },
-        "cell_health_latest": 96.74
+        "cell_health_latest": 98.35
       }
     },
     {
       "scenario": "cell_wear",
-      "vehicle_id": "V-036",
-      "model_code": "Volt 1",
-      "onset": "2026-06-28",
+      "vehicle_id": "V-017",
+      "model_code": "EVX Standard",
+      "onset": "2026-07-04",
       "finding": "Cell health falling ~0.6% per week; current draw near baseline",
       "cause": "Removable pack capacity loss / cell imbalance",
       "documents": [
@@ -267,43 +129,86 @@
       ],
       "measured_since_onset": {
         "speed": {
-          "actual": 43.8,
-          "baseline": 43.6,
-          "delta_pct": 0.5
+          "actual": 42.6,
+          "baseline": 42.8,
+          "delta_pct": -0.5
         },
         "charge_power": {
-          "actual": 0.7,
+          "actual": 0.8,
           "baseline": 0.8,
-          "delta_pct": -0.1
+          "delta_pct": 0.1
         },
         "range_estimate": {
-          "actual": 135.4,
-          "baseline": 149.2,
-          "delta_pct": -9.2
+          "actual": 131.9,
+          "baseline": 144.8,
+          "delta_pct": -8.9
         },
         "payload": {
-          "actual": 94.4,
+          "actual": 93.4,
           "baseline": 95.0,
-          "delta_pct": -0.7
+          "delta_pct": -1.7
         },
         "motor_temp": {
-          "actual": 47.8,
-          "baseline": 46.7,
-          "delta_pct": 2.3
+          "actual": 47.1,
+          "baseline": 46.4,
+          "delta_pct": 1.7
         },
         "current_draw": {
-          "actual": 21.8,
-          "baseline": 21.7,
-          "delta_pct": 0.4
+          "actual": 21.5,
+          "baseline": 21.5,
+          "delta_pct": 0.0
         },
         "cell_health_latest": 84.0
       }
     },
     {
+      "scenario": "undocumented",
+      "vehicle_id": "V-023",
+      "model_code": "EVX Standard",
+      "onset": "2026-09-22",
+      "finding": "Current draw ~30% above baseline; payload and cell health normal",
+      "cause": null,
+      "documents": [],
+      "note": "No document explains high current with normal payload and cell health; the correct answer is partial.",
+      "measured_since_onset": {
+        "speed": {
+          "actual": 43.1,
+          "baseline": 43.2,
+          "delta_pct": -0.2
+        },
+        "charge_power": {
+          "actual": 0.8,
+          "baseline": 0.8,
+          "delta_pct": 0.4
+        },
+        "range_estimate": {
+          "actual": 110.1,
+          "baseline": 142.1,
+          "delta_pct": -22.5
+        },
+        "payload": {
+          "actual": 91.7,
+          "baseline": 95.0,
+          "delta_pct": -3.5
+        },
+        "motor_temp": {
+          "actual": 53.5,
+          "baseline": 46.5,
+          "delta_pct": 15.2
+        },
+        "current_draw": {
+          "actual": 27.3,
+          "baseline": 21.2,
+          "delta_pct": 28.7
+        },
+        "cell_health_latest": 97.63
+      }
+    },
+    {
       "scenario": "overload",
-      "vehicle_id": "V-042",
-      "model_code": "Volt 1 Gen 2",
-      "onset": "2026-09-16",
+      "vehicle_id": "V-029",
+      "model_code": "EVX Pro",
+      "onset": "2026-09-22",
       "finding": "Current draw well above baseline; payload above rated; cell health normal",
       "cause": "Sustained overload",
       "documents": [
@@ -314,90 +219,185 @@
       ],
       "measured_since_onset": {
         "speed": {
-          "actual": 46.1,
-          "baseline": 45.5,
-          "delta_pct": 1.4
+          "actual": 44.0,
+          "baseline": 43.9,
+          "delta_pct": 0.1
         },
         "charge_power": {
           "actual": 0.8,
           "baseline": 0.8,
-          "delta_pct": 0.7
+          "delta_pct": 0.0
         },
         "range_estimate": {
-          "actual": 137.1,
-          "baseline": 186.1,
-          "delta_pct": -26.4
+          "actual": 132.7,
+          "baseline": 180.2,
+          "delta_pct": -26.3
         },
         "payload": {
-          "actual": 190.4,
+          "actual": 188.3,
           "baseline": 95.0,
-          "delta_pct": 100.4
+          "delta_pct": 98.2
         },
         "motor_temp": {
-          "actual": 51.5,
-          "baseline": 48.2,
-          "delta_pct": 6.8
+          "actual": 50.3,
+          "baseline": 47.0,
+          "delta_pct": 7.1
         },
         "current_draw": {
-          "actual": 33.3,
-          "baseline": 24.1,
-          "delta_pct": 38.4
+          "actual": 29.3,
+          "baseline": 21.8,
+          "delta_pct": 34.3
         },
-        "cell_health_latest": 97.08
+        "cell_health_latest": 96.7
+      }
+    },
+    {
+      "scenario": "cell_wear",
+      "vehicle_id": "V-036",
+      "model_code": "EVX Standard",
+      "onset": "2026-07-04",
+      "finding": "Cell health falling ~0.6% per week; current draw near baseline",
+      "cause": "Removable pack capacity loss / cell imbalance",
+      "documents": [
+        "SB-121_removable_pack_cell_wear"
+      ],
+      "error_codes": [
+        "ERR_402",
+        "ERR_403"
+      ],
+      "measured_since_onset": {
+        "speed": {
+          "actual": 43.5,
+          "baseline": 43.2,
+          "delta_pct": 0.7
+        },
+        "charge_power": {
+          "actual": 0.8,
+          "baseline": 0.8,
+          "delta_pct": 0.2
+        },
+        "range_estimate": {
+          "actual": 129.3,
+          "baseline": 142.8,
+          "delta_pct": -9.5
+        },
+        "payload": {
+          "actual": 95.1,
+          "baseline": 95.0,
+          "delta_pct": 0.2
+        },
+        "motor_temp": {
+          "actual": 47.5,
+          "baseline": 46.5,
+          "delta_pct": 2.1
+        },
+        "current_draw": {
+          "actual": 21.8,
+          "baseline": 21.6,
+          "delta_pct": 0.9
+        },
+        "cell_health_latest": 84.0
+      }
+    },
+    {
+      "scenario": "overload",
+      "vehicle_id": "V-042",
+      "model_code": "EVX Pro",
+      "onset": "2026-09-22",
+      "finding": "Current draw well above baseline; payload above rated; cell health normal",
+      "cause": "Sustained overload",
+      "documents": [
+        "SB-114_sustained_overload"
+      ],
+      "error_codes": [
+        "ERR_601"
+      ],
+      "measured_since_onset": {
+        "speed": {
+          "actual": 42.3,
+          "baseline": 42.4,
+          "delta_pct": -0.3
+        },
+        "charge_power": {
+          "actual": 0.8,
+          "baseline": 0.8,
+          "delta_pct": 0.6
+        },
+        "range_estimate": {
+          "actual": 140.8,
+          "baseline": 187.9,
+          "delta_pct": -25.1
+        },
+        "payload": {
+          "actual": 189.4,
+          "baseline": 95.0,
+          "delta_pct": 99.4
+        },
+        "motor_temp": {
+          "actual": 50.0,
+          "baseline": 46.0,
+          "delta_pct": 8.6
+        },
+        "current_draw": {
+          "actual": 27.5,
+          "baseline": 20.6,
+          "delta_pct": 33.8
+        },
+        "cell_health_latest": 98.37
       }
     },
     {
       "scenario": "speed_cap",
       "vehicle_id": "V-055",
-      "model_code": "Volt 1 Ultra",
-      "onset": "2026-09-15",
-      "finding": "Speed in Sonic / Sonic X held near 42 km/h (baseline 62 / 70) since the 3.2.0 update",
-      "cause": "Firmware 3.2.0 applies the Eco X speed limit to Sonic and Sonic X",
+      "model_code": "EVX Max",
+      "onset": "2026-09-21",
+      "finding": "Speed in the two highest modes held near 42 km/h (baseline 62 / 70) since the 3.2.0 update",
+      "cause": "Firmware 3.2.0 applies the lowest mode's speed limit to the two highest modes",
       "documents": [
-        "SB-135_firmware_sonic_speed_cap"
+        "SB-135_firmware_top_mode_speed_cap"
       ],
       "error_codes": [
         "ERR_205"
       ],
       "measured_since_onset": {
         "speed": {
-          "actual": 46.5,
-          "baseline": 56.6,
-          "delta_pct": -17.9
+          "actual": 48.5,
+          "baseline": 55.4,
+          "delta_pct": -12.4
         },
         "charge_power": {
-          "actual": 0.8,
+          "actual": 0.7,
           "baseline": 0.8,
-          "delta_pct": 1.2
+          "delta_pct": -0.5
         },
         "range_estimate": {
-          "actual": 190.5,
-          "baseline": 189.2,
-          "delta_pct": 0.7
+          "actual": 182.5,
+          "baseline": 179.5,
+          "delta_pct": 1.7
         },
         "payload": {
-          "actual": 93.0,
+          "actual": 86.2,
           "baseline": 95.0,
-          "delta_pct": -2.1
+          "delta_pct": -9.2
         },
         "motor_temp": {
-          "actual": 56.5,
-          "baseline": 55.8,
-          "delta_pct": 1.4
+          "actual": 55.7,
+          "baseline": 54.7,
+          "delta_pct": 1.7
         },
         "current_draw": {
-          "actual": 29.0,
-          "baseline": 36.3,
-          "delta_pct": -20.0
+          "actual": 29.4,
+          "baseline": 34.6,
+          "delta_pct": -15.2
         },
-        "cell_health_latest": 98.31
+        "cell_health_latest": 98.27
       }
     },
     {
       "scenario": "charger_fault",
       "vehicle_id": "V-064",
-      "model_code": "Volt 1 Gen 2",
-      "onset": "2026-09-13",
+      "model_code": "EVX Pro",
+      "onset": "2026-09-19",
       "finding": "Charging power ~0.34 kW against a 0.75 kW baseline; riding metrics normal",
       "cause": "Fast charger delivering under half its rated power",
       "documents": [
@@ -408,90 +408,90 @@
       ],
       "measured_since_onset": {
         "speed": {
-          "actual": 50.7,
-          "baseline": 51.1,
-          "delta_pct": -0.8
+          "actual": 48.7,
+          "baseline": 49.0,
+          "delta_pct": -0.6
         },
         "charge_power": {
           "actual": 0.3,
           "baseline": 0.8,
-          "delta_pct": -54.6
+          "delta_pct": -54.0
         },
         "range_estimate": {
-          "actual": 164.8,
-          "baseline": 163.9,
-          "delta_pct": 0.5
+          "actual": 166.7,
+          "baseline": 165.2,
+          "delta_pct": 0.9
         },
         "payload": {
-          "actual": 87.9,
+          "actual": 98.8,
           "baseline": 95.0,
-          "delta_pct": -7.4
+          "delta_pct": 4.0
         },
         "motor_temp": {
-          "actual": 54.0,
-          "baseline": 51.7,
-          "delta_pct": 4.4
+          "actual": 52.8,
+          "baseline": 50.3,
+          "delta_pct": 5.1
         },
         "current_draw": {
-          "actual": 29.1,
-          "baseline": 29.1,
-          "delta_pct": 0.0
+          "actual": 26.7,
+          "baseline": 27.0,
+          "delta_pct": -1.3
         },
-        "cell_health_latest": 97.6
+        "cell_health_latest": 97.58
       }
     },
     {
       "scenario": "speed_cap",
       "vehicle_id": "V-088",
-      "model_code": "Volt 1 Ultra",
-      "onset": "2026-09-15",
-      "finding": "Speed in Sonic / Sonic X held near 42 km/h (baseline 62 / 70) since the 3.2.0 update",
-      "cause": "Firmware 3.2.0 applies the Eco X speed limit to Sonic and Sonic X",
+      "model_code": "EVX Max",
+      "onset": "2026-09-21",
+      "finding": "Speed in the two highest modes held near 42 km/h (baseline 62 / 70) since the 3.2.0 update",
+      "cause": "Firmware 3.2.0 applies the lowest mode's speed limit to the two highest modes",
       "documents": [
-        "SB-135_firmware_sonic_speed_cap"
+        "SB-135_firmware_top_mode_speed_cap"
       ],
       "error_codes": [
         "ERR_205"
       ],
       "measured_since_onset": {
         "speed": {
-          "actual": 45.6,
-          "baseline": 55.7,
-          "delta_pct": -18.2
+          "actual": 46.6,
+          "baseline": 55.8,
+          "delta_pct": -16.5
         },
         "charge_power": {
           "actual": 0.7,
           "baseline": 0.8,
-          "delta_pct": -0.1
+          "delta_pct": -0.6
         },
         "range_estimate": {
-          "actual": 193.9,
-          "baseline": 190.5,
-          "delta_pct": 1.8
+          "actual": 179.0,
+          "baseline": 176.6,
+          "delta_pct": 1.4
         },
         "payload": {
-          "actual": 94.4,
+          "actual": 94.9,
           "baseline": 95.0,
-          "delta_pct": -0.7
+          "delta_pct": -0.1
         },
         "motor_temp": {
           "actual": 56.6,
-          "baseline": 55.2,
-          "delta_pct": 2.6
+          "baseline": 55.3,
+          "delta_pct": 2.4
         },
         "current_draw": {
-          "actual": 28.0,
+          "actual": 28.7,
           "baseline": 35.5,
-          "delta_pct": -21.1
+          "delta_pct": -19.1
         },
-        "cell_health_latest": 98.39
+        "cell_health_latest": 98.29
       }
     },
     {
       "scenario": "charger_fault",
       "vehicle_id": "V-091",
-      "model_code": "Volt 1 Gen 2",
-      "onset": "2026-09-13",
+      "model_code": "EVX Pro",
+      "onset": "2026-09-19",
       "finding": "Charging power ~0.34 kW against a 0.75 kW baseline; riding metrics normal",
       "cause": "Fast charger delivering under half its rated power",
       "documents": [
@@ -502,36 +502,36 @@
       ],
       "measured_since_onset": {
         "speed": {
-          "actual": 43.7,
+          "actual": 44.0,
           "baseline": 43.8,
-          "delta_pct": -0.3
+          "delta_pct": 0.5
         },
         "charge_power": {
           "actual": 0.3,
           "baseline": 0.8,
-          "delta_pct": -54.4
+          "delta_pct": -54.3
         },
         "range_estimate": {
-          "actual": 191.2,
-          "baseline": 191.7,
-          "delta_pct": -0.3
+          "actual": 177.7,
+          "baseline": 178.7,
+          "delta_pct": -0.5
         },
         "payload": {
-          "actual": 94.6,
+          "actual": 96.6,
           "baseline": 95.0,
-          "delta_pct": -0.4
+          "delta_pct": 1.6
         },
         "motor_temp": {
-          "actual": 50.3,
+          "actual": 49.8,
           "baseline": 47.0,
-          "delta_pct": 7.0
+          "delta_pct": 6.1
         },
         "current_draw": {
-          "actual": 22.1,
-          "baseline": 22.2,
-          "delta_pct": -0.2
+          "actual": 22.3,
+          "baseline": 22.1,
+          "delta_pct": 0.9
         },
-        "cell_health_latest": 96.6
+        "cell_health_latest": 96.74
       }
     }
   ]

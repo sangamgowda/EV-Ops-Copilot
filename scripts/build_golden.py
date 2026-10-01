@@ -57,12 +57,29 @@ from ops_copilot.settings import get_config, load_prompt  # noqa: E402
 GOLDEN = ROOT / "src" / "ops_copilot" / "evaluation" / "golden"
 DOCS = ROOT / "data" / "documents"
 MANIFEST = ROOT / "data" / "seed_manifest.json"
+REFERENCE = ROOT / "data" / "reference" / "ev_models.yaml"
 
 WEEK = "t.recorded_at >= now() - interval '7 days'"
 Q3 = "sold_on BETWEEN '2026-07-01' AND '2026-09-30'"
 STOPWORDS = set("""a an and are as at be but by can do does for from how i if in is it its
 of on or so that the their them then there these this to was what when where which who why
 will with would you your my me we our any all has have had not no than too very just""".split())
+
+
+def catalogue() -> dict[str, Any]:
+    """Model and ride-mode names come from data/reference/ev_models.yaml,
+    as they do for the seed script: a rename there flows into the
+    questions here."""
+    return yaml.safe_load(REFERENCE.read_text(encoding="utf-8"))
+
+
+def model_by_role(role: str) -> str:
+    return next(name for name, spec in catalogue()["models"].items() if spec["role"] == role)
+
+
+def modes() -> list[str]:
+    """Ride modes, lowest power first."""
+    return list(catalogue()["ride_modes"])
 
 
 def database_url(arg: str | None) -> str:
@@ -139,13 +156,14 @@ def story_cases(conn: Any) -> list[dict[str, Any]]:
             ["current_draw"], ["battery degradation is the cause", "caused by battery wear"],
             ["story:overload"]))
     for vid in ("V-055", "V-088"):
-        spd, spd_b = vs_baseline(conn, vid, "speed", ("Sonic", "Sonic X"))
+        low, (high, top) = modes()[0], modes()[-2:]
+        spd, spd_b = vs_baseline(conn, vid, "speed", (high, top))
         out.append(diag(
-            f"syn_speed_cap_{vid}", vid, f"Why won't {vid} go above 45 km/h in Sonic mode?",
-            f"{vid} is on firmware 3.2.0, which applies the Eco X 45 km/h limit to Sonic and Sonic X "
+            f"syn_speed_cap_{vid}", vid, f"Why won't {vid} go above 45 km/h in {high} mode?",
+            f"{vid} is on firmware 3.2.0, which applies the {low} 45 km/h limit to {high} and {top} "
             f"(SB-135). Its speed in those modes averages about {spd:.0f} km/h against a baseline of "
             f"{spd_b:.0f}. Updating to 3.2.1 restores the limits.",
-            [{"label": "sonic speed kmh", "value": r(spd, 0), "tolerance": 4}],
+            [{"label": "top modes speed kmh", "value": r(spd, 0), "tolerance": 4}],
             [["firmware", "3.2.0"]], ["speed"], tags=["story:speed_cap"]))
     pw, pw_b = vs_baseline(conn, "V-091", "charge_power")
     out.append(diag(
@@ -189,9 +207,10 @@ def lookup(case_id: str, question: str, reference: str, domain: str, *, facts: l
 
 def lookup_cases(conn: Any) -> list[dict[str, Any]]:
     out = []
-    normal_ultra = q1(conn, "SELECT vehicle_id FROM vehicles WHERE model_code = 'Volt 1 Ultra' "
-                            "AND config->>'firmware_version' <> '3.2.0' ORDER BY vehicle_id LIMIT 1")
-    for vid in ("V-055", normal_ultra):
+    top_model, flagship = model_by_role("top"), model_by_role("flagship")
+    healthy_top = q1(conn, "SELECT vehicle_id FROM vehicles WHERE model_code = %s "
+                           "AND config->>'firmware_version' <> '3.2.0' ORDER BY vehicle_id LIMIT 1", top_model)
+    for vid in ("V-055", healthy_top):
         fw = q1(conn, "SELECT config->>'firmware_version' FROM vehicles WHERE vehicle_id = %s", vid)
         out.append(lookup(f"syn_firmware_{vid}", f"What firmware version is {vid} running?",
                           f"{vid} is on firmware {fw}.", "diagnostic", must_contain=[fw], key=[vid], vid=vid))
@@ -219,13 +238,13 @@ def lookup_cases(conn: Any) -> list[dict[str, Any]]:
                           f"{code}: {meaning}. Recommended action: {action}.", "diagnostic",
                           must_contain=must, key=[code], tags=["error_code"]))
 
-    ultra_south = q1(conn, f"SELECT count(*) FROM sales_transactions WHERE model_code = 'Volt 1 Ultra' "
-                           f"AND region = 'south' AND {Q3}")
-    out.append(lookup("syn_sales_ultra_south_q3",
-                      "How many Volt 1 Ultras were sold in the south between 1 July and 30 September 2026?",
-                      f"{ultra_south} Volt 1 Ultras were sold in the south in that period.", "business",
-                      facts=[{"label": "ultra south q3 units", "value": ultra_south, "tolerance": 0}],
-                      key=["Volt 1 Ultra", "south"]))
+    top_south = q1(conn, f"SELECT count(*) FROM sales_transactions WHERE model_code = %s "
+                         f"AND region = 'south' AND {Q3}", top_model)
+    out.append(lookup("syn_sales_top_model_south_q3",
+                      f"How many {top_model} scooters were sold in the south between 1 July and 30 September 2026?",
+                      f"{top_south} {top_model} scooters were sold in the south in that period.", "business",
+                      facts=[{"label": "top model south q3 units", "value": top_south, "tolerance": 0}],
+                      key=[top_model, "south"]))
     with conn.cursor() as cur:
         cur.execute(f"SELECT region, count(*) FROM sales_transactions WHERE {Q3} GROUP BY 1 ORDER BY 2 DESC")
         top, top_n = cur.fetchone()
@@ -233,13 +252,14 @@ def lookup_cases(conn: Any) -> list[dict[str, Any]]:
                       "Which region sold the most scooters between 1 July and 30 September 2026?",
                       f"The {top}, with {top_n} sales.", "business", must_contain=[top],
                       facts=[{"label": "top region units", "value": top_n, "tolerance": 0}]))
-    price = q1(conn, "SELECT avg(unit_price) FROM sales_transactions WHERE model_code = 'Volt 1 Gen 2' "
-                     "AND sold_on >= '2026-01-01'")
-    out.append(lookup("syn_sales_gen2_avg_price_2026",
-                      "What was the average selling price of a Volt 1 Gen 2 in 2026?",
-                      f"About ₹{price:,.0f} (list price ₹1,45,000, less discounts).", "business",
+    price = q1(conn, "SELECT avg(unit_price) FROM sales_transactions WHERE model_code = %s "
+                     "AND sold_on >= '2026-01-01'", flagship)
+    list_price = catalogue()["models"][flagship]["price_inr"]
+    out.append(lookup("syn_sales_flagship_avg_price_2026",
+                      f"What was the average selling price of an {flagship} in 2026?",
+                      f"About ₹{price:,.0f} (list price ₹{list_price:,}, less discounts).", "business",
                       facts=[{"label": "avg price inr", "value": r(price, 0), "tolerance": 600}],
-                      key=["Volt 1 Gen 2"]))
+                      key=[flagship]))
     fleet_aug = q1(conn, "SELECT count(*) FROM sales_transactions WHERE channel = 'fleet' "
                          "AND sold_on BETWEEN '2026-08-01' AND '2026-08-31'")
     out.append(lookup("syn_sales_fleet_aug", "How many scooters were sold through the fleet channel in August 2026?",
@@ -285,7 +305,7 @@ def sanitize(g: GeneratedQuestion) -> tuple[list[str], list[dict[str, Any]]]:
         if found:
             values += [float(n.replace(",", "")) for n in found]
         elif item.strip() and len(item.split()) <= 2:
-            # Longer phrases ("Ride and Air") fail on any rewording.
+            # Longer phrases ("Normal and Sport") fail on any rewording.
             phrases.append(item.strip())
     for f in g.facts:
         v = f.get("value")

@@ -40,13 +40,13 @@
 - id: adv_nonexistent_model
   source: adversarial
   tags: [nonexistent_entity, abstain]
-  question: What is the top speed of the Volt 2?
+  question: What is the top speed of the EVX Lite?
   expected:
     abstain: true
     max_iterations: 2
   reference_answer: >
-    There is no model called Volt 2. The family is the Volt 1 (100 km/h),
-    Volt 1 Gen 2 (100 km/h) and Volt 1 Ultra (115 km/h).
+    There is no model called EVX Lite. The family is the EVX Standard
+    (100 km/h), EVX Pro (100 km/h) and EVX Max (115 km/h).
 
 - id: adv_refute_claim
   source: adversarial
@@ -84,9 +84,9 @@
     max_iterations: 3
   reference_answer: >
     It depends on which scooter, so the vehicle id is needed. Common causes in
-    this fleet: Eco X and Eco modes limit speed to 45 and 50 km/h; overload
-    above 150 kg; and Volt 1 Ultras on firmware 3.2.0 are held to 45 km/h in
-    Sonic and Sonic X (SB-135).
+    this fleet: Saver and Eco modes limit speed to 45 and 50 km/h; overload
+    above 150 kg; and EVX Max scooters on firmware 3.2.0 are held to 45 km/h
+    in Sport+ and Ultra (SB-135).
 
 - id: adv_cross_domain
   source: adversarial
@@ -113,7 +113,7 @@
 - id: adv_holdout_brakes
   source: adversarial
   tags: [holdout_document]
-  question: The front brake on a Volt 1 feels weak and the pads keep wearing out fast. What should the workshop do?
+  question: The front brake on an EVX Standard feels weak and the pads keep wearing out fast. What should the workshop do?
   expected:
     domains: [diagnostic]
     tools: [rag_retrieval_tool]
@@ -152,35 +152,35 @@
 - id: adv_launch_timing
   source: adversarial
   tags: [temporal]
-  question: How many Volt 1 Ultras were sold in the west before 15 August 2026?
+  question: How many EVX Max scooters were sold in the west before 15 August 2026?
   expected:
     domains: [business]
     tools: [structured_query_tool]
-    must_contain: [["0 ", "zero", "none", "no volt 1 ultra", "no ultra", "not sold", "not on sale", "wasn't on sale", "was not on sale"]]
+    must_contain: [["0 ", "zero", "none", "no evx max", "none were sold", "not sold", "not on sale", "wasn't on sale", "was not on sale"]]
     max_iterations: 3
   reference_answer: >
-    None. The Ultra only went on sale outside the south on 15 August 2026.
+    None. The EVX Max only went on sale outside the south on 15 August 2026.
 
 - id: adv_longest_range
   source: adversarial
   tags: [comparison]
   question: Which scooter model has the longest certified range, and what is it?
   expected:
-    must_contain: ["Ultra"]
-    facts: [{label: ultra range km, value: 248, tolerance: 0}]
+    must_contain: ["EVX Max"]
+    facts: [{label: top model range km, value: 240, tolerance: 0}]
     max_iterations: 2
-  reference_answer: The Volt 1 Ultra, with 248 km.
+  reference_answer: The EVX Max, with 240 km.
 
 - id: adv_mode_not_available
   source: adversarial
   tags: [claim_to_refute]
-  question: Can I use Sonic X mode on a Volt 1 Gen 2?
+  question: Can I use Ultra mode on an EVX Pro?
   expected:
-    must_contain: ["Ultra"]
+    must_contain: ["EVX Max"]
     max_iterations: 2
   reference_answer: >
-    No. Sonic X (up to 115 km/h) is only on the Volt 1 Ultra. The Volt 1
-    Gen 2 tops out at Sonic, 100 km/h.
+    No. Ultra mode (up to 115 km/h) is only on the EVX Max. The EVX Pro
+    tops out at Sport+, 100 km/h.
 
 - id: adv_south_outperformed
   source: adversarial
@@ -188,7 +188,7 @@
   note: the generated question for sales_q3_2026_midquarter was rejected three times for word overlap
   question: Why did the south outsell the other regions between July and September 2026?
   expected:
-    must_contain: ["Ultra", ["launch", "launched", "went on sale", "on sale"]]
+    must_contain: ["EVX Max", ["launch", "launched", "went on sale", "on sale"]]
     facts:
       - label: south sales Q3 2026
         tolerance: 0
@@ -197,9 +197,9 @@
           AND sold_on BETWEEN '2026-07-01' AND '2026-09-30'
     max_iterations: 3
   reference_answer: >
-    The Volt 1 Ultra launched in the south on 1 June 2026, ten weeks before the
+    The EVX Max launched in the south on 1 June 2026, ten weeks before the
     other regions got it (15 August). South sales reached {south sales Q3 2026}
-    in July to September while the other regions stayed roughly flat; Ultra
+    in July to September while the other regions stayed roughly flat; EVX Max
     sales added to, rather than replaced, the other models.
 
 # Promoted cases live in promoted.yaml.

@@ -29,7 +29,7 @@ CALLS = [
         "SELECT v.vehicle_id, v.model_code, b.nominal_value AS baseline_current_a "
         "FROM vehicles v JOIN vehicle_baseline_specs b ON b.model_code = v.model_code "
         "WHERE v.vehicle_id = 'V-042' AND b.metric_name = 'current_draw' "
-        "AND b.drive_mode = 'Ride'")}),
+        "AND b.drive_mode = 'Normal'")}),
     ("structured_query_tool", {"sql": "DELETE FROM vehicles"}),
     ("rag_retrieval_tool", {"query": "range dropped and current draw is high with heavy loads",
                             "domain": "diagnostic",

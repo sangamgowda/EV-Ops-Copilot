@@ -88,7 +88,7 @@ async def test_readonly_cannot_write(engines):
     with pytest.raises(DBAPIError) as err:
         async with readonly.begin() as conn:
             await conn.execute(text(
-                "INSERT INTO vehicles (vehicle_id, model_code) VALUES ('V-TEST', 'Volt 1 Gen 2')"))
+                "INSERT INTO vehicles (vehicle_id, model_code) VALUES ('V-TEST', 'EVX Pro')"))
     # Refused by the read-only session, before the role's grants are
     # even consulted — the second lock.
     assert "read-only transaction" in str(err.value)
@@ -110,7 +110,7 @@ async def test_owner_can_write(engines):
     async with owner.connect() as conn:
         trans = await conn.begin()
         await conn.execute(text(
-            "INSERT INTO vehicles (vehicle_id, model_code) VALUES ('V-TEST', 'Volt 1 Gen 2')"))
+            "INSERT INTO vehicles (vehicle_id, model_code) VALUES ('V-TEST', 'EVX Pro')"))
         assert (await conn.execute(text(
             "SELECT count(*) FROM vehicles WHERE vehicle_id = 'V-TEST'"))).scalar() == 1
         await trans.rollback()

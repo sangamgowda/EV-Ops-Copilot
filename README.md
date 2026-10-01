@@ -35,7 +35,7 @@ source.
 **Vehicle questions**
 - "Why did range drop on this vehicle this week?"
 - "What does error code ERR_205 mean?"
-- "What ride modes does the Volt 1 Ultra have?"
+- "What ride modes does the EVX Max have?"
 
 **Business questions**
 - "How are sales tracking this quarter?"
@@ -165,8 +165,8 @@ With the default 120 vehicles and 90 days:
 
 | Table | Rows | What it holds |
 |---|---|---|
-| vehicles | 120 | V-001 to V-120: three scooter models (Volt 1, Volt 1 Gen 2, Volt 1 Ultra), 15 cities, private and fleet use |
-| vehicle_baseline_specs | 115 | normal values for each model and ride mode (Eco X, Eco, Ride, Air, Sonic, Sonic X) and for charging |
+| vehicles | 120 | V-001 to V-120: three scooter models (EVX Standard, EVX Pro, EVX Max), 15 cities, private and fleet use |
+| vehicle_baseline_specs | 115 | normal values for each model and ride mode (Saver, Eco, Normal, Sport, Sport+, Ultra) and for charging |
 | vehicle_telemetry | ~1.5 million | speed, power draw, battery, temperature and load every 5 minutes while riding; nightly charging power |
 | service_events | ~360 | service visits and customer complaints over 12 months |
 | sales_transactions | ~20,000 | two years of sales across four regions |
@@ -184,7 +184,7 @@ ground truth:
 | Vehicle | Problem | Explained by |
 |---|---|---|
 | V-042, V-007, V-029 | overloaded: power use up ~38%, range down ~26% | SB-114 |
-| V-012, V-055, V-088 | firmware 3.2.0 holds Sonic and Sonic X to 45 km/h | SB-135 |
+| V-012, V-055, V-088 | firmware 3.2.0 holds Sport+ and Ultra to 45 km/h | SB-135 |
 | V-064, V-091 | charger delivering under half its rated power | SB-140 |
 | V-017, V-036 | battery wearing out: health falling from 92% to 84% | SB-121 |
 | V-023 | power use up ~30% for no documented reason | nothing — the right answer says so |
