@@ -5,11 +5,13 @@
                                                    # document questions,
                                                    # refresh the rest
     python scripts/build_golden.py --check-traps   # only re-check traps
+    python scripts/build_golden.py --heldout       # only the held-out set
 
 Writes, under src/ops_copilot/evaluation/golden/:
   golden.jsonl       every case the runner scores
   trap_cases.jsonl   abstention cases (reported separately)
   golden_meta.json   what was built from what, and what was rejected
+  heldout.jsonl      the held-out set (--heldout): never tuned against
 
 Three sources, mixed:
 
@@ -110,7 +112,8 @@ def vs_baseline(conn: Any, vid: str, metric: str, modes: tuple[str, ...] | None 
               FROM vehicle_telemetry t JOIN vehicles v ON v.vehicle_id = t.vehicle_id
               JOIN vehicle_baseline_specs b ON b.model_code = v.model_code
                AND b.drive_mode = t.drive_mode AND b.metric_name = t.metric_name
-              WHERE t.vehicle_id = %s AND t.metric_name = %s AND {WEEK} {mode_sql}"""
+              WHERE t.vehicle_id = %s AND t.metric_name = %s AND {WEEK} {mode_sql}
+                AND t.quality_flag IS NULL"""  # as the agent's queries are guarded
     with conn.cursor() as cur:
         cur.execute(sql, (vid, metric, list(modes)) if modes else (vid, metric))
         actual, base = cur.fetchone()
@@ -442,6 +445,116 @@ def apply_overrides(cases: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 # ── main ─────────────────────────────────────────────────────
 
+# ── held-out set ─────────────────────────────────────────────
+#
+# Never looked at while changing prompts or code. The golden set is
+# what gets tuned against, so its pass rate drifts upward partly by
+# fitting it; the held-out rate is the estimate of how the system does
+# on questions nobody tuned for. Built from data only (no model call),
+# about vehicles, codes and periods the golden set and the Plan prompt
+# examples do not use, and worded differently.
+
+# Used by golden/curated/traps or by the Plan prompt examples.
+NOT_HELD_OUT_VEHICLES = {"V-001", "V-007", "V-009", "V-017", "V-023", "V-029", "V-036", "V-042", "V-055",
+                         "V-064", "V-088", "V-091", "V-101", "V-118", "V-120"}
+HELD_OUT_CODES = ["ERR_101", "ERR_102", "ERR_201", "ERR_301", "ERR_302", "ERR_402", "ERR_404",
+                  "ERR_405", "ERR_601", "ERR_701", "ERR_801"]
+MONTHS = [("July", "2026-07-01", "2026-07-31"), ("August", "2026-08-01", "2026-08-31"),
+          ("September", "2026-09-01", "2026-09-30")]
+
+
+def heldout_cases(conn: Any) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    planted = {s["vehicle_id"]: s["scenario"]
+               for s in json.loads(MANIFEST.read_text(encoding="utf-8"))["scenarios"]}
+
+    # A planted story on a vehicle the golden set never asks about.
+    top, high_mode = modes()[-1], modes()[-2]
+    for vid, scenario in sorted(planted.items()):
+        if vid in NOT_HELD_OUT_VEHICLES or scenario != "speed_cap":
+            continue
+        spd, spd_b = vs_baseline(conn, vid, "speed", (high_mode, top))
+        out.append(diag(
+            f"ho_speed_cap_{vid}", vid, f"{vid} tops out at about 45 even in {top}. What is going on?",
+            f"{vid} runs firmware 3.2.0, which caps {high_mode} and {top} at the lowest mode's 45 km/h "
+            f"(SB-135); those modes average about {spd:.0f} km/h against {spd_b:.0f}. Update to 3.2.1.",
+            [{"label": "top modes speed kmh", "value": r(spd, 0), "tolerance": 2}],
+            [["firmware", "3.2.0"]], ["speed"], tags=["story:speed_cap", "heldout"]))
+
+    # Controls: healthy vehicles. The right answer is "nothing is wrong";
+    # inventing a cause is the failure being tested.
+    healthy = [row[0] for row in conn.execute(
+        "SELECT vehicle_id FROM vehicles ORDER BY vehicle_id").fetchall()
+        if row[0] not in planted and row[0] not in NOT_HELD_OUT_VEHICLES][::13][:6]
+    for vid in healthy:
+        rng, rng_b = vs_baseline(conn, vid, "range_estimate")
+        out.append(diag(
+            f"ho_control_{vid}", vid, f"Is anything off with the range on {vid} lately?",
+            f"No. {vid}'s range estimate averages about {rng:.0f} km against a {rng_b:.0f} km baseline, "
+            "within tolerance, and load, current draw and battery health are normal.",
+            [], [["normal", "within", "no sign", "no evidence", "in line", "nothing unusual", "no issue",
+                  "no problem", "as expected"]],
+            ["range_estimate"], ["overloaded", "battery degradation", "speed cap", "faulty charger"],
+            ["control", "heldout"]))
+
+    # Lookups on vehicles nobody tuned for.
+    pool = [row for row in conn.execute(
+        "SELECT vehicle_id, config->>'firmware_version', odometer_km, registered_region FROM vehicles "
+        "ORDER BY vehicle_id").fetchall() if row[0] not in NOT_HELD_OUT_VEHICLES]
+    for vid, fw, _, _ in pool[2::23][:5]:
+        out.append(lookup(f"ho_firmware_{vid}", f"Which software version is installed on {vid}?",
+                          f"{vid} runs firmware {fw}.", "diagnostic", must_contain=[fw], key=[vid], vid=vid,
+                          tags=["heldout"]))
+    for vid, _, odo, _ in [p for p in pool[5::19] if p[2] is not None][:5]:
+        out.append(lookup(f"ho_odometer_{vid}", f"How far has {vid} been ridden in total?",
+                          f"About {odo:,.0f} km.", "diagnostic",
+                          facts=[{"label": "odometer km", "value": r(odo, 0), "tolerance": 1}], key=[vid],
+                          vid=vid, tags=["heldout"]))
+    for vid, _, _, _ in pool[9::17][:6]:
+        health = r(q1(conn, "SELECT metric_value FROM vehicle_telemetry WHERE vehicle_id = %s "
+                            "AND metric_name = 'cell_health' ORDER BY recorded_at DESC LIMIT 1", vid))
+        out.append(lookup(f"ho_cell_health_{vid}", f"How healthy is the battery on {vid} right now?",
+                          f"Its latest cell health reading is {health}%.", "diagnostic",
+                          facts=[{"label": "cell health pct", "value": health, "tolerance": 0.5}],
+                          key=[vid, "cell_health"], vid=vid, tags=["heldout"]))
+
+    for code in HELD_OUT_CODES:
+        meaning, action = conn.execute("SELECT meaning, recommended_action FROM error_codes WHERE code = %s",
+                                       (code,)).fetchone()
+        words = [w for w in content_words(meaning) if len(w) > 3][:1]
+        out.append(lookup(f"ho_code_{code}", f"A rider reports {code} on the dashboard. What does it mean?",
+                          f"{code}: {meaning}. Recommended action: {action}.", "diagnostic",
+                          must_contain=[words] if words else None, key=[code], tags=["error_code", "heldout"]))
+
+    # Sales slices the golden set does not ask about.
+    for month, first, last in MONTHS:
+        for region in ("north", "east", "west"):
+            n = q1(conn, "SELECT count(*) FROM sales_transactions WHERE region = %s "
+                         "AND sold_on BETWEEN %s AND %s", region, first, last)
+            out.append(lookup(f"ho_sales_{region}_{month.lower()}",
+                              f"How many scooters did we sell in the {region} region in {month} 2026?",
+                              f"{n} scooters.", "business",
+                              facts=[{"label": f"{region} {month} units", "value": n, "tolerance": 0}],
+                              key=[region], tags=["heldout"]))
+    for channel in ("online", "partner", "showroom"):
+        n = q1(conn, f"SELECT count(*) FROM sales_transactions WHERE channel = %s AND {Q3}", channel)
+        out.append(lookup(f"ho_sales_channel_{channel}_q3",
+                          f"What were {channel} channel sales between 1 July and 30 September 2026?",
+                          f"{n} scooters.", "business",
+                          facts=[{"label": f"{channel} q3 units", "value": n, "tolerance": 0}],
+                          key=[channel], tags=["heldout"]))
+    for role in ("entry", "top"):
+        model = model_by_role(role)
+        price = q1(conn, "SELECT avg(unit_price) FROM sales_transactions WHERE model_code = %s "
+                         "AND sold_on >= '2026-01-01'", model)
+        out.append(lookup(f"ho_avg_price_{role}",
+                          f"On average, what did customers pay for an {model} this year?",
+                          f"About ₹{price:,.0f}.", "business",
+                          facts=[{"label": "avg price inr", "value": r(price, 0), "tolerance": 600}],
+                          key=[model], tags=["heldout"]))
+    return out
+
+
 def write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
     path.write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in rows), encoding="utf-8")
 
@@ -451,12 +564,18 @@ async def main() -> int:
     p.add_argument("--database-url")
     p.add_argument("--no-generate", action="store_true", help="reuse existing document questions")
     p.add_argument("--check-traps", action="store_true", help="only check trap answers are absent")
+    p.add_argument("--heldout", action="store_true", help="only (re)build the held-out set")
     args = p.parse_args()
 
     import psycopg
 
     cfg = get_config()["evaluation"]
     conn = psycopg.connect(database_url(args.database_url))
+    if args.heldout:
+        held = heldout_cases(conn)
+        write_jsonl(ROOT / cfg["heldout_path"], held)
+        print(f"{len(held)} held-out cases written to {cfg['heldout_path']}")
+        return 0
     traps = trap_cases()
     leaks = check_traps(conn, traps)
     if leaks:

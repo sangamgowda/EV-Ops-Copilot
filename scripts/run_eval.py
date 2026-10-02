@@ -5,6 +5,7 @@
     python scripts/run_eval.py --resume 20260925-101500
     python scripts/run_eval.py --only syn_overload_V-042,adv_typo_vehicle
     python scripts/run_eval.py --promoted         # the merge gate: promoted cases only
+    python scripts/run_eval.py --heldout          # the held-out set (never tuned against)
     python scripts/run_eval.py --agreement        # judge vs your labels
 
 Needs the running stack (MCP server and database, as for /chat).
@@ -59,6 +60,8 @@ async def main() -> int:
     p.add_argument("--smoke", action="store_true", help="a quick, varied subset")
     p.add_argument("--promoted", action="store_true",
                    help="only cases promoted from real failures: the gate for prompt/config changes")
+    p.add_argument("--heldout", action="store_true",
+                   help="run the held-out set instead (build it with build_golden.py --heldout)")
     p.add_argument("--limit", type=int)
     p.add_argument("--gate", action="store_true",
                    help="exit 1 if ANY case fails (not only regressions); for CI, where no previous run exists")
@@ -93,8 +96,9 @@ async def main() -> int:
 
     get_settings.cache_clear()
     llm_client._client.cache_clear()
-    cases = load_cases(cfg["golden_path"])
-    if not args.no_traps:
+    case_set = "heldout" if args.heldout else "golden"
+    cases = load_cases(cfg["heldout_path"] if args.heldout else cfg["golden_path"])
+    if not args.no_traps and not args.heldout:
         cases += load_cases(cfg["trap_path"])
     if args.smoke:
         cases = [c for c in cases if c["id"] in SMOKE]
@@ -111,7 +115,8 @@ async def main() -> int:
         import json
 
         ids = json.loads((runs_dir() / args.resume / "meta.json").read_text(encoding="utf-8"))["case_ids"]
-        everything = {c["id"]: c for c in load_cases(cfg["golden_path"]) + load_cases(cfg["trap_path"])}
+        everything = {c["id"]: c for path in ("golden_path", "trap_path", "heldout_path")
+                      if (ROOT / cfg[path]).exists() for c in load_cases(cfg[path])}
         cases = [everything[i] for i in ids if i in everything]
 
     from ops_copilot.evaluation.runner import preflight
@@ -127,7 +132,7 @@ async def main() -> int:
     print(f"Running {len(cases)} cases through the real system"
           + ("" if args.no_judge else ", judged") + " …", flush=True)
     run_id, rep = await run_eval(cases, run_id=args.resume, use_judge=not args.no_judge,
-                                 pause_s=args.pause, on_result=show)
+                                 pause_s=args.pause, case_set=case_set, on_result=show)
     print()
     print((runs_dir() / run_id / "report.md").read_text(encoding="utf-8"))
     if not rep["complete"]:

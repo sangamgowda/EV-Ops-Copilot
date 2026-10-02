@@ -47,6 +47,7 @@ from ops_copilot.evaluation.deterministic import (
     run_checks,
     says_it_cannot_tell,
 )
+from ops_copilot.evaluation.stats import overlaps, wilson
 from ops_copilot.settings import get_config
 
 log = logging.getLogger(__name__)
@@ -220,7 +221,7 @@ async def preflight() -> str | None:
 
 
 async def run_eval(cases: list[dict[str, Any]], *, run_id: str | None = None, use_judge: bool = True,
-                   pause_s: float | None = None,
+                   pause_s: float | None = None, case_set: str = "golden",
                    on_result: Callable[[dict[str, Any]], None] | None = None) -> tuple[str, dict[str, Any]]:
     """Run (or resume) `cases`. Returns the run id and its report."""
     cfg = get_config()["evaluation"]
@@ -249,6 +250,8 @@ async def run_eval(cases: list[dict[str, Any]], *, run_id: str | None = None, us
             # A pass-rate change between runs on different models is the
             # models, not the code; the report says so.
             "models": _models(),
+            # golden / heldout: a run is compared only with runs of the same set.
+            "case_set": case_set,
         }, indent=2) + "\n", encoding="utf-8")
 
     stopped_for_budget = False
@@ -278,6 +281,17 @@ def _rate(rows: list[dict[str, Any]], key: str = "pass") -> float | None:
     return None if not rows else round(100 * sum(bool(r.get(key)) for r in rows) / len(rows), 1)
 
 
+def _interval(rows: list[dict[str, Any]], key: str = "pass") -> list[float] | None:
+    ci = wilson(sum(bool(r.get(key)) for r in rows), len(rows),
+                get_config()["evaluation"].get("confidence_level", 0.95))
+    return list(ci) if ci else None
+
+
+def _case_set(run_id: str) -> str:
+    meta = runs_dir() / run_id / "meta.json"
+    return json.loads(meta.read_text(encoding="utf-8")).get("case_set", "golden") if meta.exists() else "golden"
+
+
 def _by_cluster(rows: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
     out: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for r in rows:
@@ -288,8 +302,10 @@ def _by_cluster(rows: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
 
 
 def previous_run(run_id: str) -> str | None:
+    this_set = _case_set(run_id)
     older = sorted(p.name for p in runs_dir().iterdir()
-                   if p.is_dir() and p.name < run_id and (p / "report.json").exists()) \
+                   if p.is_dir() and p.name < run_id and (p / "report.json").exists()
+                   and _case_set(p.name) == this_set) \
         if runs_dir().exists() else []
     return older[-1] if older else None
 
@@ -335,6 +351,11 @@ def build_report(run_id: str, cases: list[dict[str, Any]], results: list[dict[st
 
     rates = {"synthetic": _rate(synthetic), "handwritten": _rate(handwritten)}
     present = [v for v in rates.values() if v is not None]
+    groups = {"synthetic": synthetic, "handwritten": handwritten, "all": scored,
+              **{f"source:{k}": v for k, v in sorted(by_source.items())}}
+    intervals = {k: _interval(v) for k, v in groups.items() if v}
+    headline_key = min((k for k in ("synthetic", "handwritten") if rates[k] is not None),
+                       key=lambda k: rates[k], default=None)
     prev_id = previous_run(run_id)
     prev_results = list({r["id"]: r for r in _read(runs_dir() / prev_id / "results.jsonl")}.values()) \
         if prev_id else []
@@ -353,6 +374,10 @@ def build_report(run_id: str, cases: list[dict[str, Any]], results: list[dict[st
         # When synthetic scores 90 and hand-written 60, the number to
         # believe is 60: the headline is the LOWER of the two.
         "headline_pass_rate": min(present) if present else None,
+        "headline_interval": intervals.get(headline_key) if headline_key else None,
+        "case_set": this_meta.get("case_set", "golden"),
+        "confidence_level": get_config()["evaluation"].get("confidence_level", 0.95),
+        "intervals": intervals,
         "pass_rate": {**rates, "all": _rate(scored), "code_checks": _rate(scored, "code_pass"),
                       **{f"source:{k}": _rate(v) for k, v in sorted(by_source.items())},
                       # Promoted cases by the failure cluster they guard: a
@@ -373,6 +398,9 @@ def build_report(run_id: str, cases: list[dict[str, Any]], results: list[dict[st
         "models": this_meta.get("models"),
         "models_changed": bool(prev_id) and prev_meta.get("models") != this_meta.get("models"),
         "diff": diff_runs(results, prev_results) if prev_id else None,
+        # Overlapping headline intervals mean the change in rate is within noise.
+        "previous_headline_interval": json.loads((runs_dir() / prev_id / "report.json").read_text(
+            encoding="utf-8")).get("headline_interval") if prev_id else None,
         "failures": [{"id": r["id"], "source": r["source"],
                       "failed": [c["name"] + ": " + c["detail"] for c in r["checks"] if not c["passed"]]
                       + ([f"judge: {r['judge']}"] if r.get("judge_pass") is False else [])}
@@ -396,10 +424,14 @@ def _pct(v: float | None) -> str:
     return "—" if v is None else f"{v:g}%"
 
 
+def _with_ci(v: float | None, ci: list[float] | None) -> str:
+    return _pct(v) + (f" ({ci[0]:g} to {ci[1]:g})" if ci and v is not None else "")
+
+
 def render_markdown(rep: dict[str, Any]) -> str:
     pr, tr, jd = rep["pass_rate"], rep["traps"], rep["judge"]
     lines = [
-        f"# Evaluation run {rep['run_id']}",
+        f"# Evaluation run {rep['run_id']} — {rep.get('case_set', 'golden')} set",
         "",
         f"Commit {rep['git_commit']} · models {rep.get('models')} · "
         f"{rep['counts']['scored']} of {rep['counts']['cases']} cases scored"
@@ -407,7 +439,8 @@ def render_markdown(rep: dict[str, Any]) -> str:
         "",
         "| Headline | |",
         "|---|---|",
-        f"| Pass rate (lower of synthetic / hand-written) | **{_pct(rep['headline_pass_rate'])}** |",
+        f"| Pass rate (lower of synthetic / hand-written) | "
+        f"**{_with_ci(rep['headline_pass_rate'], rep.get('headline_interval'))}** |",
         f"| Ungrounded-truth rate on traps (lower is better) | **{_pct(tr['ungrounded_truth_rate'])}** |",
         f"| Trap abstention rate | {_pct(tr['abstention_rate'])} |",
         "",
@@ -417,11 +450,17 @@ def render_markdown(rep: dict[str, Any]) -> str:
         + (f" and would likely have hit the app's {rep['app_turn_timeout_s']} s limit."
            if rep["throttled_cases"] else "."),
         "",
-        "| Pass rate by source | |",
+        f"| Pass rate by source ({rep.get('confidence_level', 0.95):.0%} interval) | |",
         "|---|---|",
-        *[f"| {k} | {_pct(v)} |" for k, v in pr.items()],
+        *[f"| {k} | {_with_ci(v, rep.get('intervals', {}).get(k))} |" for k, v in pr.items()],
         "",
     ]
+    prev_ci, this_ci = rep.get("previous_headline_interval"), rep.get("headline_interval")
+    if prev_ci and this_ci:
+        same = overlaps(tuple(prev_ci), tuple(this_ci))
+        lines += [f"Previous headline interval {prev_ci[0]:g} to {prev_ci[1]:g}: "
+                  + ("overlaps this one, so the change is within noise at this sample size."
+                     if same else "no overlap with this one, so the change is more than noise."), ""]
     if jd["n"]:
         ag = jd.get("agreement")
         if ag and not ag.get("stale"):

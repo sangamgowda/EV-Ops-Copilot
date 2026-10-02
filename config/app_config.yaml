@@ -357,6 +357,11 @@ groundedness:
 evaluation:
   golden_path: src/ops_copilot/evaluation/golden/golden.jsonl
   trap_path: src/ops_copilot/evaluation/golden/trap_cases.jsonl
+  # Never used while changing prompts or code; run it to estimate how
+  # the system does on questions nobody tuned for (run_eval.py --heldout).
+  heldout_path: src/ops_copilot/evaluation/golden/heldout.jsonl
+  # Pass rates are reported with this confidence interval (Wilson).
+  confidence_level: 0.95
   labels_path: src/ops_copilot/evaluation/golden/human_labels.jsonl
   runs_dir: evaluation_runs
   judge_temperature: 0.0
