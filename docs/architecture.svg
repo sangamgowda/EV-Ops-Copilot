@@ -40,8 +40,8 @@
 <text x="694.0" y="295.0" font-size="15" fill="#0B5E55" font-weight="650" text-anchor="start">Plan</text>
 <text x="694.0" y="314.0" font-size="11.5" fill="#55637A" font-weight="400" text-anchor="start">decides what to look up,</text>
 <text x="694.0" y="330.0" font-size="11.5" fill="#55637A" font-weight="400" text-anchor="start">writes the SQL</text>
-<rect x="802.4" y="279.0" width="31.6" height="19" rx="9.5" fill="#5B5BD6"/>
-<text x="818.2" y="292.5" font-size="11" fill="#FFFFFF" font-weight="700" text-anchor="middle">70B</text>
+<rect x="795.2" y="279.0" width="38.8" height="19" rx="9.5" fill="#5B5BD6"/>
+<text x="814.6" y="292.5" font-size="11" fill="#FFFFFF" font-weight="700" text-anchor="middle">120B</text>
 <rect x="856.0" y="448.0" width="164" height="72" rx="12" fill="#E8F7F4" stroke="#0E9F8E" stroke-width="1.6"/>
 <text x="872.0" y="473.0" font-size="15" fill="#0B5E55" font-weight="650" text-anchor="start">Execute</text>
 <text x="872.0" y="492.0" font-size="11.5" fill="#55637A" font-weight="400" text-anchor="start">runs tools in parallel</text>
@@ -58,8 +58,8 @@
 <text x="516.0" y="473.0" font-size="15" fill="#0B5E55" font-weight="650" text-anchor="start">Reflect</text>
 <text x="516.0" y="492.0" font-size="11.5" fill="#55637A" font-weight="400" text-anchor="start">enough, or go again</text>
 <text x="516.0" y="508.0" font-size="11.5" fill="#55637A" font-weight="400" text-anchor="start">with a sharper question?</text>
-<rect x="631.6" y="457.0" width="24.4" height="19" rx="9.5" fill="#5B5BD6"/>
-<text x="643.8" y="470.5" font-size="11" fill="#FFFFFF" font-weight="700" text-anchor="middle">8B</text>
+<rect x="624.4" y="457.0" width="31.6" height="19" rx="9.5" fill="#5B5BD6"/>
+<text x="640.2" y="470.5" font-size="11" fill="#FFFFFF" font-weight="700" text-anchor="middle">20B</text>
 <text x="670.6619048833757" y="384.66190488337577" font-size="12" fill="#0B5E55" font-weight="650" text-anchor="middle">need more?</text>
 <text x="670.6619048833757" y="399.66190488337577" font-size="11" fill="#55637A" font-weight="400" text-anchor="middle">up to 3 laps</text>
 <rect x="60" y="150" width="200" height="64" rx="12" fill="#FFFFFF" stroke="#1B2A41" stroke-width="1.6"/>
@@ -79,8 +79,8 @@
 <text x="316" y="337" font-size="15" fill="#34348F" font-weight="650" text-anchor="start">Router</text>
 <text x="316" y="356" font-size="11.5" fill="#55637A" font-weight="400" text-anchor="start">domain: vehicle, business</text>
 <text x="316" y="372" font-size="11.5" fill="#55637A" font-weight="400" text-anchor="start">or both; fixes VIN typos</text>
-<rect x="447.6" y="321" width="24.4" height="19" rx="9.5" fill="#5B5BD6"/>
-<text x="459.8" y="334.5" font-size="11" fill="#FFFFFF" font-weight="700" text-anchor="middle">8B</text>
+<rect x="440.4" y="321" width="31.6" height="19" rx="9.5" fill="#5B5BD6"/>
+<text x="456.2" y="334.5" font-size="11" fill="#FFFFFF" font-weight="700" text-anchor="middle">20B</text>
 <path d="M262,282 C282,282 282,346 297,346" fill="none" stroke="#1B2A41" stroke-width="2" stroke-linecap="round" marker-end="url(#h-entry)"/>
 <path d="M482,344 C560,344 600,302 675,302" fill="none" stroke="#5B5BD6" stroke-width="2" stroke-linecap="round" marker-end="url(#h-llm)"/>
 <text x="515" y="290" font-size="13" fill="#0B5E55" font-weight="700" text-anchor="middle">Investigate</text>
@@ -92,8 +92,8 @@
 <text x="316" y="545" font-size="15" fill="#34348F" font-weight="650" text-anchor="start">Synthesize</text>
 <text x="316" y="564" font-size="11.5" fill="#55637A" font-weight="400" text-anchor="start">writes the answer, cites</text>
 <text x="316" y="580" font-size="11.5" fill="#55637A" font-weight="400" text-anchor="start">each claim to evidence</text>
-<rect x="440.4" y="529" width="31.6" height="19" rx="9.5" fill="#5B5BD6"/>
-<text x="456.2" y="542.5" font-size="11" fill="#FFFFFF" font-weight="700" text-anchor="middle">70B</text>
+<rect x="433.2" y="529" width="38.8" height="19" rx="9.5" fill="#5B5BD6"/>
+<text x="452.6" y="542.5" font-size="11" fill="#FFFFFF" font-weight="700" text-anchor="middle">120B</text>
 <rect x="300" y="628" width="180" height="72" rx="12" fill="#EFEFFD" stroke="#5B5BD6" stroke-width="1.6"/>
 <circle cx="300" cy="628" r="13" fill="#5B5BD6"/>
 <text x="300" y="632.5" font-size="13" fill="#FFFFFF" font-weight="700" text-anchor="middle">5</text>
@@ -115,7 +115,7 @@
 <rect x="1080" y="130" width="480" height="96" rx="12" fill="#FFFFFF" stroke="#55637A" stroke-width="1.2"/>
 <text x="1098" y="157" font-size="15" fill="#1B2A41" font-weight="650" text-anchor="start">Configuration and models</text>
 <text x="1098" y="179" font-size="11.5" fill="#55637A" font-weight="400" text-anchor="start">Thresholds, schema and versioned prompts live in config files, not code.</text>
-<text x="1098" y="197" font-size="11.5" fill="#55637A" font-weight="400" text-anchor="start">Groq LLMs: a fast 8B model and a strong 70B model.</text>
+<text x="1098" y="197" font-size="11.5" fill="#55637A" font-weight="400" text-anchor="start">Groq models: gpt-oss-20b for quick decisions, gpt-oss-120b for writing.</text>
 <text x="1098" y="215" font-size="11.5" fill="#55637A" font-weight="400" text-anchor="start">Local embeddings and reranker: no cost, no data leaves the machine.</text>
 <rect x="1080" y="262" width="300" height="398" rx="16" fill="#FFFFFF" stroke="#2F6BFF" stroke-width="1.8"/>
 <text x="1098" y="292" font-size="17" fill="#1D45A8" font-weight="700" text-anchor="start">MCP tool server</text>
@@ -207,12 +207,12 @@
 <text x="915" y="752" font-size="11" fill="#8F1D46" font-weight="600" text-anchor="end">a fixed failure can't come back:</text>
 <text x="915" y="767" font-size="11" fill="#55637A" font-weight="400" text-anchor="end">every prompt or config change is tested</text>
 <line x1="60" y1="932" x2="1564" y2="932" stroke="#DCE2EA" stroke-width="1"/>
-<rect x="60" y="945" width="24.4" height="19" rx="9.5" fill="#5B5BD6"/>
-<text x="72.2" y="958.5" font-size="11" fill="#FFFFFF" font-weight="700" text-anchor="middle">8B</text>
-<text x="92.4" y="959" font-size="12" fill="#55637A" font-weight="400" text-anchor="start">fast model</text>
-<rect x="192.4" y="945" width="31.6" height="19" rx="9.5" fill="#5B5BD6"/>
-<text x="208.20000000000002" y="958.5" font-size="11" fill="#FFFFFF" font-weight="700" text-anchor="middle">70B</text>
-<text x="232.0" y="959" font-size="12" fill="#55637A" font-weight="400" text-anchor="start">strong model</text>
+<rect x="60" y="945" width="31.6" height="19" rx="9.5" fill="#5B5BD6"/>
+<text x="75.8" y="958.5" font-size="11" fill="#FFFFFF" font-weight="700" text-anchor="middle">20B</text>
+<text x="99.6" y="959" font-size="12" fill="#55637A" font-weight="400" text-anchor="start">fast model</text>
+<rect x="199.6" y="945" width="38.8" height="19" rx="9.5" fill="#5B5BD6"/>
+<text x="219.0" y="958.5" font-size="11" fill="#FFFFFF" font-weight="700" text-anchor="middle">120B</text>
+<text x="246.4" y="959" font-size="12" fill="#55637A" font-weight="400" text-anchor="start">strong model</text>
 <rect x="346.0" y="945" width="38.8" height="19" rx="9.5" fill="#55637A"/>
 <text x="365.4" y="958.5" font-size="11" fill="#FFFFFF" font-weight="700" text-anchor="middle">code</text>
 <text x="392.8" y="959" font-size="12" fill="#55637A" font-weight="400" text-anchor="start">no AI, plain code</text>

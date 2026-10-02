@@ -4,6 +4,7 @@ doc_type: service_bulletin
 domain: diagnostic
 applies_to_models: [EVX Standard, EVX Pro, EVX Max]
 effective_date: 2026-05-05
+trust: official
 ---
 
 # SB-130 — Early front brake pad wear

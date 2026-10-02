@@ -4,6 +4,7 @@ doc_type: service_bulletin
 domain: diagnostic
 applies_to_models: [EVX Standard, EVX Pro, EVX Max]
 effective_date: 2026-02-10
+trust: official
 ---
 
 # SB-114 — Sustained overload raises drive current and reduces range

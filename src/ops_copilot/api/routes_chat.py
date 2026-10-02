@@ -32,14 +32,15 @@ import logging
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from sse_starlette.sse import EventSourceResponse
 
 from ops_copilot.agent.state import AgentState
 from ops_copilot.agent.turn import run_turn
 from ops_copilot.api.progress import to_progress
 from ops_copilot.api.schemas import ChatRequest, ChatResponse, EvidenceView, LapView
-from ops_copilot.llm.client import LLMNotConfigured
+from ops_copilot.api.security import chat_rate_limit
+from ops_copilot.llm.client import LLMNotConfigured, LLMUnavailable
 
 log = logging.getLogger(__name__)
 router = APIRouter()
@@ -85,7 +86,7 @@ def to_response(state: AgentState) -> ChatResponse:
     )
 
 
-@router.post("/chat", response_model=ChatResponse)
+@router.post("/chat", response_model=ChatResponse, dependencies=[Depends(chat_rate_limit)])
 async def chat(req: ChatRequest) -> Any:
     session_id = req.session_id or uuid.uuid4().hex
     turn_id = uuid.uuid4().hex
@@ -93,7 +94,7 @@ async def chat(req: ChatRequest) -> Any:
     if not req.stream:
         try:
             state = await run_turn(req.question, session_id, turn_id=turn_id)
-        except LLMNotConfigured as exc:
+        except (LLMNotConfigured, LLMUnavailable) as exc:
             raise HTTPException(503, str(exc)) from exc
         return to_response(state)
 

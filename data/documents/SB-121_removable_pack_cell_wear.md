@@ -4,6 +4,7 @@ doc_type: service_bulletin
 domain: diagnostic
 applies_to_models: [EVX Standard]
 effective_date: 2025-11-20
+trust: official
 ---
 
 # SB-121 — Removable pack cell wear and gradual range loss

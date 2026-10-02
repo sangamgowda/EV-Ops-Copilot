@@ -30,9 +30,14 @@ Details that decide whether this is usable or just noisy:
   Small integers are ignored ("two laps", "3 vehicles" in a count
   the model derived by reading the list) below a configured bound.
 
-  Tier 3 exempts sentences that state a gap ("the cause cannot be
+  Tier 3 exempts clauses that state a gap ("the cause cannot be
   established because no documentation exists") — that "because" is
-  the honest partial answer this system wants, not a causal claim.
+  the honest partial answer this system wants, not a causal claim. The
+  exemption covers only the clause holding the causal phrase: "it is
+  due to overload, although wear cannot be ruled out" is still a claim.
+
+  Tier 2 checks each number against the evidence cited in its own
+  sentence, so a correct number with the wrong citation is caught.
 
   Unresolved citations are never escalated to tier 4. An id that does
   not exist cannot be rescued by an entailment check.
@@ -125,19 +130,37 @@ def _traces(raw: str, value: float, pool: set[float], tol_pct: float) -> bool:
 
 
 def untraceable_numbers(answer: str, evidence: list[Evidence], extra_text: str = "") -> list[str]:
+    """Numbers that do not trace to their evidence.
+
+    A number is checked against the evidence cited in ITS OWN sentence,
+    not against everything gathered: "range fell 26% [e1]" must be
+    backed by e1, even if 26 appears in some other entry. A sentence
+    that cites nothing is checked against all evidence (the model often
+    cites once per paragraph), and the question and entity notes count
+    for every sentence.
+    """
     cfg = get_config()["groundedness"]
-    pool = _evidence_numbers(evidence, extra_text)
+    by_id = {e.id: e for e in evidence}
+    everything = _evidence_numbers(evidence, extra_text)
     floor = cfg["ignore_integers_below"]
     bad = []
-    for raw, value in extract_numbers(answer):
-        if value.is_integer() and abs(value) < floor:
-            continue
-        if not _traces(raw, abs(value), pool, cfg["numeric_tolerance_pct"]):
-            bad.append(raw)
+    for sentence in (s for s in _SENTENCE.split(answer) if s.strip()):
+        cited = [by_id[i] for i in _TAG.findall(sentence) if i in by_id]
+        pool = _evidence_numbers(cited, extra_text) if cited else everything
+        for raw, value in extract_numbers(sentence):
+            if value.is_integer() and abs(value) < floor:
+                continue
+            if not _traces(raw, abs(value), pool, cfg["numeric_tolerance_pct"]):
+                bad.append(raw)
     return list(dict.fromkeys(bad))
 
 
 # ── tier 3 ───────────────────────────────────────────────────
+
+# Clause boundaries for tier 3: punctuation and contrastive words. A
+# hedge only excuses the causal phrase in its own clause.
+_CLAUSE = re.compile(r"[;:,]|(?:but|although|though|whereas|while|however|yet)", re.I)
+
 
 def _words(s: str) -> set[str]:
     return set(re.findall(r"[a-z0-9]+", s.lower()))
@@ -152,7 +175,9 @@ def unsupported_causal_claims(answer: str, citations: list[Citation], evidence: 
     for sentence in (s.strip() for s in _SENTENCE.split(answer)):
         if not sentence or not any(m.search(sentence) for m in markers):
             continue
-        if any(x.search(sentence) for x in exempt):
+        clauses = [c for c in _CLAUSE.split(sentence) if c and c.strip()]
+        causal_clauses = [c for c in clauses if any(m.search(c) for m in markers)]
+        if all(any(x.search(c) for x in exempt) for c in causal_clauses):
             continue
         ids = set(_TAG.findall(sentence))
         # Citations are matched to a sentence by wording when the model

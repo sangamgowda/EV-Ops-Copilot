@@ -4,6 +4,7 @@ doc_type: success_story
 domain: business
 applies_to_models: [EVX Standard, EVX Pro, EVX Max]
 effective_date: 2026-09-15
+trust: internal
 ---
 
 # Sales Update — Q3 2026 mid-quarter

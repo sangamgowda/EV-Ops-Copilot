@@ -104,7 +104,9 @@ class _RateLimitWatch(logging.Handler):
             self.per_day = True
             self.seen.append(text[:300])
         elif any(m in text for m in ("RateLimitError", "Rate limit reached", "Error code: 429",
-                                     "rate_limit_exceeded", "Request too large")):
+                                     "rate_limit_exceeded", "Request too large",
+                                     # our own queue gave up waiting for the provider's budget
+                                     "QueueTimeout")):
             # The exception's text, not its class name, is what gets logged:
             # "Error code: 429 - {... 'code': 'rate_limit_exceeded'}".
             self.rate_failed = True
@@ -119,6 +121,7 @@ class _RateLimitWatch(logging.Handler):
 
 async def run_case(case: dict[str, Any], run_id: str, *, use_judge: bool, judge_threshold: int) -> dict[str, Any]:
     from ops_copilot.agent.turn import run_turn
+    from ops_copilot.llm.client import primary_only
 
     watch = _RateLimitWatch()
     root = logging.getLogger()
@@ -132,8 +135,10 @@ async def run_case(case: dict[str, Any], run_id: str, *, use_judge: bool, judge_
     started = time.perf_counter()
     state: dict[str, Any]
     try:
-        state = dict(await run_turn(case["question"], f"eval-{run_id}", turn_id=uuid.uuid4().hex,
-                                    record=False, timeout_s=get_config()["evaluation"]["turn_timeout_s"]))
+        # No fallback model: the score must belong to the models the report names.
+        with primary_only():
+            state = dict(await run_turn(case["question"], f"eval-{run_id}", turn_id=uuid.uuid4().hex,
+                                        record=False, timeout_s=get_config()["evaluation"]["turn_timeout_s"]))
     except Exception as exc:     # a crash IS a system failure; score it
         log.exception("case %s crashed", case["id"])
         state = {"answer": "", "stop_reason": f"crashed: {type(exc).__name__}: {exc}"}

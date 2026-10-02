@@ -4,6 +4,7 @@ doc_type: success_story
 domain: business
 applies_to_models: [EVX Standard, EVX Pro]
 effective_date: 2026-08-20
+trust: internal
 ---
 
 # Fleet Story — Last-mile delivery partner moves 120 riders to electric

@@ -4,6 +4,7 @@ doc_type: service_bulletin
 domain: diagnostic
 applies_to_models: [EVX Max]
 effective_date: 2026-09-20
+trust: official
 ---
 
 # SB-135 — Firmware 3.2.0 limits Sport+ and Ultra to 45 km/h

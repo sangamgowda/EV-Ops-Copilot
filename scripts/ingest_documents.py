@@ -8,12 +8,14 @@ no chunking or embedding at all.
 Usage:
   python scripts/ingest_documents.py                  # data/documents
   python scripts/ingest_documents.py path/to/dir --domain business
+  python scripts/ingest_documents.py web_pages/ --trust external --uploaded-by alice
 """
 
 from __future__ import annotations
 
 import argparse
 import asyncio
+import getpass
 import sys
 from collections import Counter
 from pathlib import Path
@@ -22,12 +24,13 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from ops_copilot.db.engine import dispose_all  # noqa: E402
-from ops_copilot.rag.ingest import DOMAINS, ingest_directory  # noqa: E402
+from ops_copilot.rag.ingest import DOMAINS, TRUST_LEVELS, ingest_directory  # noqa: E402
 
 
 async def run(args: argparse.Namespace) -> int:
     try:
-        results = await ingest_directory(Path(args.directory), domain=args.domain)
+        results = await ingest_directory(Path(args.directory), domain=args.domain,
+                                         uploaded_by=args.uploaded_by, trust_level=args.trust)
     finally:
         await dispose_all()
 
@@ -49,6 +52,9 @@ def main() -> None:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("directory", nargs="?", default=str(ROOT / "data" / "documents"))
     p.add_argument("--domain", choices=DOMAINS, help="override front matter (required for PDFs)")
+    p.add_argument("--trust", choices=TRUST_LEVELS,
+                   help="override front matter `trust:` (default internal)")
+    p.add_argument("--uploaded-by", default=getpass.getuser(), help="recorded on every document")
     args = p.parse_args()
 
     if sys.platform == "win32":

@@ -9,6 +9,7 @@ pydantic==2.10.4
 pydantic-settings==2.7.0
 python-dotenv==1.0.1
 PyYAML==6.0.2
+tzdata==2025.2                 # time zones on slim images and Windows
 
 # ── Agent orchestration ──────────────────────────────────────
 langgraph==0.2.60
@@ -25,6 +26,7 @@ mcp==1.2.0
 
 # ── Database ─────────────────────────────────────────────────
 sqlalchemy==2.0.36
+alembic==1.14.0                # versioned migrations (db/schema)
 psycopg[binary,pool]==3.2.3
 pgvector==0.3.6
 

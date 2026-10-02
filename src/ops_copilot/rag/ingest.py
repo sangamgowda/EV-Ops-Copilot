@@ -61,6 +61,7 @@ from ops_copilot.rag.embeddings import embed_documents
 from ops_copilot.rag.hashing import content_hash
 
 DOMAINS = ("diagnostic", "business")
+TRUST_LEVELS = ("official", "internal", "external")
 SUPPORTED_SUFFIXES = (".md", ".markdown", ".txt", ".pdf")
 
 # Header spellings seen in real code tables, mapped onto error_codes.
@@ -165,8 +166,13 @@ async def ingest_text(
     title: str | None = None,
     applies_to_models: list[str] | None = None,
     effective_date: date | None = None,
+    uploaded_by: str | None = None,
+    trust_level: str | None = None,
 ) -> dict[str, Any]:
-    """Ingest one document's text. Arguments override front matter."""
+    """Ingest one document's text. Arguments override front matter.
+
+    `trust_level` (front matter `trust:`) is one of TRUST_LEVELS and
+    defaults to 'internal'; `uploaded_by` records who added it."""
     from ops_copilot.db.engine import owner_engine
 
     engine = owner_engine()
@@ -191,6 +197,10 @@ async def ingest_text(
     title = title or meta.get("title") or doc_id
     models = applies_to_models if applies_to_models is not None else _as_list(meta.get("applies_to_models"))
     effective = effective_date or _as_date(meta.get("effective_date"))
+    trust = trust_level or meta.get("trust") or "internal"
+    if trust not in TRUST_LEVELS:
+        raise ValueError(f"{doc_id}: trust must be one of {TRUST_LEVELS}, got {trust!r}")
+    uploader = uploaded_by or meta.get("uploaded_by") or "unknown"
 
     blocks = parse_structure(body)
     codes = error_code_rows(blocks, doc_id)
@@ -216,11 +226,12 @@ async def ingest_text(
         await conn.execute(
             text("""
                 INSERT INTO documents (doc_id, content_hash, title, doc_type, domain,
-                                       applies_to_models, effective_date)
-                VALUES (:doc_id, :h, :title, :doc_type, :domain, :models, :eff)
+                                       applies_to_models, effective_date, uploaded_by, trust_level)
+                VALUES (:doc_id, :h, :title, :doc_type, :domain, :models, :eff, :by, :trust)
             """),
             {"doc_id": doc_id, "h": digest, "title": title, "doc_type": doc_type,
-             "domain": domain, "models": models, "eff": effective},
+             "domain": domain, "models": models, "eff": effective,
+             "by": uploader, "trust": trust},
         )
 
         if codes:
@@ -265,17 +276,20 @@ async def ingest_text(
     }
 
 
-async def ingest_document(path: Path, domain: str | None = None, doc_type: str | None = None) -> dict:
+async def ingest_document(path: Path, domain: str | None = None, doc_type: str | None = None,
+                          uploaded_by: str | None = None, trust_level: str | None = None) -> dict:
     """Ingest a file. doc_id is the file stem, so re-ingesting an
     edited file replaces the old version rather than adding a copy."""
     path = Path(path)
     if path.suffix.lower() not in SUPPORTED_SUFFIXES:
         raise ValueError(f"{path.name}: unsupported type; expected one of {SUPPORTED_SUFFIXES}")
     raw = await asyncio.to_thread(read_document, path)
-    return await ingest_text(raw, path.stem, domain=domain, doc_type=doc_type)
+    return await ingest_text(raw, path.stem, domain=domain, doc_type=doc_type,
+                             uploaded_by=uploaded_by, trust_level=trust_level)
 
 
-async def ingest_directory(directory: Path, domain: str | None = None) -> list[dict]:
+async def ingest_directory(directory: Path, domain: str | None = None,
+                           uploaded_by: str | None = None, trust_level: str | None = None) -> list[dict]:
     """Every supported file, one at a time. One bad file is reported,
     not allowed to abort the rest of the folder."""
     results: list[dict] = []
@@ -283,7 +297,8 @@ async def ingest_directory(directory: Path, domain: str | None = None) -> list[d
         if path.suffix.lower() not in SUPPORTED_SUFFIXES:
             continue
         try:
-            results.append(await ingest_document(path, domain=domain))
+            results.append(await ingest_document(path, domain=domain, uploaded_by=uploaded_by,
+                                                 trust_level=trust_level))
         except Exception as exc:  # reported per file, by design
             results.append({"doc_id": path.stem, "status": "failed", "error": str(exc)})
     return results

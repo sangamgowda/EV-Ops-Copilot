@@ -82,6 +82,34 @@ tables:
           vehicle_baseline_specs.
           "Charging" marks charge_power readings; NULL for cell_health.
         allowed_values: ["Saver", "Eco", "Normal", "Sport", "Sport+", "Ultra", "Charging"]
+      quality_flag:
+        type: text
+        description: >
+          NULL for a plausible reading. 'below_physical_range' or
+          'above_physical_range' when the value is impossible for the
+          hardware (a stuck probe, a dropout, a spike) — a sensor
+          fault, not a measurement. Flagged readings are left out of
+          your queries automatically; mention quality_flag only to ask
+          about sensor faults themselves.
+        allowed_values: ["below_physical_range", "above_physical_range"]
+
+  metric_physical_ranges:
+    description: >
+      What each metric can physically read. A telemetry reading
+      outside its range is flagged in vehicle_telemetry.quality_flag.
+    primary_key: [metric_name]
+    columns:
+      metric_name:
+        type: text
+        description: Joins to vehicle_telemetry.metric_name.
+      unit:
+        type: text
+      min_value:
+        type: double precision
+      max_value:
+        type: double precision
+      note:
+        type: text
 
   vehicles:
     description: >
@@ -283,6 +311,15 @@ tables:
         description: Model codes this document covers.
       effective_date:
         type: date
+      uploaded_by:
+        type: text
+        description: Who added the document.
+      trust_level:
+        type: text
+        description: >
+          official (service and product teams), internal (reports),
+          external (web pages, partners' files).
+        allowed_values: ["official", "internal", "external"]
       ingested_at:
         type: timestamptz
 
@@ -327,3 +364,4 @@ join_keys:
   - [vehicles.model_code, vehicle_baseline_specs.model_code]
   - [service_events.error_code, error_codes.code]
   - [documents.doc_id, document_chunks.doc_id]
+  - [vehicle_telemetry.metric_name, metric_physical_ranges.metric_name]

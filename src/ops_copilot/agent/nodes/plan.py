@@ -20,14 +20,16 @@ is incremented here and nowhere else.
 
 Today's date is part of the context. "Last week" means nothing to a
 model without it, and it would otherwise guess from training data.
+Relative periods come pre-computed (agent/calendar.py) in the
+configured time zone.
 """
 
 from __future__ import annotations
 
 import json
-from datetime import date
 from typing import Any
 
+from ops_copilot.agent.calendar import calendar_block
 from ops_copilot.agent.context import call_key, emit, evidence_block, guarded
 from ops_copilot.agent.state import AgentState, PlanOutput, ToolCall
 from ops_copilot.llm.client import complete_json
@@ -40,7 +42,7 @@ def build_context(state: AgentState, iteration: int) -> str:
     cfg = get_config()["agent"]
     parts = [
         f"## Question\n{state['question']}",
-        f"## Today\n{date.today().isoformat()}",
+        f"## Today\n{calendar_block()}",
         f"## Domains\n{', '.join(state.get('domains', []))}",
         f"## Resolved entities\n{json.dumps(state.get('resolved_entities', {}))}",
     ]
