@@ -103,6 +103,8 @@ def render_evidence(e: Evidence) -> str:
             f"  comparison (computed): {e.metric} actual {_fmt(e.actual)}{unit} vs baseline "
             f"{_fmt(e.baseline)}{unit} -> {delta} ({e.verdict.value})"
         )
+    if e.quality_warning:
+        lines.append(f"  SENSOR FAULT: {e.quality_warning}. Report it as a fault; do not diagnose from it.")
     if e.error:
         lines.append(f"  error: {e.error}")
     return "\n".join(lines)

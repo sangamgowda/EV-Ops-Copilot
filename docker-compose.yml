@@ -6,8 +6,6 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-opscopilot}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
       POSTGRES_DB: ${POSTGRES_DB:-opscopilot}
-      # Read by migrations/004_readonly_password.sh on first boot.
-      DB_READONLY_PASSWORD: ${DB_READONLY_PASSWORD:?set DB_READONLY_PASSWORD in .env}
     ports:
       # Host side is 5433, not 5432: a PostgreSQL installed directly on
       # the host commonly owns 5432, and host tools would silently reach
@@ -15,14 +13,34 @@ services:
       - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-      # Migrations run in filename order on first boot.
-      - ./src/ops_copilot/db/migrations:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-opscopilot} -d ${POSTGRES_DB:-opscopilot}"]
       interval: 10s
       timeout: 5s
       retries: 5
     restart: unless-stopped
+
+  # Versioned migrations (Alembic), run to completion before anything
+  # that reads the database starts. Every start applies only revisions
+  # the database has not seen, then syncs the read-only password and the
+  # data-quality ranges. It sets the read-only role's password; the API
+  # container is never given it.
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: opscopilot-migrate
+    command: ["python", "-m", "ops_copilot.db.migrate", "upgrade"]
+    env_file: .env
+    environment:
+      POSTGRES_HOST: postgres
+      DB_READONLY_PASSWORD: ${DB_READONLY_PASSWORD:?set DB_READONLY_PASSWORD in .env}
+    healthcheck:
+      disable: true          # the image's check probes the API port
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
 
   api:
     build:
@@ -44,8 +62,8 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      postgres:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
       mcp-server:
         condition: service_started
     volumes:
@@ -83,8 +101,8 @@ services:
       start_period: 60s
       retries: 3
     depends_on:
-      postgres:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     volumes:
       - hfcache:/app/.cache/huggingface
     restart: unless-stopped

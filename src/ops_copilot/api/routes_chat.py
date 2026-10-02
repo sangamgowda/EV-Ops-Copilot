@@ -40,7 +40,7 @@ from ops_copilot.agent.turn import run_turn
 from ops_copilot.api.progress import to_progress
 from ops_copilot.api.schemas import ChatRequest, ChatResponse, EvidenceView, LapView
 from ops_copilot.api.security import chat_rate_limit
-from ops_copilot.llm.client import LLMNotConfigured
+from ops_copilot.llm.client import LLMNotConfigured, LLMUnavailable
 
 log = logging.getLogger(__name__)
 router = APIRouter()
@@ -94,7 +94,7 @@ async def chat(req: ChatRequest) -> Any:
     if not req.stream:
         try:
             state = await run_turn(req.question, session_id, turn_id=turn_id)
-        except LLMNotConfigured as exc:
+        except (LLMNotConfigured, LLMUnavailable) as exc:
             raise HTTPException(503, str(exc)) from exc
         return to_response(state)
 

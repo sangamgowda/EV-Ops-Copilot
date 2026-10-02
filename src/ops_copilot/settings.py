@@ -37,6 +37,14 @@ class Settings(BaseSettings):
     # the system is never graded by the model that wrote the answer, and
     # judging draws on its own daily token allowance.
     llm_model_judge: str = "qwen/qwen3.8-27b"
+    # Fallback, per tier, used when the primary model is rate-limited,
+    # failing or cooling down. Empty base URL / key = same provider as
+    # above. The default sends Plan and Synthesize to the cheap model
+    # when the strong one's allowance runs out. The judge never falls back.
+    llm_fallback_base_url: str = ""
+    llm_fallback_api_key: str = ""
+    llm_fallback_model_strong: str = "openai/gpt-oss-20b"
+    llm_fallback_model_cheap: str = ""
     llm_timeout_seconds: int = 60
     llm_max_retries: int = 2
 
@@ -48,6 +56,9 @@ class Settings(BaseSettings):
     # Database
     database_url: str = ""
     database_url_readonly: str = ""
+    # Read only by the migrate step, which sets the read-only role's
+    # password from it. The API and tool containers are given it blank.
+    db_readonly_password: str = ""
 
     # MCP
     mcp_transport: Literal["stdio", "http"] = "stdio"
@@ -125,8 +136,11 @@ def load_prompt(name: str) -> tuple[str, str]:
     return body, digest
 
 
+def tier_for(node: str) -> str:
+    return str(get_config()["llm"]["tiers"].get(node, "cheap"))
+
+
 def model_for(node: str) -> str:
     """Resolve a node name to a concrete model id via its tier."""
     s = get_settings()
-    tier = get_config()["llm"]["tiers"].get(node, "cheap")
-    return {"strong": s.llm_model_strong, "judge": s.llm_model_judge}.get(tier, s.llm_model_cheap)
+    return {"strong": s.llm_model_strong, "judge": s.llm_model_judge}.get(tier_for(node), s.llm_model_cheap)

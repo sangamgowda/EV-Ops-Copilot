@@ -101,6 +101,8 @@ class Evidence(BaseModel):
     source_doc: str | None = None
     # official / internal / external, from the document's record.
     trust_level: str | None = None
+    # Set when a measured value is physically impossible (a sensor fault).
+    quality_warning: str | None = None
     chunk_ids: list[int] = Field(default_factory=list)
     rerank_score: float | None = None
 
@@ -124,8 +126,11 @@ class Evidence(BaseModel):
         This is what the groundedness check enforces.
         An external document (a web page, a partner's file) is never
         enough on its own: anyone can have written it.
+        A physically impossible reading backs nothing either: it is a
+        sensor fault, not a measurement.
         """
-        return self.status == EvidenceStatus.OK and self.trust_level != "external" and (
+        return (self.status == EvidenceStatus.OK and self.trust_level != "external"
+                and self.quality_warning is None) and (
             self.source_doc is not None or self.verdict is not None
         )
 

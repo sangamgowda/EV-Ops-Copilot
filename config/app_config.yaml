@@ -107,9 +107,33 @@ llm:
     eval_generate: low
     groundedness: low
 
+  # Models that accept `reasoning_effort` (substring of the model id).
+  # Others, e.g. a fallback without reasoning, are sent no such field.
+  reasoning_effort_models: ["gpt-oss", "qwen3"]
+
   # A reply that fails schema validation gets this many retries, each
   # shown the validation error. Then the node fails, loudly.
   json_repair_attempts: 1
+
+  # After this many failures in a row (rate limit, timeout, server
+  # error) a model is skipped for the cooldown; then one trial call
+  # decides whether it is back.
+  circuit_breaker:
+    failure_threshold: 3
+    cooldown_seconds: 60
+
+  # Every call waits for a slot: a free place (concurrency) and room in
+  # the model's per-minute token budget, so calls queue here instead of
+  # being refused by the provider.
+  queue:
+    max_concurrent_per_model: 4
+    tokens_per_minute: 8000          # the free tier's limit per model
+    tokens_per_minute_overrides: {}  # model id -> limit
+    estimated_output_tokens: 1024    # budgeted per call until the real count is known
+    # How long a call waits for a slot before giving up; shorter when a
+    # fallback model is there to take it.
+    max_wait_seconds: 40
+    failover_wait_seconds: 5
 
 retrieval:
   # Hybrid search pulls this many candidates before reranking.
@@ -195,6 +219,24 @@ mcp:
   # query would time out again.
   transport_retries: 2
   retry_backoff_seconds: 0.5
+
+data_quality:
+  # What the hardware can physically report. A reading outside its range
+  # is a sensor fault, not a measurement: the database flags it
+  # (vehicle_telemetry.quality_flag) and the SQL tool leaves it out.
+  # Synced to the database on every `python -m ops_copilot.db.migrate`.
+  # Deliberately wide: these catch the impossible, not the unusual.
+  physical_ranges:
+    current_draw:    {unit: A,    min: -60, max: 150, note: "regen down to -60 A; controller peak 150 A"}
+    pack_voltage:    {unit: V,    min: 30,  max: 60,  note: "48 V-class pack; 0 V is a dropout"}
+    motor_temp:      {unit: C,    min: -30, max: 160, note: "-40 is the probe-fault sentinel"}
+    ambient_temp:    {unit: C,    min: -30, max: 60}
+    speed:           {unit: kmph, min: 0,   max: 130}
+    state_of_charge: {unit: pct,  min: 0,   max: 100}
+    cell_health:     {unit: pct,  min: 0,   max: 100}
+    payload:         {unit: kg,   min: 0,   max: 350}
+    range_estimate:  {unit: km,   min: 0,   max: 400}
+    charge_power:    {unit: kW,   min: 0,   max: 5}
 
 db:
   owner_pool_size: 5

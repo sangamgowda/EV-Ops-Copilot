@@ -133,6 +133,43 @@ system inside the free tier at all.
 
 ---
 
+## Reliability
+
+- **Fallback model with a circuit breaker** (`llm/client.py`,
+  `llm/resilience.py`). Each tier has an optional fallback model, on the
+  same provider or any OpenAI-compatible one (`LLM_FALLBACK_*`). By
+  default Plan and Synthesize fall back to the small model when the
+  large one's allowance runs out. After three failures in a row a model
+  is skipped for a minute, then one trial call decides whether it is
+  back. Only rate limits, timeouts and server errors fail over; a bad
+  request would fail anywhere. A streamed answer fails over only before
+  its first word. Evaluation turns the fallback off, so a score always
+  belongs to the models its report names.
+- **Request queue.** Every model call waits for a slot: a free place
+  (at most 4 at once per model) and room in the model's tokens-per-minute
+  budget. Calls wait here instead of being refused by the provider, and
+  a call that would wait too long goes to the fallback instead.
+- **Versioned migrations** (Alembic, `db/schema/`). Every database
+  records its revision; a one-shot `migrate` service applies what is new
+  before the API and tool server start. An advisory lock stops two
+  migrators racing. The read-only password and the data-quality ranges
+  are re-synced on every run, so `.env` and the config stay the source.
+- **Tool-server reconnection** (`mcp_client/client.py`). On a transport
+  error a new connection serves new calls while the old one is retired,
+  not closed: calls still running on it finish. A connection generation
+  number means one outage causes one reconnect, and calls caught in it
+  retry on the new connection instead of failing.
+- **Data-quality guard.** Each metric has a physical range
+  (`data_quality` in `config/app_config.yaml`). A database trigger flags
+  every reading outside it (`vehicle_telemetry.quality_flag`): a stuck
+  probe at -40 C, a 0 V dropout, a 250 A spike. The SQL validator adds
+  `quality_flag IS NULL` to every model-written read of telemetry, so
+  faults never enter an average; a query about `quality_flag` itself is
+  left alone. Anything impossible that still comes back is marked as a
+  sensor fault in the evidence and cannot back a "because".
+
+---
+
 ## Data and search
 
 - **Two kinds of data.** Database records (vehicles, readings, sales)
@@ -232,7 +269,9 @@ limited per client address (in memory, so per process).
 tool server, structure-aware chunking, error-code promotion, entity
 resolution, hybrid search with re-ranking, content-hash deduplication,
 tracing with prompt versions, the evaluation suite with trap cases and
-a calibrated judge, the feedback loop, Docker, and streaming.
+a calibrated judge, the feedback loop, Docker, streaming, model
+fail-over with a circuit breaker and request queue, versioned
+migrations, and the telemetry data-quality guard.
 
 **Described, not built:** voice input, per-customer data isolation
 (tokens plus Postgres row-level security), monitoring and cost

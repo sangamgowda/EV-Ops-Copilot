@@ -299,6 +299,7 @@ curl -X POST localhost:8000/chat \
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements-dev.txt
 export PYTHONPATH=src
+python -m ops_copilot.db.migrate        # apply database migrations (needs DATABASE_URL)
 uvicorn ops_copilot.main:app --reload
 ```
 
@@ -406,6 +407,11 @@ Design decisions and their reasons: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.m
   the web interface and the API.
 - Hybrid document search with re-ranking, and exact error-code lookup.
 - Three-layer protection on every generated database query.
+- A fallback model behind a circuit breaker, a queue that paces model
+  calls to the provider's limits, and a tool connection that reconnects
+  without failing calls in flight.
+- Versioned database migrations, and impossible sensor readings flagged
+  and kept out of every average.
 - Every document records who added it and how far it is trusted;
   document text is shown to the model as data, never instructions.
 - Per-question tracing in Langfuse, with prompt versions and a

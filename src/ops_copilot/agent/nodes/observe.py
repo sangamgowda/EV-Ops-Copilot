@@ -81,6 +81,22 @@ def _fmt_row(row: dict[str, Any]) -> str:
     return ", ".join(f"{k}={cell(v)}" for k, v in row.items())
 
 
+def physical_check(metric: Any, value: float | None) -> str | None:
+    """A warning when `value` is impossible for `metric`, else None.
+
+    The database flags such readings and the SQL tool leaves them out
+    (data_quality in app_config.yaml); this catches what still comes
+    back, e.g. from a query that asked about quality_flag itself.
+    """
+    if value is None or metric is None:
+        return None
+    r = get_config()["data_quality"]["physical_ranges"].get(str(metric))
+    if r is None or r["min"] <= value <= r["max"]:
+        return None
+    return (f"{metric} {value:g} is outside its physical range {r['min']:g} to {r['max']:g}"
+            f"{' ' + r['unit'] if r.get('unit') else ''}: a sensor fault, not a measurement")
+
+
 def _sql_evidence(res: dict[str, Any], base: dict[str, Any]) -> list[Evidence]:
     cfg = get_config()["agent"]
     status = res.get("status")
@@ -115,7 +131,8 @@ def _sql_evidence(res: dict[str, Any], base: dict[str, Any]) -> list[Evidence]:
             if context:
                 summary += f" [{_fmt_row(context)}]"
             out.append(Evidence(**base, summary=summary, metric=str(metric), actual=actual,
-                                baseline=baseline, unit=unit, delta_pct=delta, verdict=verdict))
+                                baseline=baseline, unit=unit, delta_pct=delta, verdict=verdict,
+                                quality_warning=physical_check(metric, actual)))
         return out
 
     shown = rows[:limit]
@@ -133,6 +150,10 @@ def _sql_evidence(res: dict[str, Any], base: dict[str, Any]) -> list[Evidence]:
         (name, value), = rows[0].items()
         if _num(value) is not None:
             ev.metric, ev.actual = name, _num(value)
+    # Raw readings (metric_name + metric_value columns) are checked row by row.
+    bad = [w for r in rows if (w := physical_check(r.get("metric_name"), _num(r.get("metric_value"))))]
+    if bad:
+        ev.quality_warning = f"{len(bad)} row(s) physically impossible, e.g. {bad[0]}"
     return [ev]
 
 

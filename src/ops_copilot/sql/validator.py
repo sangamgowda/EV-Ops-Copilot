@@ -85,6 +85,10 @@ _CALL_NAME = re.compile(r"\s*([A-Za-z_][A-Za-z0-9_]*)\s*\(")
 _TIME_TYPES = ("timestamp", "timestamptz", "date")
 
 
+# Readings outside physical ranges are flagged here (migration 0008).
+QUALITY_GUARDED_TABLE = "vehicle_telemetry"
+
+
 class ValidationError(Exception):
     """Raised when a query is rejected. The message is shown to the
     agent as tool feedback, so it must say what was wrong."""
@@ -216,8 +220,40 @@ class SQLValidator:
         if reasons:
             return self._reject(sql, *reasons)
 
-        # ── 10. LIMIT ────────────────────────────────────────
-        return self._ensure_limit(sql, tree)
+        # ── 10. data-quality guard ───────────────────────────
+        guard = self._exclude_flagged_readings(tree)
+
+        # ── 11. LIMIT ────────────────────────────────────────
+        result = self._ensure_limit(sql, tree)
+        result.warnings = guard + result.warnings
+        return result
+
+    def _exclude_flagged_readings(self, tree: exp.Expression) -> list[str]:
+        """Leave telemetry flagged outside physical ranges out of the query.
+
+        A stuck probe reading -40 C or a 250 A spike, averaged in, moves
+        the very numbers a diagnosis rests on. Every read of the table
+        gets `quality_flag IS NULL`: in WHERE when the table is in FROM,
+        in the ON clause when it is joined (so an outer join stays an
+        outer join). A query that names quality_flag is asking about the
+        faults themselves and is left as written.
+        """
+        table = QUALITY_GUARDED_TABLE
+        if any(c.name.lower() == "quality_flag" for c in tree.find_all(exp.Column)):
+            return []
+        guarded = 0
+        for select in tree.find_all(exp.Select):
+            source = select.args.get("from")
+            if source is not None and isinstance(source.this, exp.Table) and source.this.name.lower() == table:
+                select.where(f"{source.this.alias_or_name}.quality_flag IS NULL", dialect="postgres", copy=False)
+                guarded += 1
+            for join in select.args.get("joins") or []:
+                if isinstance(join.this, exp.Table) and join.this.name.lower() == table:
+                    cond = exp.condition(f"{join.this.alias_or_name}.quality_flag IS NULL", dialect="postgres")
+                    on = join.args.get("on")
+                    join.set("on", exp.and_(on, cond) if on is not None else cond)
+                    guarded += 1
+        return [f"{table}: readings flagged outside physical ranges left out"] if guarded else []
 
     @staticmethod
     def _reject(sql: str, *reasons: str) -> ValidationResult:
