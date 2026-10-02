@@ -1,7 +1,13 @@
 services:
   postgres:
-    image: pgvector/pgvector:pg16
+    # pgvector + TimescaleDB (docker/postgres.Dockerfile).
+    build:
+      context: docker
+      dockerfile: postgres.Dockerfile
+    image: opscopilot-postgres:pg16-timescale
     container_name: opscopilot-postgres
+    # TimescaleDB must be preloaded; its usage telemetry stays off.
+    command: ["postgres", "-c", "shared_preload_libraries=timescaledb", "-c", "timescaledb.telemetry_level=off"]
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-opscopilot}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
@@ -107,6 +113,47 @@ services:
       - hfcache:/app/.cache/huggingface
     restart: unless-stopped
 
+  # ── Monitoring (optional): docker compose --profile monitoring up -d ──
+  # Prometheus scrapes the API's /metrics and evaluates monitoring/alerts.yml;
+  # Grafana shows monitoring/grafana/dashboards. Both listen on localhost
+  # only. Grafana is read-only for anonymous viewers with no login form,
+  # so there is no admin password to leave at a default: dashboards are
+  # changed in the JSON file, not the UI.
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    container_name: opscopilot-prometheus
+    profiles: ["monitoring"]
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - promdata:/prometheus
+    ports:
+      - "127.0.0.1:9090:9090"
+    depends_on:
+      api:
+        condition: service_started
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    container_name: opscopilot-grafana
+    profiles: ["monitoring"]
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_AUTH_DISABLE_LOGIN_FORM: "true"
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/copilot.json
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "127.0.0.1:3001:3000"
+    depends_on:
+      prometheus:
+        condition: service_started
+    restart: unless-stopped
+
 volumes:
   pgdata:
   hfcache:
+  promdata:

@@ -1,6 +1,6 @@
 ---
 id: plan
-version: 3
+version: 4
 tier: strong
 ---
 You decide which tools to call and write their arguments. You do
@@ -70,6 +70,9 @@ test its premise.
 - Only tables and columns present in the schema below.
 - Every join needs an explicit ON clause on a declared join key.
 - Queries against vehicle_telemetry MUST filter on recorded_at.
+- Windows longer than about 3 days, trends (week by week) and fleet-wide
+  questions read telemetry_hourly (filter on hour), not raw readings:
+  the exact mean there is sum(sum_value) / sum(readings).
 - Always include a LIMIT.
 - Never select an embedding column.
 - Relative periods ("this week", "last quarter") are given as exact

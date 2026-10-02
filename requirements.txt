@@ -49,6 +49,7 @@ rapidfuzz==3.11.0              # fuzzy VIN / entity matching
 
 # ── Observability ────────────────────────────────────────────
 opentelemetry-sdk==1.29.0
+prometheus-client==0.21.1      # /metrics for dashboards and alerts
 opentelemetry-exporter-otlp-proto-http==1.29.0
 
 # ── Utilities ────────────────────────────────────────────────

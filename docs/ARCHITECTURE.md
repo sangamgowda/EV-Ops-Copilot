@@ -231,6 +231,41 @@ limited per client address (in memory, so per process).
   answer. Flags are grouped by failure type in code, reviewed by a
   person, and promoted into the test set, where a regression blocks the
   change.
+- **Held-out set and intervals.** 48 questions built from data only,
+  about vehicles, codes and periods the test set and the prompt
+  examples never use, and never tuned against. Every pass rate carries
+  a 95% Wilson interval; the report says whether a change is more than
+  noise.
+- **Live judge** (`evaluation/live_judge.py`). 10% of live answers,
+  chosen by a hash of the turn id, are scored in the background against
+  their own evidence (faithful? hedged? helpful?). Scores are stored and
+  exported as metrics; a low score joins the human review queue.
+- **Retrieval evaluation** (`scripts/eval_retrieval.py`). Document
+  search alone, no model calls, in English, Hindi, Kannada and Tamil:
+  is the right document found, and does its score clear the threshold.
+
+---
+
+## Operations and scale
+
+- **Metrics** (`observability/metrics.py`, `GET /metrics`): answer time,
+  how turns end, errors, grounding results, tokens and cost per model,
+  cost per question at list price, fail-overs, circuit state, tool calls
+  and cache hits. Labels are low-cardinality only: no questions or ids.
+- **Dashboard and alerts** (`monitoring/`, compose profile
+  `monitoring`): a provisioned Grafana dashboard, and Prometheus rules
+  for downtime, p95 near the 45 s limit, error rate, grounding failures,
+  timeouts, cost per question, an open circuit and low live-judge scores.
+- **TimescaleDB** (revision 0010). Telemetry is a hypertable in 7-day
+  chunks, so a recent window reads one or two chunks. `telemetry_hourly`
+  is a continuous aggregate (count, sum, mean, min, max per vehicle,
+  metric, mode and hour, sensor faults excluded) that Plan uses for long
+  windows and fleet-wide questions. Chunks older than 30 days are
+  compressed (138 MB to 20 MB on the sample data).
+- **Cache** (`mcp_server/cache.py`). Lookups of reference tables (error
+  codes, baselines) and document searches are cached in the tool server.
+  Keys include the corpus version, so an ingest invalidates them within
+  15 seconds. Telemetry and sales queries are never cached.
 
 ---
 

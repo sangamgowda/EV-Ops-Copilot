@@ -1,0 +1,22 @@
+# Scrapes the API's /metrics (src/ops_copilot/observability/metrics.py)
+# and evaluates the alert rules in alerts.yml.
+# Start with:  docker compose --profile monitoring up -d
+global:
+  scrape_interval: 15s
+  evaluation_interval: 30s
+
+rule_files:
+  - /etc/prometheus/alerts.yml
+
+scrape_configs:
+  - job_name: copilot-api
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["api:8000"]
+
+# Firing alerts show in Prometheus (localhost:9090/alerts) and Grafana.
+# To page someone, add an Alertmanager and point this at it:
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets: ["alertmanager:9093"]

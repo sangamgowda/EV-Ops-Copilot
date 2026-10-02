@@ -220,16 +220,24 @@ make collect
 
 ## Measuring quality
 
-Every change can be checked against 45 test questions with known right
+Every change can be checked against 46 test questions with known right
 answers, plus 8 "trap" questions whose right answer is "the data does
-not say".
+not say". A separate held-out set of 48 questions, built from the data
+and never tuned against, estimates how the system does on questions
+nobody optimised for.
 
 ```bash
 python scripts/run_eval.py --smoke        # 8 varied questions, ~10 minutes
 python scripts/run_eval.py                # all 53; resumes with --resume <run id>
 python scripts/label_eval.py              # score answers yourself (aim for 30)
 python scripts/run_eval.py --agreement    # how often the AI judge agrees with you
+python scripts/run_eval.py --heldout      # the held-out set
+python scripts/eval_retrieval.py          # document search only: no model calls, ~10 minutes
 ```
+
+Pass rates come with 95% confidence intervals: on ~50 questions a rate
+of 70% means "somewhere between about 56% and 81%", and the report says
+whether a change between runs is more than that noise.
 
 Each answer is checked two ways: by code (right vehicle, right tools,
 numbers within tolerance, citations real, no forbidden claims) and by
@@ -243,6 +251,22 @@ now fails is listed. Details: [`src/ops_copilot/evaluation/golden/README.md`](sr
 
 On the free tier a full run needs about two days' allowance; it stops
 cleanly when the allowance runs out and `--resume` finishes it.
+
+A sample of live answers (10%) is also judged in the background
+against the evidence each was built on; low scores join the feedback
+queue for a person to review.
+
+### Monitoring
+
+```bash
+docker compose --profile monitoring up -d
+```
+
+Prometheus (localhost:9090) scrapes the API's `/metrics`; Grafana
+(localhost:3001) shows answer time (p50/p95), how questions end, error
+and grounding-failure rates, cost per question at list price, tokens,
+model fail-overs, tool cache hits and live-judge scores. Alert rules are
+in [`monitoring/alerts.yml`](monitoring/alerts.yml).
 
 ---
 
@@ -416,8 +440,13 @@ Design decisions and their reasons: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.m
   document text is shown to the model as data, never instructions.
 - Per-question tracing in Langfuse, with prompt versions and a
   configuration snapshot.
-- An evaluation suite (45 test cases and 8 trap cases) with regression
-  comparison between runs.
+- An evaluation suite (46 test cases and 8 trap cases), a 48-case
+  held-out set, confidence intervals, and regression comparison between
+  runs; a retrieval-only evaluation across four languages.
+- Metrics, a Grafana dashboard and alert rules; a judge reviewing a
+  sample of live answers.
+- Telemetry in TimescaleDB with hourly rollups and compression; cached
+  error-code lookups and document searches.
 - A feedback loop that turns flagged answers into reviewed test cases.
 
 ## License

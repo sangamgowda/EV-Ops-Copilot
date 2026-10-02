@@ -28,7 +28,7 @@ from ops_copilot.settings import get_config
 
 log = logging.getLogger(__name__)
 
-Rating = Literal["up", "down", "implicit_down"]
+Rating = Literal["up", "down", "implicit_down", "judge_low"]   # judge_low: evaluation/live_judge.py
 
 
 class UnknownTurnError(LookupError):
