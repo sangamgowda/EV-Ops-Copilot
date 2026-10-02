@@ -23,7 +23,8 @@ is outside the database and can change:
     the only place it is set; rotate it there and re-run);
   - the physical ranges the data-quality guard checks telemetry against,
     from config/app_config.yaml `data_quality.physical_ranges`;
-  - the hourly telemetry rollups (TimescaleDB), refreshed incrementally.
+  - the hourly telemetry rollups (TimescaleDB), refreshed incrementally;
+  - the width of the embedding column, while the corpus is still empty.
 Revisions are forward-only: a downgrade on production data is a restore.
 """
 
@@ -107,6 +108,35 @@ def sync_physical_ranges(conn) -> int:
         "SELECT count(*) FROM vehicle_telemetry WHERE quality_flag IS NOT NULL")).scalar() or 0)
 
 
+def sync_embedding_column(conn) -> str:
+    """Size document_chunks.embedding for the configured model.
+
+    With no chunks yet (a fresh install) the column is simply resized,
+    so EMBEDDING_MODEL/EMBEDDING_DIM in .env decide the vector width
+    before the first ingest. With chunks already embedded by another
+    model this changes nothing and says so: re-embedding is a deliberate
+    step (scripts/reembed.py), not a side effect of a migration."""
+    s = get_settings()
+    target = f"vector({s.embedding_dim})"
+    col = conn.execute(text(
+        "SELECT format_type(atttypid, atttypmod) FROM pg_attribute "
+        "WHERE attrelid = 'document_chunks'::regclass AND attname = 'embedding'")).scalar()
+    stored = conn.execute(text("SELECT value FROM corpus_meta WHERE key = 'embedding_model'")).scalar()
+    has_chunks = conn.execute(text("SELECT EXISTS (SELECT 1 FROM document_chunks)")).scalar()
+    if not has_chunks:
+        if col != target:
+            conn.execute(text("DROP INDEX IF EXISTS idx_chunks_embedding"))
+            conn.execute(text(f"ALTER TABLE document_chunks ALTER COLUMN embedding TYPE {target}"))
+            conn.execute(text("CREATE INDEX idx_chunks_embedding ON document_chunks "
+                              "USING hnsw (embedding vector_cosine_ops)"))
+        conn.execute(text("DELETE FROM corpus_meta WHERE key = 'embedding_model'"))
+        return f"empty corpus, ready for {s.embedding_model} [{target}]"
+    if stored != s.embedding_model or col != target:
+        return (f"WARNING: corpus is {stored} [{col}] but EMBEDDING_MODEL is {s.embedding_model} [{target}]; "
+                "search refuses to run until scripts/reembed.py")
+    return f"corpus embedded with {stored}"
+
+
 def refresh_rollups(engine) -> bool:
     """Bring telemetry_hourly up to date (revision 0010). A continuous
     aggregate refresh cannot run inside a transaction, hence AUTOCOMMIT.
@@ -124,10 +154,11 @@ def upgrade(target: str = "head") -> None:
     with engine.begin() as conn:
         pw = sync_readonly_password(conn)
         flagged = sync_physical_ranges(conn)
+        embeddings = sync_embedding_column(conn)
     refresh_rollups(engine)
     engine.dispose()
     print(f"migrated to {target}; read-only password {'synced' if pw else 'NOT set (DB_READONLY_PASSWORD empty)'}; "
-          f"{flagged} telemetry readings flagged outside physical ranges")
+          f"{flagged} telemetry readings flagged outside physical ranges; {embeddings}")
 
 
 def main(argv: list[str]) -> None:

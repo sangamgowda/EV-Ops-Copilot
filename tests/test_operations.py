@@ -218,3 +218,45 @@ class TestMetrics:
         with TestClient(main.app) as c:
             r = c.get("/metrics")
         assert r.status_code == 200 and "copilot_turn_latency_seconds_bucket" in r.text
+
+
+class TestEmbeddingModelGuard:
+    async def test_mismatched_corpus_is_refused(self, monkeypatch):
+        from types import SimpleNamespace
+
+        from ops_copilot.rag import corpus
+        corpus.forget()
+
+        async def stored(conn):
+            return "BAAI/bge-small-en-v1.5"
+
+        monkeypatch.setattr(corpus, "stored_model", stored)
+        monkeypatch.setattr(corpus, "get_settings", lambda: SimpleNamespace(embedding_model="BAAI/bge-m3"))
+        with pytest.raises(corpus.EmbeddingModelMismatchError, match="reembed"):
+            await corpus.check(None)
+        corpus.forget()
+
+    async def test_empty_or_matching_corpus_passes(self, monkeypatch):
+        from types import SimpleNamespace
+
+        from ops_copilot.rag import corpus
+        for stored_value in (None, "BAAI/bge-m3"):
+            corpus.forget()
+
+            async def stored(conn, v=stored_value):
+                return v
+
+            monkeypatch.setattr(corpus, "stored_model", stored)
+            monkeypatch.setattr(corpus, "get_settings", lambda: SimpleNamespace(embedding_model="BAAI/bge-m3"))
+            await corpus.check(None)
+        corpus.forget()
+
+    def test_query_prefix_follows_the_model(self, monkeypatch):
+        from types import SimpleNamespace
+
+        from ops_copilot.rag import embeddings
+        monkeypatch.setattr(embeddings, "get_settings", lambda: SimpleNamespace(embedding_model="BAAI/bge-m3"))
+        assert embeddings.query_prefix() == ""
+        monkeypatch.setattr(embeddings, "get_settings",
+                            lambda: SimpleNamespace(embedding_model="BAAI/bge-small-en-v1.5"))
+        assert embeddings.query_prefix().startswith("Represent this sentence")

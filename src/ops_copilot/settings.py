@@ -49,9 +49,13 @@ class Settings(BaseSettings):
     llm_max_retries: int = 2
 
     # Embeddings / reranking (local)
-    embedding_model: str = "BAAI/bge-small-en-v1.5"
-    embedding_dim: int = 384
-    reranker_model: str = "BAAI/bge-reranker-base"
+    # Multilingual (English, Hindi, Kannada, Tamil, ...): measured with
+    # scripts/eval_retrieval.py. Changing the embedding model means
+    # scripts/reembed.py; changing the reranker means re-deriving
+    # retrieval.confidence_threshold.
+    embedding_model: str = "BAAI/bge-m3"
+    embedding_dim: int = 1024
+    reranker_model: str = "BAAI/bge-reranker-v2-m3"
 
     # Database
     database_url: str = ""

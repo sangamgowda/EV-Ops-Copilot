@@ -232,7 +232,7 @@ python scripts/run_eval.py                # all 53; resumes with --resume <run i
 python scripts/label_eval.py              # score answers yourself (aim for 30)
 python scripts/run_eval.py --agreement    # how often the AI judge agrees with you
 python scripts/run_eval.py --heldout      # the held-out set
-python scripts/eval_retrieval.py          # document search only: no model calls, ~10 minutes
+python scripts/eval_retrieval.py          # document search only, 4 languages: no model calls
 ```
 
 Pass rates come with 95% confidence intervals: on ~50 questions a rate

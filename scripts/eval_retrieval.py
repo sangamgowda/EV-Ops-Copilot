@@ -45,7 +45,8 @@ async def run_one(item: dict[str, Any]) -> dict[str, Any]:
     cfg = get_config()["retrieval"]
     candidates = await hybrid_search(item["q"], item["domain"], None, cfg["candidate_k"])
     candidate_docs = [c["doc_id"] for c in candidates]
-    ranked = await asyncio.to_thread(rr.rerank, item["q"], candidates, cfg["final_k"])
+    shortlist = candidates[: cfg.get("rerank_candidates", len(candidates))]   # as rag/retrieve.py does
+    ranked = await asyncio.to_thread(rr.rerank, item["q"], shortlist, cfg["final_k"])
     best = max((c["rerank_score"] for c in ranked), default=0.0)
     out = {**item, "best_score": round(best, 4), "top_doc": ranked[0]["doc_id"] if ranked else None}
     if "doc" in item:

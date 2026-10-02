@@ -153,6 +153,12 @@ retrieval:
   # Candidate retrieval is cheap; reranking is what scales with
   # list length, so pull wide and rerank narrow.
   candidate_k: 50
+  # ...of which only the best this many (by hybrid score) are reranked.
+  # Reranking cost grows with every pair scored; on CPU the multilingual
+  # reranker took 23-28 s for 50 pairs and 4-7 s for 10 (384 tokens).
+  # The expected document stays within the hybrid top 10 for the
+  # questions in retrieval.yaml (scripts/eval_retrieval.py).
+  rerank_candidates: 10
   final_k: 5
 
   # Weighting between the vector and keyword halves of hybrid
@@ -165,7 +171,11 @@ retrieval:
   # evidence. Returning weak context is worse than returning
   # none, because weak context is what the model builds
   # confident nonsense on.
-  confidence_threshold: 0.55
+  # On the reranker's 0-1 scale, so it is re-derived whenever the
+  # reranker changes: scripts/eval_retrieval.py. For bge-reranker-v2-m3,
+  # 0.30 separated answerable from unanswerable questions best (88%;
+  # 0.55 gave 76%). 34 questions: a guide, not a precise optimum.
+  confidence_threshold: 0.30
 
   # Skip reranking when the top hybrid hit leads the runner-up by
   # this margin. Common on precise entity queries.
@@ -178,7 +188,7 @@ retrieval:
 
   # Cross-encoder cost scales with sequence length, so candidates are
   # truncated before scoring. 512 tokens is the model's limit.
-  rerank_max_length: 512
+  rerank_max_length: 384
   # Small batches, scored shortest-first: padding to the longest pair
   # in a batch is what makes large CPU batches slow.
   rerank_batch_size: 8
@@ -222,6 +232,12 @@ embeddings:
   batch_size: 32
   # Query embeddings repeat across laps of the same turn; cache them.
   query_cache_size: 256
+  # Instruction each model expects in front of a QUERY (never a
+  # document). A model missing here gets none.
+  query_prefixes:
+    BAAI/bge-small-en-v1.5: "Represent this sentence for searching relevant passages: "
+    BAAI/bge-base-en-v1.5: "Represent this sentence for searching relevant passages: "
+    BAAI/bge-m3: ""
 
 mcp:
   # Every tool call has a deadline; a hung tool must not hang the turn.

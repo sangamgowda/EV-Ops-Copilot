@@ -262,6 +262,19 @@ limited per client address (in memory, so per process).
   metric, mode and hour, sensor faults excluded) that Plan uses for long
   windows and fleet-wide questions. Chunks older than 30 days are
   compressed (138 MB to 20 MB on the sample data).
+- **Multilingual search.** bge-m3 embeddings and the
+  bge-reranker-v2-m3 cross-encoder, so questions in Hindi, Kannada or
+  Tamil find the English documents. Chosen by measurement
+  (`scripts/eval_retrieval.py`): swapping the embeddings alone changed
+  nothing, since the English reranker scored non-English pairs near
+  zero. With both swapped, accepted answers went from 9/11 to 11/11 in
+  English, 1/7 to 6/7 in Hindi and 0 to 2/3 in Kannada and Tamil, and
+  wrongly accepted unanswerable questions fell from 2/10 to 1/10. The
+  confidence threshold was re-derived for the new reranker (0.30).
+  Reranking only the best 10 of 50 candidates keeps a search at 4-7 s
+  on CPU (all 50 took 23-28 s) with identical results. The corpus
+  records its embedding model, and search refuses to run against a
+  different one; `scripts/reembed.py` switches models.
 - **Cache** (`mcp_server/cache.py`). Lookups of reference tables (error
   codes, baselines) and document searches are cached in the tool server.
   Keys include the corpus version, so an ingest invalidates them within
