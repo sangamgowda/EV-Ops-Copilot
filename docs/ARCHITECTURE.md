@@ -159,6 +159,15 @@ system inside the free tier at all.
   not closed: calls still running on it finish. A connection generation
   number means one outage causes one reconnect, and calls caught in it
   retry on the new connection instead of failing.
+  Found live: after a server restart, a call on the old session got
+  neither a reply nor an error and waited out the 45 s timeout. The
+  client now watches the transport's streams while a call waits; a
+  closed one is retried at once (2 s instead of 45 s, verified by
+  restarting the server mid-session). Also found: this MCP server
+  version answers one session's requests one at a time, so the agent's
+  parallel tool calls run in sequence on the server. A small pool of
+  sessions would parallelise them; today it costs about a second per
+  lap, since SQL calls are fast and one document search dominates.
 - **Data-quality guard.** Each metric has a physical range
   (`data_quality` in `config/app_config.yaml`). A database trigger flags
   every reading outside it (`vehicle_telemetry.quality_flag`): a stuck
@@ -274,7 +283,11 @@ limited per client address (in memory, so per process).
   Reranking only the best 10 of 50 candidates keeps a search at 4-7 s
   on CPU (all 50 took 23-28 s) with identical results. The corpus
   records its embedding model, and search refuses to run against a
-  different one; `scripts/reembed.py` switches models.
+  different one; `scripts/reembed.py` switches models. Seen live: Plan
+  usually writes its search query in English even for a Hindi question,
+  so inside the agent the gain is mostly for queries it passes through
+  untranslated (names, phrases it cannot render); the measured gain
+  applies fully to direct document search.
 - **Cache** (`mcp_server/cache.py`). Lookups of reference tables (error
   codes, baselines) and document searches are cached in the tool server.
   Keys include the corpus version, so an ingest invalidates them within

@@ -247,6 +247,11 @@ mcp:
   # Transport errors only. A timeout is never retried as-is: the same
   # query would time out again.
   transport_retries: 2
+  # While a call is outstanding, check this often whether its connection
+  # has closed (e.g. the server restarted). A closed one is retried on a
+  # new connection instead of waiting out call_timeout_seconds for a
+  # reply that cannot come. Local check, so frequent is cheap.
+  liveness_probe_seconds: 1
   retry_backoff_seconds: 0.5
 
 live_judge:

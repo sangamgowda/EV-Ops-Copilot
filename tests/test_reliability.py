@@ -156,17 +156,33 @@ class TestQueue:
 
 # ── MCP reconnection ─────────────────────────────────────────
 
+class _Stream:
+    """Stands in for the transport's memory streams: closed once the server
+    has dropped the session (as the mcp client does on a failed post)."""
+
+    def __init__(self, n, server, side):
+        self.n, self.server, self.side = n, server, side
+
+    def statistics(self):
+        return SimpleNamespace(open_send_streams=0 if self.n in self.server.silent else 1)
+
+    @property
+    def _closed(self):
+        return self.side == "write" and self.n in self.server.silent
+
+
 class _FakeServer:
     """Sessions numbered from 1. `broken` sessions fail every call;
     `slow` calls take a while and then succeed."""
 
     def __init__(self):
         self.opened, self.closed, self.broken = 0, 0, set()
+        self.silent = set()        # sessions the server no longer knows: requests are never answered
         server = self
 
         class Session:
             def __init__(self, read, write):
-                self.n = read
+                self.n = read.n
 
             async def __aenter__(self):
                 return self
@@ -178,6 +194,8 @@ class _FakeServer:
                 pass
 
             async def call_tool(self, name, args):
+                if self.n in server.silent:
+                    await asyncio.sleep(3600)          # the reply that never comes
                 await asyncio.sleep(args.get("delay", 0))
                 if self.n in server.broken:
                     raise ConnectionError(f"session {self.n} is gone")
@@ -191,7 +209,10 @@ class _FakeServer:
         class Transport:
             async def __aenter__(self):
                 server.opened += 1
-                return server.opened, None
+                self.n = server.opened
+                self.read = _Stream(self.n, server, "read")
+                self.write = _Stream(self.n, server, "write")
+                return self.read, self.write
 
             async def __aexit__(self, *exc):
                 pass
@@ -207,6 +228,7 @@ def mcp(monkeypatch):
     monkeypatch.setattr(mc.MCPClient, "_transport", lambda self: server.transport())
     cfg = mc.get_config()
     monkeypatch.setitem(cfg["mcp"], "retry_backoff_seconds", 0.01)
+    monkeypatch.setitem(cfg["mcp"], "liveness_probe_seconds", 0.05)
     c = mc.MCPClient(transport="http")
     return c, server
 
@@ -231,6 +253,26 @@ class TestMCPReconnect:
         assert (await slow)["result"] == {"session": 1}   # not cut off by the reconnect
         await asyncio.sleep(0.05)
         assert server.closed == 1                 # the retired connection closed after it finished
+        await client.close()
+
+    async def test_server_restart_is_detected_without_waiting_out_the_timeout(self, mcp):
+        """Seen live: after a server restart the old session's call got no
+        reply and no error. The closed transport stream ends the wait."""
+        import time
+        client, server = mcp
+        await client.connect()
+        server.silent.add(1)                     # the restarted server forgot session 1
+        started = time.perf_counter()
+        out = await client.call_tool("t", {}, "turn")
+        assert out["result"] == {"session": 2}
+        assert time.perf_counter() - started < 2   # call_timeout_seconds is 45
+        await client.close()
+
+    async def test_slow_call_on_a_live_session_keeps_waiting(self, mcp):
+        client, server = mcp
+        await client.connect()
+        out = await client.call_tool("t", {"delay": 0.3}, "turn")   # several probe intervals
+        assert out["result"] == {"session": 1} and server.opened == 1
         await client.close()
 
     async def test_persistent_failure_still_raises(self, mcp):
