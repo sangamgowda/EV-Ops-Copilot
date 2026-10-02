@@ -39,6 +39,7 @@ from typing import Any
 from ops_copilot.agent.context import configurable, emit, guarded
 from ops_copilot.agent.state import AgentState, ToolCall
 from ops_copilot.mcp_client.client import ToolTimeoutError, get_client
+from ops_copilot.observability import metrics
 from ops_copilot.observability.tracing import traced
 from ops_copilot.settings import get_config, get_schema_config
 from ops_copilot.sql.validator import SQLValidator
@@ -93,5 +94,6 @@ async def execute_node(state: AgentState, config: Any = None) -> dict:
                    "result": {"status": "failed", "error": f"{type(out).__name__}: {out}"}}
         if out["turn_id"] != turn_id:
             continue  # a stale answer for a turn this session has left
+        metrics.record_tool_result(out["tool"], out["result"])
         results.append(out)
     return {"raw_results": results, "pending_tool_calls": []}

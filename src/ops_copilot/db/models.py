@@ -1,7 +1,7 @@
 """SQLAlchemy Core tables for the operational tables the API writes.
 
-Kept in sync by hand; the SQL files in migrations/ are the source of
-truth because they are what actually runs on container boot.
+Kept in sync by hand; the migrations (db/schema/versions) are the
+source of truth because they are what actually runs.
 
 Only the tables this process writes are mirrored. Lane A and Lane B
 tables are written by the seed script and by ingestion with explicit
@@ -48,7 +48,7 @@ flagged_interactions = Table(
     "flagged_interactions", metadata,
     Column("id", BigInteger, primary_key=True, autoincrement=True),
     Column("turn_id", Text, ForeignKey("conversation_turns.turn_id"), nullable=False),
-    Column("rating", Text, nullable=False),          # up | down | implicit_down
+    Column("rating", Text, nullable=False),          # up | down | implicit_down | judge_low
     Column("category", Text),
     Column("comment", Text),
     Column("cluster_id", Text),                      # failure signature
@@ -58,4 +58,17 @@ flagged_interactions = Table(
     Column("review_note", Text),
     Column("reviewed_at", DateTime(timezone=True)),
     Column("golden_case_id", Text),
+)
+
+
+live_judgements = Table(
+    "live_judgements", metadata,
+    Column("id", BigInteger, primary_key=True, autoincrement=True),
+    Column("turn_id", Text, ForeignKey("conversation_turns.turn_id"), nullable=False),
+    Column("judge_version", Text, nullable=False),
+    Column("faithfulness", Integer, nullable=False),
+    Column("hedging", Integer, nullable=False),
+    Column("helpfulness", Integer, nullable=False),
+    Column("notes", Text),
+    Column("created_at", DateTime(timezone=True), server_default=func.now(), nullable=False),
 )

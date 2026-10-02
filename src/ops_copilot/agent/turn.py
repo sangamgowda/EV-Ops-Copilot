@@ -36,6 +36,8 @@ from ops_copilot.agent.context import Emit
 from ops_copilot.agent.graph import get_graph
 from ops_copilot.agent.nodes.synthesize import evidence_answer
 from ops_copilot.agent.state import AgentState, new_state
+from ops_copilot.evaluation import live_judge
+from ops_copilot.observability import metrics
 from ops_copilot.observability.tracing import turn_trace, update_turn
 from ops_copilot.settings import get_config
 
@@ -116,6 +118,7 @@ async def run_turn(question: str, session_id: str | None = None, *, turn_id: str
     initial = new_state(question, session_id, turn_id)
     latest: AgentState = initial
     started = time.perf_counter()
+    metrics.start_turn()
     error: BaseException | None = None
     with turn_trace(turn_id, session_id, question):
         try:
@@ -141,11 +144,16 @@ async def run_turn(question: str, session_id: str | None = None, *, turn_id: str
             raise
         finally:
             fields = outcome(latest, int((time.perf_counter() - started) * 1000), error)
+            fields["cost_usd"] = metrics.turn_cost()
+            metrics.record_turn(fields)
             update_turn(output={"answer": latest.get("answer"),
                                 "citations": latest.get("citations", [])}, **fields)
 
     if record:
         await _record_end(latest, fields)
+        # A sample of live answers is judged in the background, after the
+        # user has the answer (evaluation/live_judge.py).
+        live_judge.schedule(cast(dict[str, Any], latest))
     return latest
 
 

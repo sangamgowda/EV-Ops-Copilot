@@ -1,17 +1,20 @@
 """Bi-encoder. Local, CPU, no API key.
 
-BAAI/bge-small-en-v1.5 — 384 dimensions, ~130MB, runs comfortably
-on CPU. Chosen over larger models deliberately: at this corpus size
-the embedder is not the quality bottleneck, and keeping it small
-means no GPU, no API cost, and a container that starts in seconds.
+BAAI/bge-m3 — 1024 dimensions, ~2.3GB, multilingual. It replaced
+bge-small-en-v1.5 (384-d, English) so that questions in Hindi, Kannada
+and Tamil find English documents. Measured with
+scripts/eval_retrieval.py: on its own the embedding swap changed
+nothing, because the English reranker scored every non-English pair
+near zero; with the multilingual reranker (rag/rerank.py) Hindi went
+from 1 of 7 accepted to 6 of 7 and English from 9 of 11 to 11 of 11.
 
-If retrieval quality ever does become the bottleneck, the upgrade
-path is Qwen3-Embedding-0.6B — but only after an eval says so, and
-switching means re-embedding the whole corpus.
-
-Note: BGE models want a query prefix for retrieval
+Note: English BGE models want a query prefix for retrieval
 ("Represent this sentence for searching relevant passages: ") but
-NOT for documents. Getting this backwards quietly degrades recall.
+NOT for documents; bge-m3 wants none. Getting this backwards quietly
+degrades recall, so the prefix is per model (embeddings.query_prefixes).
+
+Changing the model means re-embedding the corpus (scripts/reembed.py);
+search refuses to mix the two (rag/corpus.py).
 
 These functions are synchronous and CPU-bound. Async callers wrap
 them in asyncio.to_thread so the event loop keeps serving.
@@ -27,7 +30,10 @@ from ops_copilot.settings import get_config, get_settings
 if TYPE_CHECKING:
     from sentence_transformers import SentenceTransformer
 
-QUERY_PREFIX = "Represent this sentence for searching relevant passages: "
+def query_prefix() -> str:
+    """The retrieval instruction the configured model expects on queries
+    (never on documents). English BGE models want one; bge-m3 wants none."""
+    return get_config()["embeddings"]["query_prefixes"].get(get_settings().embedding_model, "")
 
 
 @functools.lru_cache(maxsize=1)
@@ -70,7 +76,7 @@ def embed_documents(texts: list[str]) -> list[list[float]]:
 
 @functools.lru_cache(maxsize=get_config()["embeddings"]["query_cache_size"])
 def _embed_query_cached(text: str) -> tuple[float, ...]:
-    return tuple(_encode([QUERY_PREFIX + text])[0])
+    return tuple(_encode([query_prefix() + text])[0])
 
 
 def embed_query(text: str) -> list[float]:

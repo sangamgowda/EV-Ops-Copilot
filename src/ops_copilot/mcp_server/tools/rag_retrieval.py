@@ -21,6 +21,7 @@ from __future__ import annotations
 
 from dataclasses import asdict
 
+from ops_copilot.rag.corpus import EmbeddingModelMismatchError
 from ops_copilot.rag.entity_resolution import resolve_vehicle_id
 from ops_copilot.rag.ingest import DOMAINS
 from ops_copilot.rag.retrieve import retrieve
@@ -55,7 +56,12 @@ async def rag_retrieval(query: str, domain: str, entity_id: str | None = None) -
         else:
             boost_id = entity_id
 
-    result = await retrieve(query, domain, boost_id)
+    try:
+        result = await retrieve(query, domain, boost_id)
+    except EmbeddingModelMismatchError as exc:
+        # A configuration fault, reported as a failed search so the
+        # answer says documents were unavailable instead of inventing.
+        return {"status": "failed", "error": str(exc), "query": query}
     return {"query": query, "domain": domain, "entity_id": entity_id,
             "entity_resolution": resolution, **result}
 

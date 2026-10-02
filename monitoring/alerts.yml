@@ -1,0 +1,70 @@
+# Alert rules. Thresholds follow the service's own limits: the app
+# stops a turn at 45 s, so a p95 near that means users are getting
+# partial answers.
+groups:
+  - name: copilot
+    rules:
+      - alert: CopilotDown
+        expr: up{job="copilot-api"} == 0
+        for: 2m
+        labels: {severity: page}
+        annotations:
+          summary: The API is not answering /metrics.
+
+      - alert: SlowAnswers
+        expr: >
+          histogram_quantile(0.95, sum by (le) (rate(copilot_turn_latency_seconds_bucket[10m]))) > 40
+        for: 10m
+        labels: {severity: page}
+        annotations:
+          summary: "p95 answer time {{ $value | humanizeDuration }}, close to the 45 s turn limit."
+
+      - alert: HighErrorRate
+        expr: >
+          sum(rate(copilot_turn_errors_total{kind=~"exception|timeout"}[10m]))
+            / clamp_min(sum(rate(copilot_turns_total[10m])), 1e-9) > 0.10
+        for: 10m
+        labels: {severity: page}
+        annotations:
+          summary: "{{ $value | humanizePercentage }} of questions crashed or timed out."
+
+      - alert: GroundingFailures
+        expr: >
+          sum(rate(copilot_grounding_checks_total{result="failed"}[30m]))
+            / clamp_min(sum(rate(copilot_grounding_checks_total{result!="not_run"}[30m])), 1e-9) > 0.20
+        for: 15m
+        labels: {severity: ticket}
+        annotations:
+          summary: "{{ $value | humanizePercentage }} of answers failed the grounding check."
+
+      - alert: TimeoutsRising
+        expr: >
+          sum(rate(copilot_turns_total{stop_reason="timeout"}[15m]))
+            / clamp_min(sum(rate(copilot_turns_total[15m])), 1e-9) > 0.25
+        for: 15m
+        labels: {severity: ticket}
+        annotations:
+          summary: "{{ $value | humanizePercentage }} of turns stopped at the time limit (rate limits?)."
+
+      - alert: CostPerQuestionHigh
+        expr: >
+          histogram_quantile(0.95, sum by (le) (rate(copilot_turn_cost_usd_bucket[1h]))) > 0.01
+        for: 30m
+        labels: {severity: ticket}
+        annotations:
+          summary: "p95 cost per question ${{ $value }} at list price: more laps or longer prompts?"
+
+      - alert: ModelCircuitOpen
+        expr: max by (model) (copilot_llm_breaker_open) == 1
+        for: 5m
+        labels: {severity: ticket}
+        annotations:
+          summary: "{{ $labels.model }} has been skipped for 5 minutes; answers come from the fallback."
+
+      - alert: LiveJudgeScoresLow
+        expr: >
+          sum(rate(copilot_live_judge_score_sum[6h])) / clamp_min(sum(rate(copilot_live_judge_score_count[6h])), 1e-9) < 2.5
+        for: 1h
+        labels: {severity: ticket}
+        annotations:
+          summary: "Sampled live answers average {{ $value }} of 4 from the judge."

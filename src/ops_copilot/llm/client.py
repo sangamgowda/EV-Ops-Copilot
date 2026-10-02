@@ -54,6 +54,7 @@ from openai import AsyncOpenAI
 from pydantic import BaseModel, ValidationError
 
 from ops_copilot.llm.resilience import CircuitBreaker, ModelQueue, QueueTimeout
+from ops_copilot.observability import metrics
 from ops_copilot.observability.tracing import record_generation
 from ops_copilot.settings import get_config, get_settings, model_for, tier_for
 
@@ -212,11 +213,14 @@ async def _with_failover(node: str, messages: list[dict[str, str]],
                 cb.failure()
             else:
                 cb.release()
+            metrics.LLM_FAILOVERS.labels(target.model, type(exc).__name__).inc()
+            metrics.BREAKER_OPEN.labels(target.model).set(1 if cb.state == "open" else 0)
             last = exc
             log.warning("%s: %s failed (%s); %s", node, target.model, type(exc).__name__,
                         "trying fallback" if i < len(targets) - 1 else "no fallback left")
             continue
         cb.success()
+        metrics.BREAKER_OPEN.labels(target.model).set(0)
         if target.role == "fallback":
             log.warning("%s answered by fallback model %s", node, target.model)
         return result
@@ -268,6 +272,7 @@ async def complete(node: str, system: str, user: str, *, json_mode: bool = False
         usage = _usage(resp.usage)
         record_generation(node, params["model"], messages, text, usage,
                           int((time.perf_counter() - started) * 1000))
+        metrics.record_llm_call(params["model"], usage)
         return text, usage
 
     return await _with_failover(node, messages, call)
@@ -322,3 +327,4 @@ async def stream(node: str, system: str, user: str, result: StreamResult, *,
     result.text = "".join(parts)
     record_generation(node, model, messages, result.text, result.usage,
                       int((time.perf_counter() - started) * 1000))
+    metrics.record_llm_call(model, result.usage)

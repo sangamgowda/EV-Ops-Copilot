@@ -1,0 +1,86 @@
+# Retrieval-only test set: does document search find the right
+# document, and is its score above the confidence threshold? No model
+# is called, so it is free to run and runs in seconds:
+#
+#   python scripts/eval_retrieval.py
+#
+# Used to choose between embedding / reranker models and to place
+# retrieval.confidence_threshold, which is defined on the reranker's
+# scale and must be re-derived whenever the reranker changes.
+#
+# positive  the expected document must be in the top results, above threshold
+# negative  questions no document answers (the trap set): the best
+#           score should stay BELOW the threshold
+#
+# The non-English questions are translations of English ones, so a
+# language's hit rate can be read against the same questions in English.
+
+positive:
+  # English: the golden set's document questions
+  - {lang: en, domain: diagnostic, doc: kb_range_shortfall_faq,
+     q: "If a rider notices their scooter's range is still under 65% of what the spec says, what should they do next?"}
+  - {lang: en, domain: diagnostic, doc: manual_ride_modes_range_and_charging,
+     q: "How long does it take to charge the removable battery pack to 80 % using the standard charger?"}
+  - {lang: en, domain: business, doc: sales_q2_2026_review,
+     q: "How many new showrooms did the company open in the south between January and June?"}
+  - {lang: en, domain: business, doc: sales_q3_2026_midquarter,
+     q: "How long was the EVX Max only available in the south before it rolled out to the other regions?"}
+  - {lang: en, domain: diagnostic, doc: SB-114_sustained_overload,
+     q: "If a rider keeps the total weight on an EVX above 150 kg, how much higher can the average current draw get?"}
+  - {lang: en, domain: diagnostic, doc: SB-121_removable_pack_cell_wear,
+     q: "If my scooter's removable pack shows a cell health of 83% after a week of normal use, what steps should I take next?"}
+  - {lang: en, domain: diagnostic, doc: SB-135_firmware_top_mode_speed_cap,
+     q: "Why does my EVX Max scooter stop at about 45 km/h when I crank up Sport+ or Ultra after the latest OTA update?"}
+  - {lang: en, domain: diagnostic, doc: SB-140_charger_low_power,
+     q: "If my scooter keeps charging past midnight and the charger shows only 350 W, what's the likely cause?"}
+  # English: documents the question generator never saw
+  - {lang: en, domain: diagnostic, doc: SB-130_front_brake_pad_wear,
+     q: "The front brake on an EVX Standard feels weak and the pads keep wearing out fast. What should the workshop do?"}
+  - {lang: en, domain: business, doc: policy_fleet_discounts,
+     q: "What is the largest discount a partner deal can get, and how many units does it need?"}
+  - {lang: en, domain: business, doc: story_fleet_delivery_partner,
+     q: "For the delivery partner that switched to electric scooters, how much did the cost per delivery fall?"}
+
+  # Hindi
+  - {lang: hi, domain: diagnostic, doc: SB-140_charger_low_power,
+     q: "मेरा स्कूटर आधी रात के बाद भी चार्ज होता रहता है और चार्जर सिर्फ़ 350 वॉट दिखाता है, इसकी वजह क्या है?"}
+  - {lang: hi, domain: diagnostic, doc: SB-121_removable_pack_cell_wear,
+     q: "मेरे रिमूवेबल बैटरी पैक की सेल हेल्थ 83% दिखा रही है, मुझे आगे क्या करना चाहिए?"}
+  - {lang: hi, domain: diagnostic, doc: SB-114_sustained_overload,
+     q: "अगर स्कूटर पर कुल वज़न 150 किलो से ज़्यादा हो तो करंट और रेंज पर क्या असर पड़ता है?"}
+  - {lang: hi, domain: diagnostic, doc: SB-135_firmware_top_mode_speed_cap,
+     q: "OTA अपडेट के बाद मेरा EVX Max स्पोर्ट+ और अल्ट्रा मोड में भी 45 किमी/घंटा पर क्यों रुक जाता है?"}
+  - {lang: hi, domain: diagnostic, doc: manual_ride_modes_range_and_charging,
+     q: "स्टैंडर्ड चार्जर से रिमूवेबल बैटरी को 80% तक चार्ज होने में कितना समय लगता है?"}
+  - {lang: hi, domain: diagnostic, doc: SB-130_front_brake_pad_wear,
+     q: "आगे के ब्रेक कमज़ोर लगते हैं और ब्रेक पैड जल्दी घिस जाते हैं, वर्कशॉप को क्या करना चाहिए?"}
+  - {lang: hi, domain: business, doc: policy_fleet_discounts,
+     q: "पार्टनर डील में सबसे ज़्यादा कितनी छूट मिल सकती है और उसके लिए कितनी यूनिट चाहिए?"}
+
+  # Kannada
+  - {lang: kn, domain: diagnostic, doc: SB-140_charger_low_power,
+     q: "ನನ್ನ ಸ್ಕೂಟರ್ ಚಾರ್ಜರ್ ಕೇವಲ 350 ವ್ಯಾಟ್ ತೋರಿಸುತ್ತಿದೆ, ಚಾರ್ಜಿಂಗ್ ತುಂಬಾ ನಿಧಾನವಾಗಿದೆ. ಕಾರಣ ಏನು?"}
+  - {lang: kn, domain: diagnostic, doc: SB-121_removable_pack_cell_wear,
+     q: "ರಿಮೂವಬಲ್ ಬ್ಯಾಟರಿಯ ಸೆಲ್ ಹೆಲ್ತ್ 83% ಇದೆ, ಮುಂದೆ ಏನು ಮಾಡಬೇಕು?"}
+  - {lang: kn, domain: diagnostic, doc: SB-130_front_brake_pad_wear,
+     q: "ಮುಂಭಾಗದ ಬ್ರೇಕ್ ಪ್ಯಾಡ್‌ಗಳು ಬೇಗ ಸವೆಯುತ್ತಿವೆ, ವರ್ಕ್‌ಶಾಪ್ ಏನು ಮಾಡಬೇಕು?"}
+
+  # Tamil
+  - {lang: ta, domain: diagnostic, doc: SB-114_sustained_overload,
+     q: "ஸ்கூட்டரில் 150 கிலோவுக்கு மேல் எடை இருந்தால் கரண்ட் மற்றும் ரேஞ்ச் எப்படி மாறும்?"}
+  - {lang: ta, domain: diagnostic, doc: SB-135_firmware_top_mode_speed_cap,
+     q: "OTA அப்டேட்டுக்குப் பிறகு Ultra மோடில் கூட 45 கிமீ வேகத்தைத் தாண்டவில்லை, ஏன்?"}
+  - {lang: ta, domain: diagnostic, doc: manual_ride_modes_range_and_charging,
+     q: "ஸ்டாண்டர்ட் சார்ஜரில் ரிமூவபிள் பேட்டரியை 80% வரை சார்ஜ் செய்ய எவ்வளவு நேரம் ஆகும்?"}
+
+negative:
+  - {lang: en, domain: diagnostic, q: "Who invented the lithium-ion battery used in electric scooters?"}
+  - {lang: en, domain: diagnostic, q: "What cathode chemistry do the EVX Pro's battery cells use?"}
+  - {lang: en, domain: diagnostic, q: "What is the nominal voltage of a single lithium-ion cell?"}
+  - {lang: en, domain: business, q: "How much was the FAME II subsidy per kWh for electric two-wheelers?"}
+  - {lang: en, domain: diagnostic, q: "What does the IP in IP67 stand for?"}
+  - {lang: en, domain: diagnostic, q: "What tyre pressure should an EVX Standard run at?"}
+  - {lang: en, domain: business, q: "How much CO2 does burning one litre of petrol produce?"}
+  - {lang: en, domain: diagnostic, q: "What is the minimum age to ride an electric scooter in India?"}
+  - {lang: hi, domain: diagnostic, q: "EVX Standard के टायर में कितना प्रेशर होना चाहिए?"}
+  - {lang: hi, domain: diagnostic, q: "लिथियम-आयन बैटरी का आविष्कार किसने किया?"}

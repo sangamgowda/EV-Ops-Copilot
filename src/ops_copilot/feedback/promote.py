@@ -44,7 +44,8 @@ from ops_copilot.settings import get_config
 
 ROOT = Path(__file__).resolve().parents[3]
 PROMOTED = ROOT / "src" / "ops_copilot" / "evaluation" / "golden" / "promoted.yaml"
-NEGATIVE = ("down", "implicit_down")
+# judge_low: the live judge scored a sampled answer low (evaluation/live_judge.py).
+NEGATIVE = ("down", "implicit_down", "judge_low")
 
 
 # ── the queue ────────────────────────────────────────────────

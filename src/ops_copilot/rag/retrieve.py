@@ -40,6 +40,7 @@ from typing import Any
 
 from sqlalchemy import text
 
+from ops_copilot.rag import corpus
 from ops_copilot.rag import rerank as rr
 from ops_copilot.rag.embeddings import embed_query
 from ops_copilot.settings import get_config
@@ -135,6 +136,9 @@ async def _dense(query: str, domain: str, k: int) -> list[dict[str, Any]]:
     qvec = await asyncio.to_thread(embed_query, query)
     literal = "[" + ",".join(f"{x:.7f}" for x in qvec) + "]"
     async with readonly_engine().connect() as conn:
+        # A query vector from one model against chunks from another is
+        # meaningless; refuse rather than rank noise (rag/corpus.py).
+        await corpus.check(conn)
         # With a WHERE on domain, HNSW filters after the index scan
         # and can return fewer than k rows. Iterative scan (pgvector
         # >= 0.8) keeps searching until k survive; on older versions
@@ -179,7 +183,8 @@ async def retrieve(query: str, domain: str, entity_id: str | None = None) -> dic
     started = time.perf_counter()
 
     candidates = await hybrid_search(query, domain, entity_id, cfg["candidate_k"])
-    reranked = await asyncio.to_thread(rr.rerank, query, candidates, cfg["final_k"])
+    shortlist = candidates[: cfg.get("rerank_candidates", len(candidates))]
+    reranked = await asyncio.to_thread(rr.rerank, query, shortlist, cfg["final_k"])
     status, kept = apply_threshold(reranked, cfg["confidence_threshold"])
 
     return {

@@ -50,6 +50,7 @@ from typing import Any
 import yaml
 from sqlalchemy import text
 
+from ops_copilot.rag import corpus
 from ops_copilot.rag.chunking import (
     Block,
     Chunk,
@@ -59,6 +60,7 @@ from ops_copilot.rag.chunking import (
 )
 from ops_copilot.rag.embeddings import embed_documents
 from ops_copilot.rag.hashing import content_hash
+from ops_copilot.settings import get_settings
 
 DOMAINS = ("diagnostic", "business")
 TRUST_LEVELS = ("official", "internal", "external")
@@ -181,6 +183,8 @@ async def ingest_text(
     # Step 2 — the cheap exit. A re-sync of an unchanged folder costs
     # one SELECT per file and nothing else.
     async with engine.connect() as conn:
+        # New chunks must share the corpus's embedding model (rag/corpus.py).
+        await corpus.check(conn)
         existing = (await conn.execute(
             text("SELECT doc_id FROM documents WHERE content_hash = :h"), {"h": digest},
         )).scalar()
@@ -217,6 +221,12 @@ async def ingest_text(
             text("SELECT 1 FROM documents WHERE content_hash = :h"), {"h": digest},
         )).scalar():
             return {"doc_id": doc_id, "status": "skipped_duplicate", "chunks": 0, "error_codes_promoted": 0}
+
+        # An empty corpus takes the configured model; a non-empty one
+        # already matches it (checked above).
+        await conn.execute(text(
+            "INSERT INTO corpus_meta (key, value) VALUES ('embedding_model', :m) ON CONFLICT (key) DO NOTHING"),
+            {"m": get_settings().embedding_model})
 
         replaced = (await conn.execute(
             text("DELETE FROM documents WHERE doc_id = :d RETURNING doc_id"), {"d": doc_id},

@@ -941,6 +941,12 @@ def main() -> None:
     write_manifest(conn, vehicles, args, start, end, counts)
     sink.close()
     if conn is not None:
+        # The hourly rollups (TimescaleDB, migration 0010) cover the new
+        # readings only once refreshed; a refresh cannot run in a transaction.
+        conn.autocommit = True
+        if conn.execute("SELECT to_regclass('telemetry_hourly') IS NOT NULL").fetchone()[0]:
+            print("refreshing hourly telemetry rollups ...", flush=True)
+            conn.execute("CALL refresh_continuous_aggregate('telemetry_hourly', NULL, NULL)")
         conn.close()
 
     print("\nSeeded:")

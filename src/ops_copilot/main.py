@@ -29,15 +29,16 @@ import sys
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from prometheus_client import CONTENT_TYPE_LATEST
 from sqlalchemy import text
 
 from ops_copilot.api import routes_chat, routes_eval, routes_feedback, routes_ingest
 from ops_copilot.db.engine import dispose_all, owner_engine
 from ops_copilot.mcp_client.client import get_client
-from ops_copilot.observability import tracing
+from ops_copilot.observability import metrics, tracing
 from ops_copilot.settings import ROOT, get_settings
 
 log = logging.getLogger("ops_copilot")
@@ -105,6 +106,13 @@ def _mount_ui() -> None:
         # fonts as text/plain, which strict browsers and proxies refuse.
         mimetypes.add_type("font/woff2", ".woff2")
         app.mount("/", StaticFiles(directory=dist, html=True), name="ui")
+
+
+@app.get("/metrics", include_in_schema=False)
+async def prometheus_metrics() -> Response:
+    # Aggregates with low-cardinality labels only: no questions, ids or
+    # answers. Scraped by monitoring/prometheus.yml.
+    return Response(metrics.render(), media_type=CONTENT_TYPE_LATEST)
 
 
 @app.get("/health")

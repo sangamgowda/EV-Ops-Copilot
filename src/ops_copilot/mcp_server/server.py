@@ -32,6 +32,7 @@ from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
+from ops_copilot.mcp_server.cache import cached, search_cache_key, sql_cache_key
 from ops_copilot.mcp_server.tools.rag_retrieval import rag_retrieval, resolve_entity
 from ops_copilot.mcp_server.tools.structured_query import structured_query
 from ops_copilot.settings import get_settings
@@ -66,7 +67,9 @@ def build_server() -> FastMCP:
     )
     async def structured_query_tool(sql: str) -> dict:
         started = time.perf_counter()
-        result = await structured_query(sql)
+        # Reference-table lookups (error codes, baselines) are cached;
+        # telemetry and sales never are (mcp_server/cache.py).
+        result = await cached("sql", sql_cache_key(sql), lambda: structured_query(sql))
         _audit("structured_query_tool", {"sql": sql}, result, started)
         return result
 
@@ -81,7 +84,8 @@ def build_server() -> FastMCP:
     )
     async def rag_retrieval_tool(query: str, domain: str, entity_id: str | None = None) -> dict:
         started = time.perf_counter()
-        result = await rag_retrieval(query, domain, entity_id)
+        result = await cached("search", search_cache_key(query, domain, entity_id),
+                              lambda: rag_retrieval(query, domain, entity_id))
         _audit("rag_retrieval_tool", {"query": query, "domain": domain, "entity_id": entity_id},
                result, started)
         return result

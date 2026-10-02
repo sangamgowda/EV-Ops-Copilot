@@ -29,6 +29,11 @@ error:
     per call, and calls that were merely caught in it do not fail.
 Retrying is safe because every tool is read-only.
 
+A dead session does not always raise: after a server restart, a call
+on the old session can simply never be answered. While a call is
+outstanding the client checks the transport's streams every
+mcp.liveness_probe_seconds; a closed one is treated as a transport error.
+
 Each connection is owned by its own task. The mcp transports are anyio
 task groups, which must be entered and exited in the same task;
 closing one from whichever call noticed the error breaks that rule.
@@ -68,6 +73,8 @@ class _Connection:
     def __init__(self, gen: int) -> None:
         self.gen = gen
         self.session: ClientSession | None = None
+        self.read: Any = None       # the transport's message streams, watched for closure
+        self.write: Any = None
         self.inflight = 0
         self.retiring = False
         self._stop = asyncio.Event()
@@ -75,7 +82,20 @@ class _Connection:
 
     @property
     def alive(self) -> bool:
-        return self.session is not None and self._task is not None and not self._task.done()
+        return (self.session is not None and self._task is not None and not self._task.done()
+                and self.transport_open())
+
+    def transport_open(self) -> bool:
+        """False once the transport has given up: the mcp client closes its
+        side of the read stream when the server's event stream ends, and
+        the write stream when a post fails (e.g. the restarted server no
+        longer knows this session). A local check, no network round trip."""
+        try:
+            if self.read is not None and self.read.statistics().open_send_streams == 0:
+                return False
+            return not (self.write is not None and getattr(self.write, "_closed", False))
+        except Exception:
+            return False
 
     async def start(self, transport: Any) -> None:
         ready: asyncio.Future[None] = asyncio.get_running_loop().create_future()
@@ -84,6 +104,7 @@ class _Connection:
             try:
                 async with AsyncExitStack() as stack:
                     read, write = await stack.enter_async_context(transport)
+                    self.read, self.write = read, write
                     session = await stack.enter_async_context(ClientSession(read, write))
                     await session.initialize()
                     self.session = session
@@ -205,15 +226,44 @@ class MCPClient:
 
     # ── calls ────────────────────────────────────────────────
 
+    @staticmethod
+    async def _await_with_liveness(conn: _Connection, call: Any) -> Any:
+        """Wait for `call`, checking the connection while it is outstanding.
+
+        Seen live: after the tool server restarts, a call on the old
+        session is rejected by the new server (unknown session); the mcp
+        library logs the error and closes its streams, but the caller is
+        never told and waits for the full call timeout. A ping cannot
+        detect it either: this mcp server answers one session's requests
+        one at a time, so a ping waits behind the slow call. Watching the
+        transport's streams can, without any round trip; a closed one
+        ends the wait as a transport error, which call_tool retries on a
+        fresh connection.
+        """
+        cfg = get_config()["mcp"]
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + cfg["call_timeout_seconds"]
+        task = asyncio.ensure_future(call)
+        try:
+            while True:
+                remaining = deadline - loop.time()
+                if remaining <= 0:
+                    raise TimeoutError
+                done, _ = await asyncio.wait({task}, timeout=min(cfg["liveness_probe_seconds"], remaining))
+                if done:
+                    return task.result()
+                if conn.session is None or not conn.transport_open():
+                    raise ConnectionError(f"MCP connection {conn.gen} closed while a call was waiting")
+        finally:
+            if not task.done():
+                task.cancel()
+
     async def _call_once(self, conn: _Connection, name: str, args: dict[str, Any]) -> dict[str, Any]:
         if conn.session is None:
             raise ConnectionError(f"MCP connection {conn.gen} is closed")
         conn.inflight += 1
         try:
-            result = await asyncio.wait_for(
-                conn.session.call_tool(name, args),
-                timeout=get_config()["mcp"]["call_timeout_seconds"],
-            )
+            result = await self._await_with_liveness(conn, conn.session.call_tool(name, args))
         finally:
             conn.inflight -= 1
             if conn.retiring and conn.inflight == 0:

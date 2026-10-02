@@ -93,6 +93,46 @@ tables:
           about sensor faults themselves.
         allowed_values: ["below_physical_range", "above_physical_range"]
 
+  telemetry_hourly:
+    description: >
+      Hourly rollup of vehicle_telemetry (TimescaleDB continuous
+      aggregate): one row per vehicle, metric, ride mode and hour.
+      Readings flagged as sensor faults are already excluded. Use it
+      for windows longer than a couple of days and for fleet-wide or
+      trend questions: about 4x fewer rows than the raw readings, and
+      already summed, so a month for the whole fleet stays cheap. For
+      the exact mean over several hours, use
+      sum(sum_value) / sum(readings), not avg(avg_value) (hours with
+      few readings would count as much as busy ones). Includes the
+      current hour. Must carry a time predicate on hour.
+    primary_key: [hour, vehicle_id, metric_name, drive_mode]
+    columns:
+      hour:
+        type: timestamptz
+        description: Start of the hour.
+      vehicle_id:
+        type: text
+        description: Joins to vehicles.vehicle_id.
+      metric_name:
+        type: text
+        description: Same values as vehicle_telemetry.metric_name.
+      drive_mode:
+        type: text
+        description: Same values as vehicle_telemetry.drive_mode.
+      readings:
+        type: bigint
+        description: Number of plausible readings in the hour.
+      sum_value:
+        type: double precision
+      avg_value:
+        type: double precision
+      min_value:
+        type: double precision
+      max_value:
+        type: double precision
+      unit:
+        type: text
+
   metric_physical_ranges:
     description: >
       What each metric can physically read. A telemetry reading
@@ -365,3 +405,4 @@ join_keys:
   - [service_events.error_code, error_codes.code]
   - [documents.doc_id, document_chunks.doc_id]
   - [vehicle_telemetry.metric_name, metric_physical_ranges.metric_name]
+  - [vehicles.vehicle_id, telemetry_hourly.vehicle_id]

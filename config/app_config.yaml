@@ -70,6 +70,7 @@ llm:
     reflect: cheap
     synthesize: strong
     judge: judge         # evaluation only; its own model (settings.llm_model_judge)
+    judge_live: judge    # reviews a sample of live answers, in the background
     eval_generate: cheap # writes synthetic test questions, offline
     groundedness: strong # tier 4 only, fires on a flagged claim
 
@@ -79,6 +80,7 @@ llm:
     reflect: 0.0
     synthesize: 0.2      # a little warmth in prose, nothing more
     judge: 0.0           # determinism matters more than style here
+    judge_live: 0.0
     groundedness: 0.0
 
   # Reasoning models spend part of this on thinking before the reply,
@@ -92,6 +94,7 @@ llm:
     # qwen allows 1,000 output tokens a minute on the free tier; a larger
     # cap is rejected outright ("Request too large"), before any reply.
     judge: 800
+    judge_live: 800
     eval_generate: 4096
     groundedness: 2048
 
@@ -102,10 +105,20 @@ llm:
     plan: low
     reflect: low
     synthesize: low
+    judge_live: default
     judge: default      # qwen: "low" thinks for ~400 tokens and overruns its
                         # 1,000-a-minute output limit; "default" answers in ~55
     eval_generate: low
     groundedness: low
+
+  # List prices (USD per million tokens) for the cost-per-question
+  # metric. The free tier bills nothing; this is what the same traffic
+  # would cost on a paid plan. Check the provider's pricing page when
+  # models change: a model missing here counts as zero.
+  pricing_usd_per_million_tokens:
+    openai/gpt-oss-120b: {input: 0.15, output: 0.60}
+    openai/gpt-oss-20b:  {input: 0.075, output: 0.30}
+    qwen/qwen3.8-27b:    {input: 0.29, output: 0.59}
 
   # Models that accept `reasoning_effort` (substring of the model id).
   # Others, e.g. a fallback without reasoning, are sent no such field.
@@ -140,6 +153,12 @@ retrieval:
   # Candidate retrieval is cheap; reranking is what scales with
   # list length, so pull wide and rerank narrow.
   candidate_k: 50
+  # ...of which only the best this many (by hybrid score) are reranked.
+  # Reranking cost grows with every pair scored; on CPU the multilingual
+  # reranker took 23-28 s for 50 pairs and 4-7 s for 10 (384 tokens).
+  # The expected document stays within the hybrid top 10 for the
+  # questions in retrieval.yaml (scripts/eval_retrieval.py).
+  rerank_candidates: 10
   final_k: 5
 
   # Weighting between the vector and keyword halves of hybrid
@@ -152,7 +171,11 @@ retrieval:
   # evidence. Returning weak context is worse than returning
   # none, because weak context is what the model builds
   # confident nonsense on.
-  confidence_threshold: 0.55
+  # On the reranker's 0-1 scale, so it is re-derived whenever the
+  # reranker changes: scripts/eval_retrieval.py. For bge-reranker-v2-m3,
+  # 0.30 separated answerable from unanswerable questions best (88%;
+  # 0.55 gave 76%). 34 questions: a guide, not a precise optimum.
+  confidence_threshold: 0.30
 
   # Skip reranking when the top hybrid hit leads the runner-up by
   # this margin. Common on precise entity queries.
@@ -165,7 +188,7 @@ retrieval:
 
   # Cross-encoder cost scales with sequence length, so candidates are
   # truncated before scoring. 512 tokens is the model's limit.
-  rerank_max_length: 512
+  rerank_max_length: 384
   # Small batches, scored shortest-first: padding to the longest pair
   # in a batch is what makes large CPU batches slow.
   rerank_batch_size: 8
@@ -209,6 +232,12 @@ embeddings:
   batch_size: 32
   # Query embeddings repeat across laps of the same turn; cache them.
   query_cache_size: 256
+  # Instruction each model expects in front of a QUERY (never a
+  # document). A model missing here gets none.
+  query_prefixes:
+    BAAI/bge-small-en-v1.5: "Represent this sentence for searching relevant passages: "
+    BAAI/bge-base-en-v1.5: "Represent this sentence for searching relevant passages: "
+    BAAI/bge-m3: ""
 
 mcp:
   # Every tool call has a deadline; a hung tool must not hang the turn.
@@ -218,7 +247,32 @@ mcp:
   # Transport errors only. A timeout is never retried as-is: the same
   # query would time out again.
   transport_retries: 2
+  # While a call is outstanding, check this often whether its connection
+  # has closed (e.g. the server restarted). A closed one is retried on a
+  # new connection instead of waiting out call_timeout_seconds for a
+  # reply that cannot come. Local check, so frequent is cheap.
+  liveness_probe_seconds: 1
   retry_backoff_seconds: 0.5
+
+live_judge:
+  # Reviews a random sample of live answers against their evidence
+  # (evaluation/live_judge.py). Background only; never slows a request.
+  enabled: true
+  sample_rate: 0.10           # share of turns judged
+  min_answer_chars: 40
+  # Any dimension at or below this flags the turn for human review.
+  flag_at_or_below: 2
+
+cache:
+  # Tool-server result cache (mcp_server/cache.py): reference-table
+  # lookups and document searches. Keys include the corpus version, so
+  # an ingest invalidates searches within version_check_seconds.
+  enabled: true
+  ttl_seconds: 3600
+  max_entries: 512
+  version_check_seconds: 15
+  # SQL reading ONLY these tables is cached. Never telemetry or sales.
+  sql_cacheable_tables: [error_codes, vehicle_baseline_specs, metric_physical_ranges, documents]
 
 data_quality:
   # What the hardware can physically report. A reading outside its range
@@ -275,12 +329,15 @@ sql_validation:
   # production database with a perfectly valid SELECT.
   require_time_filter_on:
     - vehicle_telemetry
+    - telemetry_hourly
 
   # Written as Postgres spells them. Anything not listed is refused,
   # including built-ins sqlglot recognises: generate_series and repeat
   # are harmless-looking ways to make a tiny query enormous, and
   # row_to_json / string_agg re-package whole rows past column checks.
   allowed_functions:
+    # time-series (TimescaleDB): re-bucket hourly rollups into days or weeks
+    - time_bucket
     # aggregates
     - avg
     - sum
@@ -357,6 +414,11 @@ groundedness:
 evaluation:
   golden_path: src/ops_copilot/evaluation/golden/golden.jsonl
   trap_path: src/ops_copilot/evaluation/golden/trap_cases.jsonl
+  # Never used while changing prompts or code; run it to estimate how
+  # the system does on questions nobody tuned for (run_eval.py --heldout).
+  heldout_path: src/ops_copilot/evaluation/golden/heldout.jsonl
+  # Pass rates are reported with this confidence interval (Wilson).
+  confidence_level: 0.95
   labels_path: src/ops_copilot/evaluation/golden/human_labels.jsonl
   runs_dir: evaluation_runs
   judge_temperature: 0.0
