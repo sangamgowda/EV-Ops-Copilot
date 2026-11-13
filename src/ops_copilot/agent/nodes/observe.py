@@ -38,6 +38,7 @@ from ops_copilot.agent.context import call_key, emit, guarded
 from ops_copilot.agent.state import AgentState, Evidence, EvidenceStatus, Verdict
 from ops_copilot.observability.tracing import traced
 from ops_copilot.settings import get_config
+from ops_copilot.sql.units import result_units
 
 ACTUAL_COLS = ("actual", "actual_value", "observed", "measured", "avg_value", "avg_actual")
 BASELINE_COLS = ("baseline", "baseline_value", "nominal_value", "nominal", "expected")
@@ -139,6 +140,12 @@ def _sql_evidence(res: dict[str, Any], base: dict[str, Any]) -> list[Evidence]:
     lines = [_fmt_row(r) for r in shown]
     more = f" (+{len(rows) - len(shown)} more rows in raw store)" if len(rows) > len(shown) else ""
     summary = f"{len(rows)} row(s){more}:\n  " + "\n  ".join(lines)
+    # A bare number invites the model to supply its own unit ("$137,000"
+    # for a price stored in INR). Units traced from the schema go with it.
+    units = {k: u for k, u in result_units(str(base["tool_args"].get("sql", ""))).items()
+             if k in rows[0]}
+    if units:
+        summary += "\n  units: " + ", ".join(f"{k} in {u}" for k, u in units.items())
     # Rows promoted from a document (error codes carry `source_document`)
     # keep that provenance: the answer can credit the manual, and a
     # documented meaning can support a causal claim.
@@ -149,7 +156,7 @@ def _sql_evidence(res: dict[str, Any], base: dict[str, Any]) -> list[Evidence]:
     if len(rows) == 1 and len(rows[0]) == 1:
         (name, value), = rows[0].items()
         if _num(value) is not None:
-            ev.metric, ev.actual = name, _num(value)
+            ev.metric, ev.actual, ev.unit = name, _num(value), units.get(name)
     # Raw readings (metric_name + metric_value columns) are checked row by row.
     bad = [w for r in rows if (w := physical_check(r.get("metric_name"), _num(r.get("metric_value"))))]
     if bad:
