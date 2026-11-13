@@ -220,3 +220,50 @@ class TestTypographicDashes:
         from ops_copilot.agent.nodes.groundedness import extract_numbers
 
         assert [v for _, v in extract_numbers("payload \u22123.1% vs baseline")] == [-3.1]
+
+
+class TestResultUnits:
+    """Units travel from the schema to the evidence, so the model never
+    has to guess one. Regression for eval case
+    syn_sales_flagship_avg_price_2026 ("$137,000" for an INR price)."""
+
+    FAILING_SQL = (
+        "SELECT round(avg(st.unit_price)::numeric,2) AS average_price FROM sales_transactions st "
+        "WHERE st.model_code = 'EVX Pro' AND st.sold_on >= date '2026-01-01' "
+        "AND st.sold_on < date '2027-01-01' LIMIT 1"
+    )
+
+    def test_aggregate_of_a_priced_column_keeps_its_unit(self):
+        from ops_copilot.sql.units import result_units
+
+        assert result_units(self.FAILING_SQL) == {"average_price": "INR"}
+
+    def test_unqualified_column_resolves_through_the_query_tables(self):
+        from ops_copilot.sql.units import result_units
+
+        sql = "SELECT model_code, sum(unit_price) AS revenue FROM sales_transactions GROUP BY model_code"
+        assert result_units(sql) == {"revenue": "INR"}
+
+    def test_count_and_ratios_get_no_unit(self):
+        from ops_copilot.sql.units import result_units
+
+        sql = ("SELECT count(unit_price) AS n, sum(unit_price) / count(*) AS avg_p, "
+               "max(unit_price) * max(unit_price) AS sq FROM sales_transactions")
+        # avg_p is really INR, but anything involving COUNT is skipped:
+        # a missing unit is safe, a wrong one is not.
+        assert result_units(sql) == {}
+
+    def test_columns_without_a_unit_and_bad_sql_are_left_alone(self):
+        from ops_copilot.sql.units import result_units
+
+        assert result_units("SELECT region FROM sales_transactions") == {}
+        assert result_units("not sql at all (") == {}
+
+    def test_evidence_states_the_unit(self):
+        from ops_copilot.agent.nodes.observe import _sql_evidence
+
+        res = {"status": "ok", "rows": [{"average_price": 136961.4}]}
+        (ev,) = _sql_evidence(res, {"id": "e1", "tool": "structured_query_tool", "iteration": 1,
+                                    "tool_args": {"sql": self.FAILING_SQL}})
+        assert "average_price in INR" in ev.summary
+        assert (ev.metric, ev.actual, ev.unit) == ("average_price", 136961.4, "INR")

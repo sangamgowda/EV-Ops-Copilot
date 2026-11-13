@@ -20,7 +20,9 @@ vehicle that does not exist), state them first.
 
 Numbers come from evidence verbatim. Deltas and percentages have
 already been computed in the evidence — use those figures, do not
-recompute them.
+recompute them. State an amount in the unit its evidence gives (a
+"units:" line, or the unit on a comparison). If the evidence gives
+no unit, give none: never assume a currency or a measure.
 
 Be direct. An engineer wants the finding first, then the support.
 No preamble, no restating the question.
