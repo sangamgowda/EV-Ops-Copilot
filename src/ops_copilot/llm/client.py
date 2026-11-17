@@ -97,6 +97,18 @@ def _is_failover(exc: BaseException) -> bool:
 
 
 _fallback_allowed: contextvars.ContextVar[bool] = contextvars.ContextVar("llm_fallback", default=True)
+_queue_wait: contextvars.ContextVar[float | None] = contextvars.ContextVar("llm_queue_wait", default=None)
+
+
+@contextmanager
+def patient(wait_seconds: float) -> Iterator[None]:
+    """Wait up to this long for room in a model's token budget (evaluation
+    only; the app keeps llm.queue.max_wait_seconds)."""
+    token = _queue_wait.set(wait_seconds)
+    try:
+        yield
+    finally:
+        _queue_wait.reset(token)
 
 
 @contextmanager
@@ -199,6 +211,8 @@ async def _with_failover(node: str, messages: list[dict[str, str]],
         params = _params(node, target.model)
         # With a fallback still to try, do not queue long for this one.
         wait = cfg["max_wait_seconds"] if i == len(targets) - 1 else cfg["failover_wait_seconds"]
+        if i == len(targets) - 1 and _queue_wait.get() is not None:
+            wait = _queue_wait.get()
         try:
             async with queue(target.model).slot(_estimate_tokens(messages, params["max_tokens"]),
                                                 wait) as entry:

@@ -54,6 +54,7 @@ log = logging.getLogger(__name__)
 
 ROOT = Path(__file__).resolve().parents[3]
 HANDWRITTEN = ("adversarial", "promoted")
+INFRA_STREAK_LIMIT = 3      # cases in a row decided by the stack before a run stops
 
 
 def load_cases(path: str | Path) -> list[dict[str, Any]]:
@@ -122,7 +123,7 @@ class _RateLimitWatch(logging.Handler):
 
 async def run_case(case: dict[str, Any], run_id: str, *, use_judge: bool, judge_threshold: int) -> dict[str, Any]:
     from ops_copilot.agent.turn import run_turn
-    from ops_copilot.llm.client import primary_only
+    from ops_copilot.llm.client import patient, primary_only
 
     watch = _RateLimitWatch()
     root = logging.getLogger()
@@ -137,7 +138,7 @@ async def run_case(case: dict[str, Any], run_id: str, *, use_judge: bool, judge_
     state: dict[str, Any]
     try:
         # No fallback model: the score must belong to the models the report names.
-        with primary_only():
+        with primary_only(), patient(get_config()["evaluation"]["queue_wait_s"]):
             state = dict(await run_turn(case["question"], f"eval-{run_id}", turn_id=uuid.uuid4().hex,
                                         record=False, timeout_s=get_config()["evaluation"]["turn_timeout_s"]))
     except Exception as exc:     # a crash IS a system failure; score it
@@ -208,15 +209,45 @@ async def preflight() -> str | None:
 
     Without it, an unreachable tool server looks like an agent that
     refuses every question — and gets scored as one."""
+    from ops_copilot.llm import client as llm_client
     from ops_copilot.mcp_client.client import get_client
 
+    client = get_client()
     try:
-        tagged = await get_client().call_tool("resolve_entity_tool", {"vehicle_id": "V-001"}, "eval-preflight")
+        tagged = await client.call_tool("resolve_entity_tool", {"vehicle_id": "V-001"}, "eval-preflight")
         status = tagged["result"].get("status")
     except Exception as exc:
         return f"tool server unreachable: {type(exc).__name__}: {str(exc)[:200]}"
     if status not in ("exact", "fuzzy", "ambiguous", "not_found"):
         return f"tool server answered but the database lookup failed: {tagged['result']}"
+
+    # Reaching the server is not the same as every tool working. A search
+    # that fails on a configuration mismatch (embedding model, missing
+    # credentials) scores every document and trap case as a failure.
+    probes = [
+        ("structured_query_tool", {"sql": "SELECT count(*) AS n FROM vehicles"}),
+        ("rag_retrieval_tool", {"query": "range dropped with a heavy payload", "domain": "diagnostic"}),
+    ]
+    for name, args in probes:
+        # The first search loads the embedding and reranking models, which
+        # outlasts the client's time limit; the load carries on, so retry.
+        for attempt in range(3):
+            try:
+                result = (await client.call_tool(name, args, "eval-preflight"))["result"]
+                break
+            except Exception as exc:
+                if type(exc).__name__ != "ToolTimeoutError" or attempt == 2:
+                    return f"{name} raised {type(exc).__name__}: {str(exc)[:200]}"
+        if result.get("status") in ("failed", "error", "rejected"):
+            return f"{name} failed: " + str({k: result[k] for k in ("stage", "reasons", "error") if k in result})
+
+    # Both models answer: the agent's, and the judge's (which gets its own check
+    # because a judge that is down would leave every case unjudged).
+    for node in ("router", "judge"):
+        try:
+            await asyncio.wait_for(llm_client.complete(node, "Reply with the single word OK.", "ping"), 300)
+        except Exception as exc:
+            return f"the {node} model did not answer: {type(exc).__name__}: {str(exc)[:200]}"
     return None
 
 
@@ -255,6 +286,7 @@ async def run_eval(cases: list[dict[str, Any]], *, run_id: str | None = None, us
         }, indent=2) + "\n", encoding="utf-8")
 
     stopped_for_budget = False
+    infra_streak = 0
     for i, case in enumerate(todo):
         if i:
             await asyncio.sleep(pause)
@@ -265,6 +297,13 @@ async def run_eval(cases: list[dict[str, Any]], *, run_id: str | None = None, us
             on_result(result)
         if result["status"] == "budget":
             stopped_for_budget = True
+            break
+        # Several in a row that the stack, not the agent, decided: a broken
+        # tool or model, not bad luck. Stop instead of burning hours on it.
+        infra_streak = infra_streak + 1 if result["status"] == "infra" else 0
+        if infra_streak >= INFRA_STREAK_LIMIT:
+            print(f"\nStopping: {infra_streak} cases in a row failed on infrastructure, not the agent. "
+                  "Fix the stack, then --resume this run.", flush=True)
             break
 
     latest = {r["id"]: r for r in _read(results_path)}      # last write per case wins
