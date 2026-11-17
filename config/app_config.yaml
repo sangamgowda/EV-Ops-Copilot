@@ -442,6 +442,10 @@ evaluation:
   # not the agent. Evaluation lets a throttled question wait and finish,
   # and the report says so. The app itself keeps api.turn_timeout_seconds.
   turn_timeout_s: 120
+  # How long one model call may wait for room in the per-minute token
+  # budget (the app uses llm.queue.max_wait_seconds, 40). One case sends
+  # several large calls to the same model, so 40 s times out on a free key.
+  queue_wait_s: 100
   llm_max_retries: 6
   # A case passes on the judge when every dimension scores at least this.
   judge_pass_score: 3
