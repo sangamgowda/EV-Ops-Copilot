@@ -57,6 +57,8 @@ async def main() -> int:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--resume", metavar="RUN_ID", help="finish an earlier run")
     p.add_argument("--only", help="comma-separated case ids")
+    p.add_argument("--allow-code-change", action="store_true",
+                   help="resume a run even though the code changed since it started (mixes versions)")
     p.add_argument("--smoke", action="store_true", help="a quick, varied subset")
     p.add_argument("--promoted", action="store_true",
                    help="only cases promoted from real failures: the gate for prompt/config changes")
@@ -132,7 +134,8 @@ async def main() -> int:
     print(f"Running {len(cases)} cases through the real system"
           + ("" if args.no_judge else ", judged") + " …", flush=True)
     run_id, rep = await run_eval(cases, run_id=args.resume, use_judge=not args.no_judge,
-                                 pause_s=args.pause, case_set=case_set, on_result=show)
+                                 pause_s=args.pause, case_set=case_set, on_result=show,
+                                 allow_commit_change=args.allow_code_change)
     print()
     print((runs_dir() / run_id / "report.md").read_text(encoding="utf-8"))
     if not rep["complete"]:
