@@ -68,9 +68,13 @@ def answer_hash(text: str) -> str:
 
 
 def _git_commit() -> str | None:
+    """The commit under test; "+uncommitted" when code or config differ from it."""
     try:
-        return subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT, capture_output=True,
-                              text=True, timeout=5).stdout.strip() or None
+        head = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT, capture_output=True,
+                              text=True, timeout=5).stdout.strip()
+        changed = subprocess.run(["git", "status", "--porcelain", "--", "src", "config", "scripts"],
+                                 cwd=ROOT, capture_output=True, text=True, timeout=5).stdout.strip()
+        return (head + ("+uncommitted" if changed else "")) or None
     except Exception:
         return None
 
@@ -95,6 +99,7 @@ class _RateLimitWatch(logging.Handler):
         super().__init__(logging.INFO)
         self.per_minute = False      # a request was refused and retried
         self.rate_failed = False     # a step gave up on a refusal and fell back
+        self.connection_failed = False   # the provider could not be reached at all
         self.per_day = False
         self.seen: list[str] = []
 
@@ -102,7 +107,10 @@ class _RateLimitWatch(logging.Handler):
         text = record.getMessage()
         if record.exc_info and record.exc_info[1] is not None:
             text += " " + str(record.exc_info[1])
-        if "tokens per day" in text or "(TPD)" in text:
+        if "APIConnectionError" in text:
+            self.connection_failed = True
+            self.seen.append(text[:200])
+        elif "tokens per day" in text or "(TPD)" in text:
             self.per_day = True
             self.seen.append(text[:300])
         elif any(m in text for m in ("RateLimitError", "Rate limit reached", "Error code: 429",
@@ -173,6 +181,9 @@ async def run_case(case: dict[str, Any], run_id: str, *, use_judge: bool, judge_
         result["rate_limit_evidence"] = watch.seen[-2:]
     elif tool_statuses and all(st == "failed" for st in tool_statuses):
         result["status"] = "infra"       # every tool call failed: the stack, not the agent
+    elif watch.connection_failed:
+        result["status"] = "infra"       # no connection to the provider: not the agent
+        result["rate_limit_evidence"] = watch.seen[:3]
     elif watch.rate_failed or (watch.per_minute and o.stop_reason == "timeout"):
         # A step gave up on a refusal, or throttling ate the whole time
         # allowance: the provider decided this case, not the agent.
@@ -186,6 +197,8 @@ async def run_case(case: dict[str, Any], run_id: str, *, use_judge: bool, judge_
         except Exception as exc:
             log.warning("judge failed on %s: %s", case["id"], exc)
             result["judge"] = None
+            result["status"] = "infra"   # an unjudged case must not count as scored
+            result["rate_limit_evidence"] = [f"judge failed: {type(exc).__name__}"]
     result["pass"] = code_pass and result.get("judge_pass", True) is not False
     return result
 
@@ -253,7 +266,8 @@ async def preflight() -> str | None:
 
 async def run_eval(cases: list[dict[str, Any]], *, run_id: str | None = None, use_judge: bool = True,
                    pause_s: float | None = None, case_set: str = "golden",
-                   on_result: Callable[[dict[str, Any]], None] | None = None) -> tuple[str, dict[str, Any]]:
+                   on_result: Callable[[dict[str, Any]], None] | None = None,
+                   allow_commit_change: bool = False) -> tuple[str, dict[str, Any]]:
     """Run (or resume) `cases`. Returns the run id and its report."""
     cfg = get_config()["evaluation"]
     pause = cfg["pause_between_cases_s"] if pause_s is None else pause_s
@@ -264,7 +278,14 @@ async def run_eval(cases: list[dict[str, Any]], *, run_id: str | None = None, us
 
     meta_file = folder / "meta.json"
     if meta_file.exists():
-        started_on = json.loads(meta_file.read_text(encoding="utf-8")).get("models")
+        started = json.loads(meta_file.read_text(encoding="utf-8"))
+        started_on = started.get("models")
+        if not allow_commit_change and started.get("git_commit") and started["git_commit"] != _git_commit():
+            # Finishing a run on other code would mix two versions of the
+            # system in one score. (A run once did, unnoticed.)
+            raise RuntimeError(f"run {run_id} was started on commit {started['git_commit']}; the code is now "
+                               f"{_git_commit()}. Resume on the original commit, or pass "
+                               "--allow-code-change and accept a mixed result.")
         if started_on and started_on != _models():
             # Finishing a run on other models would mix two systems in
             # one report. Start a new run instead.

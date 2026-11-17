@@ -74,3 +74,29 @@ async def test_run_stops_after_consecutive_infra_failures(monkeypatch, tmp_path)
     cases = [{"id": f"c{i}", "source": "synthetic_data", "tags": []} for i in range(10)]
     await runner.run_eval(cases, run_id="r1", use_judge=False, pause_s=0)
     assert len(calls) == runner.INFRA_STREAK_LIMIT
+
+
+def test_a_lost_connection_is_infrastructure_not_a_failure():
+    import logging
+
+    watch = runner._RateLimitWatch()
+    watch.emit(logging.LogRecord("x", logging.WARNING, __file__, 1,
+                                 "judge: qwen/qwen3.8-27b failed (APIConnectionError); no fallback left",
+                                 None, None))
+    assert watch.connection_failed and not watch.rate_failed
+
+
+async def test_resume_refuses_when_the_code_changed(monkeypatch, tmp_path):
+    import json
+
+    monkeypatch.setattr(runner, "runs_dir", lambda: tmp_path)
+    monkeypatch.setattr(runner, "_git_commit", lambda: "bbb2222")
+    (tmp_path / "r1").mkdir()
+    (tmp_path / "r1" / "meta.json").write_text(json.dumps(
+        {"git_commit": "aaa1111", "models": runner._models(), "case_ids": []}), encoding="utf-8")
+    import pytest
+
+    with pytest.raises(RuntimeError, match="aaa1111"):
+        await runner.run_eval([], run_id="r1", use_judge=False, pause_s=0)
+    # the explicit override still works
+    await runner.run_eval([], run_id="r1", use_judge=False, pause_s=0, allow_commit_change=True)
