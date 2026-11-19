@@ -8,6 +8,9 @@ out which day a week starts or which months make a quarter.
 
 from __future__ import annotations
 
+import contextvars
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -16,8 +19,23 @@ from ops_copilot.settings import get_config
 _WEEKDAYS = ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
 
 
+_pinned: contextvars.ContextVar[date | None] = contextvars.ContextVar("calendar_today", default=None)
+
+
+@contextmanager
+def pinned(day: date) -> Iterator[None]:
+    """Treat `day` as today inside this block (evaluation only: the seeded
+    data ends on a fixed day, and "this week" must stay a week that has
+    data however long ago the data was made). The app never pins."""
+    token = _pinned.set(day)
+    try:
+        yield
+    finally:
+        _pinned.reset(token)
+
+
 def today() -> date:
-    return datetime.now(ZoneInfo(get_config()["calendar"]["timezone"])).date()
+    return _pinned.get() or datetime.now(ZoneInfo(get_config()["calendar"]["timezone"])).date()
 
 
 def _month_start(d: date, months_back: int = 0) -> date:

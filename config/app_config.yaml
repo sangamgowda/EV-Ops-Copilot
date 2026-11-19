@@ -446,6 +446,11 @@ evaluation:
   # budget (the app uses llm.queue.max_wait_seconds, 40). One case sends
   # several large calls to the same model, so 40 s times out on a free key.
   queue_wait_s: 100
+  # The date the evaluation treats as "today". The golden answers were
+  # computed on this day from data that ends the day before; on the real
+  # clock "this week" soon falls after the data and every time-relative
+  # question searches an empty window. The app itself uses the real clock.
+  as_of: 2026-10-02
   llm_max_retries: 6
   # A case passes on the judge when every dimension scores at least this.
   judge_pass_score: 3
