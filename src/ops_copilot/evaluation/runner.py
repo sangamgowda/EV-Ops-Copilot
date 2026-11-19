@@ -36,7 +36,7 @@ import uuid
 from collections import defaultdict
 from collections.abc import Callable
 from dataclasses import asdict
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
 
@@ -131,6 +131,7 @@ class _RateLimitWatch(logging.Handler):
 
 async def run_case(case: dict[str, Any], run_id: str, *, use_judge: bool, judge_threshold: int) -> dict[str, Any]:
     from ops_copilot.agent.turn import run_turn
+    from ops_copilot.agent.calendar import pinned
     from ops_copilot.llm.client import patient, primary_only
 
     watch = _RateLimitWatch()
@@ -146,7 +147,7 @@ async def run_case(case: dict[str, Any], run_id: str, *, use_judge: bool, judge_
     state: dict[str, Any]
     try:
         # No fallback model: the score must belong to the models the report names.
-        with primary_only(), patient(get_config()["evaluation"]["queue_wait_s"]):
+        with primary_only(), patient(get_config()["evaluation"]["queue_wait_s"]),                 pinned(date.fromisoformat(str(get_config()["evaluation"]["as_of"]))):
             state = dict(await run_turn(case["question"], f"eval-{run_id}", turn_id=uuid.uuid4().hex,
                                         record=False, timeout_s=get_config()["evaluation"]["turn_timeout_s"]))
     except Exception as exc:     # a crash IS a system failure; score it
@@ -298,6 +299,7 @@ async def run_eval(cases: list[dict[str, Any]], *, run_id: str | None = None, us
         meta_path.write_text(json.dumps({
             "run_id": run_id, "started_at": datetime.now(UTC).isoformat(timespec="seconds"),
             "git_commit": _git_commit(), "case_ids": [c["id"] for c in cases],
+            "as_of": str(cfg["as_of"]),
             "judge_version": judging.judge_version() if use_judge else None,
             # A pass-rate change between runs on different models is the
             # models, not the code; the report says so.
@@ -452,6 +454,7 @@ def build_report(run_id: str, cases: list[dict[str, Any]], results: list[dict[st
         "mean_latency_s": round(sum(r["latency_s"] for r in ok) / len(ok), 1) if ok else None,
         "turn_timeout_s": get_config()["evaluation"]["turn_timeout_s"],
         "app_turn_timeout_s": get_config()["api"]["turn_timeout_seconds"],
+        "as_of": str(get_config()["evaluation"]["as_of"]),
         "throttled_cases": sum(bool(r.get("throttled")) for r in ok),
         "compared_to": prev_id,
         "judge_comparable": bool(prev_id) and prev_meta.get("judge_version") == this_meta.get("judge_version"),
@@ -504,7 +507,8 @@ def render_markdown(rep: dict[str, Any]) -> str:
         f"| Ungrounded-truth rate on traps (lower is better) | **{_pct(tr['ungrounded_truth_rate'])}** |",
         f"| Trap abstention rate | {_pct(tr['abstention_rate'])} |",
         "",
-        f"Time limit per question: {rep['turn_timeout_s']} s in this evaluation "
+        f"Evaluation date: {rep['as_of']} (the day the golden set was built; the seeded data ends the day before), "
+        f"so \"this week\" has data. Time limit per question: {rep['turn_timeout_s']} s in this evaluation "
         f"(the app uses {rep['app_turn_timeout_s']} s). {rep['throttled_cases']} of "
         f"{rep['counts']['scored']} scored cases were slowed by the provider's rate limit"
         + (f" and would likely have hit the app's {rep['app_turn_timeout_s']} s limit."

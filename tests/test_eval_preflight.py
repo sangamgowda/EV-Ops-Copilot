@@ -100,3 +100,28 @@ async def test_resume_refuses_when_the_code_changed(monkeypatch, tmp_path):
         await runner.run_eval([], run_id="r1", use_judge=False, pause_s=0)
     # the explicit override still works
     await runner.run_eval([], run_id="r1", use_judge=False, pause_s=0, allow_commit_change=True)
+
+
+def test_the_evaluation_pins_today_and_the_app_does_not():
+    from datetime import date
+
+    from ops_copilot.agent import calendar
+
+    real = calendar.today()
+    with calendar.pinned(date(2026, 10, 2)):
+        assert calendar.today() == date(2026, 10, 2)
+        # "this week" is the week of data the golden answers were computed on
+        assert calendar.ranges()["this week"] == (date(2026, 9, 26), date(2026, 10, 2))
+    assert calendar.today() == real       # unpinned again outside the block
+
+
+def test_the_configured_evaluation_date_is_the_golden_build_day():
+    import json
+    from datetime import date
+
+    from ops_copilot.settings import get_config
+
+    as_of = date.fromisoformat(str(get_config()["evaluation"]["as_of"]))
+    meta = json.loads((runner.ROOT / "src/ops_copilot/evaluation/golden/golden_meta.json").read_text(encoding="utf-8"))
+    assert as_of.isoformat() == meta["built_at"][:10]
+    assert date.fromisoformat(meta["data_ends"][:10]) <= as_of
