@@ -80,48 +80,41 @@ test its premise.
 
 ## SQL the database rejects
 
-The database refuses queries that break these rules, and every refusal
-costs a lap. Check each query against them before you write it.
+Each refusal costs a lap. Check every query against these:
 
-- Do not mix aggregates with bare columns. When a query uses avg, sum,
-  max or count, every other selected column must also be inside an
-  aggregate (or be in GROUP BY). A baseline is
-  `round(avg(b.nominal_value)::numeric, 1)`, never a bare
-  `b.nominal_value`. A single latest reading is not `max(...)` with
-  `recorded_at` beside it; select the value and order by time:
-  `SELECT t.metric_value, t.recorded_at ... ORDER BY t.recorded_at DESC LIMIT 1`.
-- Cast the WHOLE value before round(), because round(value, digits)
-  needs numeric. For a weighted mean write
-  `round((sum(t.sum_value) / nullif(sum(t.readings), 0))::numeric, 1)`;
-  casting only the divisor leaves a double precision and is refused.
-- Use the real column names. metric_value exists on vehicle_telemetry
-  only. telemetry_hourly has avg_value, sum_value and readings; it has
-  no metric_value.
-- JSONB has no `?` operator here. Test a key with
-  `col->>'key' IS NOT NULL`.
-- Bound the time column from below as its own AND term
-  (`AND t.hour >= '...'`), and write each join condition as its own AND
-  term, never inside an OR.
-- When a query was refused, read the message in the evidence, fix that
-  one cause and send the corrected query once. Do not send the same
-  shape again.
+- Aggregates and bare columns do not mix. With avg, sum, max or count,
+  every other selected column must be aggregated or in GROUP BY. The
+  baseline is `round(avg(b.nominal_value)::numeric, 1)`, never a bare
+  `b.nominal_value`. The latest reading is
+  `SELECT t.metric_value, t.recorded_at ... ORDER BY t.recorded_at DESC LIMIT 1`,
+  not max() beside recorded_at.
+- round() needs numeric: cast the whole value, e.g.
+  `round((sum(t.sum_value) / nullif(sum(t.readings), 0))::numeric, 1)`.
+  Casting only the divisor is refused.
+- metric_value is on vehicle_telemetry only; telemetry_hourly has
+  avg_value, sum_value and readings.
+- No JSONB `?` operator: test a key with `col->>'key' IS NOT NULL`.
+- Time bounds and join conditions are their own AND terms, never under
+  an OR.
+- If a query was refused, fix that one cause and resend it once; do not
+  resend the same shape.
 
 ## Comparing against a baseline
 
-When a value should be judged against its rated value, return the
-comparison in ONE query with these column aliases:
+To judge a value against its rated value, return the comparison in ONE
+query with these column aliases:
 
   metric, actual, baseline, unit, tolerance_pct
 
 e.g. average current_draw since a date for one vehicle, joined to
 vehicle_baseline_specs on model_code, drive_mode and metric_name.
-The percentage difference and the above/below-normal verdict are then
-computed for you in code. Do not compute them in SQL.
+The percentage difference and the verdict are computed for you in code;
+do not compute them in SQL.
 
 ## Examples
 
 These follow every rule above. Copy their shape; change only what the
-question needs. The vehicle, metrics and periods here are illustrations.
+question needs.
 
 "Why has V-118 been running hot over the last 10 days?" — lap 1
 screens broadly: the main metrics plus the ones the symptom names
@@ -144,12 +137,6 @@ the readings split by mode, or one slow mode averages away:
 
 Charging questions use metric_name 'charge_power', recorded with
 drive_mode 'Charging' and baselined the same way.
-
-A single latest value (to rule a cause in or out):
-
-{"reasoning": "cell health rules degradation in or out",
- "tool_calls": [
-  {"tool": "structured_query_tool", "args": {"sql": "SELECT max(t.metric_value) AS cell_health_pct FROM vehicle_telemetry t WHERE t.vehicle_id = 'V-118' AND t.metric_name = 'cell_health' AND t.recorded_at >= now() - interval '2 days' LIMIT 1"}}]}
 
 "Which campaign did the reports credit for growth in the east?" —
 reasons behind sales are in the reports, not in sales_transactions:

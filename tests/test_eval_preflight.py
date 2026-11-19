@@ -125,3 +125,13 @@ def test_the_configured_evaluation_date_is_the_golden_build_day():
     meta = json.loads((runner.ROOT / "src/ops_copilot/evaluation/golden/golden_meta.json").read_text(encoding="utf-8"))
     assert as_of.isoformat() == meta["built_at"][:10]
     assert date.fromisoformat(meta["data_ends"][:10]) <= as_of
+
+
+def test_a_vehicle_only_question_does_not_carry_the_sales_table():
+    from ops_copilot.sql.schema_loader import prompt_block
+
+    both, diagnostic = prompt_block(("business", "diagnostic")), prompt_block(("diagnostic",))
+    assert "sales_transactions:" in both and "sales_transactions" in prompt_block(())
+    assert "sales_transactions" not in diagnostic          # the table and its join key
+    assert "vehicle_telemetry:" in diagnostic and "vehicles:" in diagnostic
+    assert len(diagnostic) < len(both)
