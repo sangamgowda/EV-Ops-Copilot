@@ -1,316 +1,136 @@
 {
- "run_id": "20261001-132338",
+ "run_id": "20261118-112737",
+ "commit": "a21bfb8",
  "models": {
   "cheap": "openai/gpt-oss-20b",
   "strong": "openai/gpt-oss-120b",
   "judge": "qwen/qwen3.8-27b"
  },
  "judge_version": "f66352838f0f",
- "commits": {
-  "first_33_cases": "61568e7",
-  "remaining_21_cases": "31c7b3d + evaluation changes in this PR",
-  "note": "mixed code versions; provisional"
- },
+ "note": "single commit; resumed twice after the daily token limit; per-case results without answer text",
  "cases": [
   {
    "id": "syn_overload_V-042",
    "source": "synthetic_data",
    "passed": false,
-   "failed_checks": [],
-   "judge": [
-    2,
-    2,
-    4
+   "failed_checks": [
+    "stop_reason",
+    "facts"
    ],
-   "latency_s": 33.5,
-   "stop_reason": "complete",
-   "iterations": 1,
-   "tool_calls": 2,
-   "tool_statuses": [
-    "ok",
-    "ok",
-    "ok"
-   ]
+   "judge": [
+    1,
+    4,
+    2
+   ],
+   "latency_s": 120.0,
+   "stop_reason": "timeout",
+   "iterations": 2,
+   "tool_calls": 5,
+   "rejected_queries": 0,
+   "empty_results": 1
   },
   {
    "id": "syn_overload_V-007",
    "source": "synthetic_data",
    "passed": false,
    "failed_checks": [
-    "key_args",
-    "facts"
+    "stop_reason",
+    "facts",
+    "must_contain"
    ],
-   "judge": [
-    2,
-    4,
-    4
-   ],
-   "latency_s": 47.8,
-   "stop_reason": "complete",
-   "iterations": 3,
-   "tool_calls": 5,
-   "tool_statuses": [
-    "ok",
-    "ok",
-    "ok",
-    "ok",
-    "below_threshold"
-   ]
-  },
-  {
-   "id": "syn_speed_cap_V-055",
-   "source": "synthetic_data",
-   "passed": false,
-   "failed_checks": [],
    "judge": [
     1,
     1,
     1
    ],
-   "latency_s": 51.3,
-   "stop_reason": "complete",
+   "latency_s": 120.0,
+   "stop_reason": "timeout",
    "iterations": 2,
-   "tool_calls": 4,
-   "tool_statuses": [
-    "failed",
-    "ok",
-    "ok",
-    "ok",
-    "ok",
-    "ok"
-   ]
+   "tool_calls": 6,
+   "rejected_queries": 1,
+   "empty_results": 1
+  },
+  {
+   "id": "syn_speed_cap_V-055",
+   "source": "synthetic_data",
+   "passed": false,
+   "failed_checks": [
+    "facts"
+   ],
+   "judge": [
+    1,
+    1,
+    1
+   ],
+   "latency_s": 19.6,
+   "stop_reason": "complete",
+   "iterations": 1,
+   "tool_calls": 3,
+   "rejected_queries": 0,
+   "empty_results": 1
   },
   {
    "id": "syn_speed_cap_V-088",
    "source": "synthetic_data",
-   "passed": true,
-   "failed_checks": [],
-   "judge": [
-    3,
-    3,
-    4
+   "passed": false,
+   "failed_checks": [
+    "stop_reason",
+    "facts"
    ],
-   "latency_s": 25.8,
-   "stop_reason": "complete",
-   "iterations": 1,
-   "tool_calls": 2,
-   "tool_statuses": [
-    "ok",
-    "ok"
-   ]
+   "judge": [
+    2,
+    4,
+    3
+   ],
+   "latency_s": 120.0,
+   "stop_reason": "timeout",
+   "iterations": 2,
+   "tool_calls": 4,
+   "rejected_queries": 1,
+   "empty_results": 1
   },
   {
    "id": "syn_charger_V-091",
    "source": "synthetic_data",
    "passed": false,
-   "failed_checks": [],
-   "judge": [
-    3,
-    2,
-    4
+   "failed_checks": [
+    "stop_reason",
+    "facts"
    ],
-   "latency_s": 48.3,
-   "stop_reason": "complete",
+   "judge": [
+    1,
+    4,
+    2
+   ],
+   "latency_s": 120.0,
+   "stop_reason": "timeout",
    "iterations": 2,
-   "tool_calls": 4,
-   "tool_statuses": [
-    "ok",
-    "ok",
-    "ok",
-    "below_threshold"
-   ]
+   "tool_calls": 5,
+   "rejected_queries": 2,
+   "empty_results": 0
   },
   {
    "id": "syn_cell_wear_V-036",
    "source": "synthetic_data",
    "passed": false,
    "failed_checks": [
-    "key_args",
     "stop_reason",
     "facts"
    ],
    "judge": [
-    1,
-    1,
-    1
+    2,
+    4,
+    3
    ],
-   "latency_s": 64.9,
-   "stop_reason": "cap_reached",
-   "iterations": 3,
-   "tool_calls": 4,
-   "tool_statuses": [
-    "ok",
-    "below_threshold",
-    "ok",
-    "ok"
-   ]
+   "latency_s": 120.0,
+   "stop_reason": "timeout",
+   "iterations": 2,
+   "tool_calls": 8,
+   "rejected_queries": 3,
+   "empty_results": 1
   },
   {
    "id": "syn_firmware_V-055",
-   "source": "synthetic_data",
-   "passed": true,
-   "failed_checks": [],
-   "judge": [
-    4,
-    4,
-    4
-   ],
-   "latency_s": 6.5,
-   "stop_reason": "complete",
-   "iterations": 1,
-   "tool_calls": 1,
-   "tool_statuses": [
-    "ok"
-   ]
-  },
-  {
-   "id": "syn_firmware_V-009",
-   "source": "synthetic_data",
-   "passed": true,
-   "failed_checks": [],
-   "judge": [
-    4,
-    4,
-    4
-   ],
-   "latency_s": 4.9,
-   "stop_reason": "complete",
-   "iterations": 1,
-   "tool_calls": 1,
-   "tool_statuses": [
-    "ok"
-   ]
-  },
-  {
-   "id": "syn_cell_health_V-042",
-   "source": "synthetic_data",
-   "passed": true,
-   "failed_checks": [],
-   "judge": [
-    4,
-    3,
-    4
-   ],
-   "latency_s": 7.3,
-   "stop_reason": "complete",
-   "iterations": 1,
-   "tool_calls": 1,
-   "tool_statuses": [
-    "ok"
-   ]
-  },
-  {
-   "id": "syn_odometer_V-101",
-   "source": "synthetic_data",
-   "passed": true,
-   "failed_checks": [],
-   "judge": [
-    4,
-    4,
-    4
-   ],
-   "latency_s": 10.3,
-   "stop_reason": "complete",
-   "iterations": 1,
-   "tool_calls": 1,
-   "tool_statuses": [
-    "ok"
-   ]
-  },
-  {
-   "id": "syn_city_V-064",
-   "source": "synthetic_data",
-   "passed": false,
-   "failed_checks": [
-    "domains"
-   ],
-   "judge": [
-    4,
-    4,
-    4
-   ],
-   "latency_s": 5.3,
-   "stop_reason": "complete",
-   "iterations": 1,
-   "tool_calls": 1,
-   "tool_statuses": [
-    "ok"
-   ]
-  },
-  {
-   "id": "syn_code_ERR_205",
-   "source": "synthetic_data",
-   "passed": true,
-   "failed_checks": [],
-   "judge": [
-    4,
-    4,
-    4
-   ],
-   "latency_s": 5.8,
-   "stop_reason": "complete",
-   "iterations": 1,
-   "tool_calls": 1,
-   "tool_statuses": [
-    "ok"
-   ]
-  },
-  {
-   "id": "syn_code_ERR_303",
-   "source": "synthetic_data",
-   "passed": true,
-   "failed_checks": [],
-   "judge": [
-    4,
-    4,
-    4
-   ],
-   "latency_s": 4.5,
-   "stop_reason": "complete",
-   "iterations": 1,
-   "tool_calls": 1,
-   "tool_statuses": [
-    "ok"
-   ]
-  },
-  {
-   "id": "syn_code_ERR_403",
-   "source": "synthetic_data",
-   "passed": true,
-   "failed_checks": [],
-   "judge": [
-    4,
-    4,
-    4
-   ],
-   "latency_s": 4.7,
-   "stop_reason": "complete",
-   "iterations": 1,
-   "tool_calls": 1,
-   "tool_statuses": [
-    "ok"
-   ]
-  },
-  {
-   "id": "syn_sales_top_model_south_q3",
-   "source": "synthetic_data",
-   "passed": true,
-   "failed_checks": [],
-   "judge": [
-    4,
-    4,
-    4
-   ],
-   "latency_s": 4.9,
-   "stop_reason": "complete",
-   "iterations": 1,
-   "tool_calls": 1,
-   "tool_statuses": [
-    "ok"
-   ]
-  },
-  {
-   "id": "syn_sales_top_region_q3",
    "source": "synthetic_data",
    "passed": true,
    "failed_checks": [],
@@ -323,30 +143,65 @@
    "stop_reason": "complete",
    "iterations": 1,
    "tool_calls": 1,
-   "tool_statuses": [
-    "ok"
-   ]
+   "rejected_queries": 0,
+   "empty_results": 0
   },
   {
-   "id": "syn_sales_flagship_avg_price_2026",
+   "id": "syn_firmware_V-009",
    "source": "synthetic_data",
-   "passed": false,
+   "passed": true,
    "failed_checks": [],
    "judge": [
-    1,
-    1,
-    1
+    4,
+    4,
+    4
    ],
-   "latency_s": 8.6,
+   "latency_s": 6.6,
    "stop_reason": "complete",
    "iterations": 1,
    "tool_calls": 1,
-   "tool_statuses": [
-    "ok"
-   ]
+   "rejected_queries": 0,
+   "empty_results": 0
   },
   {
-   "id": "syn_sales_fleet_aug",
+   "id": "syn_cell_health_V-042",
+   "source": "synthetic_data",
+   "passed": false,
+   "failed_checks": [
+    "stop_reason",
+    "facts"
+   ],
+   "judge": [
+    1,
+    4,
+    2
+   ],
+   "latency_s": 120.0,
+   "stop_reason": "timeout",
+   "iterations": 2,
+   "tool_calls": 2,
+   "rejected_queries": 0,
+   "empty_results": 2
+  },
+  {
+   "id": "syn_odometer_V-101",
+   "source": "synthetic_data",
+   "passed": true,
+   "failed_checks": [],
+   "judge": [
+    4,
+    4,
+    4
+   ],
+   "latency_s": 5.5,
+   "stop_reason": "complete",
+   "iterations": 1,
+   "tool_calls": 1,
+   "rejected_queries": 0,
+   "empty_results": 0
+  },
+  {
+   "id": "syn_city_V-064",
    "source": "synthetic_data",
    "passed": true,
    "failed_checks": [],
@@ -359,9 +214,127 @@
    "stop_reason": "complete",
    "iterations": 1,
    "tool_calls": 1,
-   "tool_statuses": [
-    "ok"
-   ]
+   "rejected_queries": 0,
+   "empty_results": 0
+  },
+  {
+   "id": "syn_code_ERR_205",
+   "source": "synthetic_data",
+   "passed": true,
+   "failed_checks": [],
+   "judge": [
+    4,
+    4,
+    4
+   ],
+   "latency_s": 5.3,
+   "stop_reason": "complete",
+   "iterations": 1,
+   "tool_calls": 1,
+   "rejected_queries": 0,
+   "empty_results": 0
+  },
+  {
+   "id": "syn_code_ERR_303",
+   "source": "synthetic_data",
+   "passed": true,
+   "failed_checks": [],
+   "judge": [
+    4,
+    4,
+    4
+   ],
+   "latency_s": 4.8,
+   "stop_reason": "complete",
+   "iterations": 1,
+   "tool_calls": 1,
+   "rejected_queries": 0,
+   "empty_results": 0
+  },
+  {
+   "id": "syn_code_ERR_403",
+   "source": "synthetic_data",
+   "passed": true,
+   "failed_checks": [],
+   "judge": [
+    4,
+    4,
+    4
+   ],
+   "latency_s": 5.9,
+   "stop_reason": "complete",
+   "iterations": 1,
+   "tool_calls": 1,
+   "rejected_queries": 0,
+   "empty_results": 0
+  },
+  {
+   "id": "syn_sales_top_model_south_q3",
+   "source": "synthetic_data",
+   "passed": true,
+   "failed_checks": [],
+   "judge": [
+    4,
+    4,
+    4
+   ],
+   "latency_s": 5.1,
+   "stop_reason": "complete",
+   "iterations": 1,
+   "tool_calls": 1,
+   "rejected_queries": 0,
+   "empty_results": 0
+  },
+  {
+   "id": "syn_sales_top_region_q3",
+   "source": "synthetic_data",
+   "passed": true,
+   "failed_checks": [],
+   "judge": [
+    4,
+    4,
+    4
+   ],
+   "latency_s": 5.3,
+   "stop_reason": "complete",
+   "iterations": 1,
+   "tool_calls": 1,
+   "rejected_queries": 0,
+   "empty_results": 0
+  },
+  {
+   "id": "syn_sales_flagship_avg_price_2026",
+   "source": "synthetic_data",
+   "passed": false,
+   "failed_checks": [],
+   "judge": [
+    1,
+    1,
+    1
+   ],
+   "latency_s": 5.1,
+   "stop_reason": "complete",
+   "iterations": 1,
+   "tool_calls": 1,
+   "rejected_queries": 0,
+   "empty_results": 0
+  },
+  {
+   "id": "syn_sales_fleet_aug",
+   "source": "synthetic_data",
+   "passed": true,
+   "failed_checks": [],
+   "judge": [
+    4,
+    4,
+    4
+   ],
+   "latency_s": 6.7,
+   "stop_reason": "complete",
+   "iterations": 1,
+   "tool_calls": 1,
+   "rejected_queries": 0,
+   "empty_results": 0
   },
   {
    "id": "syn_sales_south_q2_vs_q3",
@@ -373,13 +346,12 @@
     4,
     4
    ],
-   "latency_s": 8.8,
+   "latency_s": 63.1,
    "stop_reason": "complete",
    "iterations": 1,
    "tool_calls": 1,
-   "tool_statuses": [
-    "ok"
-   ]
+   "rejected_queries": 0,
+   "empty_results": 0
   },
   {
    "id": "doc_kb_range_shortfall_faq",
@@ -393,13 +365,12 @@
     2,
     2
    ],
-   "latency_s": 13.9,
+   "latency_s": 13.3,
    "stop_reason": "complete",
    "iterations": 1,
    "tool_calls": 1,
-   "tool_statuses": [
-    "ok"
-   ]
+   "rejected_queries": 0,
+   "empty_results": 0
   },
   {
    "id": "doc_manual_ride_modes_range_and_charging",
@@ -411,59 +382,15 @@
     4,
     4
    ],
-   "latency_s": 19.4,
+   "latency_s": 14.4,
    "stop_reason": "complete",
    "iterations": 1,
    "tool_calls": 1,
-   "tool_statuses": [
-    "ok",
-    "ok"
-   ]
+   "rejected_queries": 0,
+   "empty_results": 0
   },
   {
    "id": "doc_sales_q2_2026_review",
-   "source": "synthetic_doc",
-   "passed": false,
-   "failed_checks": [
-    "tools",
-    "facts"
-   ],
-   "judge": [
-    1,
-    1,
-    1
-   ],
-   "latency_s": 5.3,
-   "stop_reason": "complete",
-   "iterations": 1,
-   "tool_calls": 1,
-   "tool_statuses": [
-    "ok"
-   ]
-  },
-  {
-   "id": "doc_sales_q3_2026_midquarter",
-   "source": "synthetic_doc",
-   "passed": false,
-   "failed_checks": [
-    "tools",
-    "must_contain"
-   ],
-   "judge": [
-    2,
-    4,
-    4
-   ],
-   "latency_s": 7.6,
-   "stop_reason": "complete",
-   "iterations": 1,
-   "tool_calls": 1,
-   "tool_statuses": [
-    "ok"
-   ]
-  },
-  {
-   "id": "doc_SB-114_sustained_overload",
    "source": "synthetic_doc",
    "passed": true,
    "failed_checks": [],
@@ -472,38 +399,65 @@
     4,
     4
    ],
-   "latency_s": 17.2,
+   "latency_s": 62.8,
    "stop_reason": "complete",
    "iterations": 1,
-   "tool_calls": 2,
-   "tool_statuses": [
-    "failed",
-    "ok"
-   ]
+   "tool_calls": 1,
+   "rejected_queries": 0,
+   "empty_results": 0
   },
   {
-   "id": "doc_SB-121_removable_pack_cell_wear",
+   "id": "doc_sales_q3_2026_midquarter",
+   "source": "synthetic_doc",
+   "passed": true,
+   "failed_checks": [],
+   "judge": [
+    4,
+    4,
+    4
+   ],
+   "latency_s": 18.3,
+   "stop_reason": "complete",
+   "iterations": 1,
+   "tool_calls": 1,
+   "rejected_queries": 0,
+   "empty_results": 0
+  },
+  {
+   "id": "doc_SB-114_sustained_overload",
    "source": "synthetic_doc",
    "passed": false,
    "failed_checks": [
     "facts"
    ],
    "judge": [
+    1,
     4,
+    2
+   ],
+   "latency_s": 120.0,
+   "stop_reason": "timeout",
+   "iterations": 2,
+   "tool_calls": 4,
+   "rejected_queries": 2,
+   "empty_results": 0
+  },
+  {
+   "id": "doc_SB-121_removable_pack_cell_wear",
+   "source": "synthetic_doc",
+   "passed": true,
+   "failed_checks": [],
+   "judge": [
+    3,
     4,
     4
    ],
-   "latency_s": 54.4,
+   "latency_s": 62.8,
    "stop_reason": "complete",
-   "iterations": 3,
-   "tool_calls": 3,
-   "tool_statuses": [
-    "ok",
-    "ok",
-    "ok",
-    "ok",
-    "ok"
-   ]
+   "iterations": 1,
+   "tool_calls": 1,
+   "rejected_queries": 0,
+   "empty_results": 0
   },
   {
    "id": "doc_SB-135_firmware_top_mode_speed_cap",
@@ -511,24 +465,16 @@
    "passed": false,
    "failed_checks": [],
    "judge": [
-    4,
     2,
-    4
+    4,
+    2
    ],
-   "latency_s": 58.4,
-   "stop_reason": "complete",
-   "iterations": 3,
-   "tool_calls": 5,
-   "tool_statuses": [
-    "ok",
-    "ok",
-    "ok",
-    "ok",
-    "ok",
-    "ok",
-    "failed",
-    "ok"
-   ]
+   "latency_s": 63.3,
+   "stop_reason": "no_new_evidence",
+   "iterations": 2,
+   "tool_calls": 2,
+   "rejected_queries": 1,
+   "empty_results": 0
   },
   {
    "id": "doc_SB-140_charger_low_power",
@@ -539,82 +485,54 @@
    ],
    "judge": [
     1,
-    1,
+    4,
     1
    ],
-   "latency_s": 45.4,
-   "stop_reason": "cap_reached",
-   "iterations": 3,
-   "tool_calls": 5,
-   "tool_statuses": [
-    "ok",
-    "below_threshold",
-    "empty",
-    "below_threshold",
-    "below_threshold"
-   ]
+   "latency_s": 120.0,
+   "stop_reason": "timeout",
+   "iterations": 2,
+   "tool_calls": 3,
+   "rejected_queries": 0,
+   "empty_results": 1
   },
   {
    "id": "adv_nonexistent_vehicle",
    "source": "adversarial",
-   "passed": true,
-   "failed_checks": [],
-   "judge": [
-    4,
-    4,
-    4
+   "passed": false,
+   "failed_checks": [
+    "must_contain"
    ],
-   "latency_s": 3.7,
-   "stop_reason": "no_new_evidence",
-   "iterations": 1,
-   "tool_calls": 0,
-   "tool_statuses": []
+   "judge": [
+    1,
+    1,
+    1
+   ],
+   "latency_s": 120.0,
+   "stop_reason": "timeout",
+   "iterations": 2,
+   "tool_calls": 3,
+   "rejected_queries": 1,
+   "empty_results": 0
   },
   {
    "id": "adv_typo_vehicle",
-   "source": "adversarial",
-   "passed": true,
-   "failed_checks": [],
-   "judge": [
-    3,
-    4,
-    4
-   ],
-   "latency_s": 37.8,
-   "stop_reason": "complete",
-   "iterations": 2,
-   "tool_calls": 4,
-   "tool_statuses": [
-    "ok",
-    "ok",
-    "ok",
-    "ok",
-    "ok"
-   ]
-  },
-  {
-   "id": "adv_nonexistent_model",
    "source": "adversarial",
    "passed": false,
    "failed_checks": [],
    "judge": [
     2,
     4,
-    4
+    2
    ],
-   "latency_s": 16.5,
-   "stop_reason": "complete",
-   "iterations": 1,
-   "tool_calls": 1,
-   "tool_statuses": [
-    "ok",
-    "ok",
-    "ok",
-    "ok"
-   ]
+   "latency_s": 419.0,
+   "stop_reason": "cap_reached",
+   "iterations": 3,
+   "tool_calls": 7,
+   "rejected_queries": 0,
+   "empty_results": 2
   },
   {
-   "id": "adv_refute_claim",
+   "id": "adv_nonexistent_model",
    "source": "adversarial",
    "passed": true,
    "failed_checks": [],
@@ -623,17 +541,29 @@
     4,
     4
    ],
-   "latency_s": 45.3,
-   "stop_reason": "cap_reached",
-   "iterations": 3,
-   "tool_calls": 4,
-   "tool_statuses": [
-    "ok",
-    "ok",
-    "ok",
-    "ok",
-    "ok"
-   ]
+   "latency_s": 13.8,
+   "stop_reason": "complete",
+   "iterations": 1,
+   "tool_calls": 1,
+   "rejected_queries": 0,
+   "empty_results": 0
+  },
+  {
+   "id": "adv_refute_claim",
+   "source": "adversarial",
+   "passed": false,
+   "failed_checks": [],
+   "judge": [
+    1,
+    1,
+    1
+   ],
+   "latency_s": 120.0,
+   "stop_reason": "timeout",
+   "iterations": 2,
+   "tool_calls": 5,
+   "rejected_queries": 1,
+   "empty_results": 2
   },
   {
    "id": "adv_missing_metric",
@@ -645,13 +575,12 @@
     4,
     4
    ],
-   "latency_s": 13.8,
+   "latency_s": 2.8,
    "stop_reason": "no_new_evidence",
-   "iterations": 2,
-   "tool_calls": 1,
-   "tool_statuses": [
-    "below_threshold"
-   ]
+   "iterations": 1,
+   "tool_calls": 0,
+   "rejected_queries": 0,
+   "empty_results": 0
   },
   {
    "id": "adv_ambiguous",
@@ -660,26 +589,15 @@
    "failed_checks": [],
    "judge": [
     1,
-    1,
-    1
+    4,
+    2
    ],
-   "latency_s": 44.5,
-   "stop_reason": "cap_reached",
-   "iterations": 3,
-   "tool_calls": 4,
-   "tool_statuses": [
-    "below_threshold",
-    "ok",
-    "ok",
-    "ok",
-    "ok",
-    "ok",
-    "ok",
-    "ok",
-    "ok",
-    "below_threshold",
-    "below_threshold"
-   ]
+   "latency_s": 120.0,
+   "stop_reason": "timeout",
+   "iterations": 2,
+   "tool_calls": 3,
+   "rejected_queries": 1,
+   "empty_results": 0
   },
   {
    "id": "adv_cross_domain",
@@ -693,35 +611,29 @@
     4,
     4
    ],
-   "latency_s": 6.3,
+   "latency_s": 8.3,
    "stop_reason": "complete",
    "iterations": 1,
    "tool_calls": 1,
-   "tool_statuses": [
-    "ok"
-   ]
+   "rejected_queries": 0,
+   "empty_results": 0
   },
   {
    "id": "adv_holdout_brakes",
    "source": "adversarial",
    "passed": false,
-   "failed_checks": [
-    "must_contain"
-   ],
+   "failed_checks": [],
    "judge": [
     1,
     4,
-    4
+    2
    ],
    "latency_s": 120.0,
    "stop_reason": "timeout",
    "iterations": 2,
-   "tool_calls": 2,
-   "tool_statuses": [
-    "ok",
-    "ok",
-    "ok"
-   ]
+   "tool_calls": 3,
+   "rejected_queries": 0,
+   "empty_results": 0
   },
   {
    "id": "adv_holdout_partner_discount",
@@ -736,13 +648,12 @@
     2,
     2
    ],
-   "latency_s": 6.7,
+   "latency_s": 6.1,
    "stop_reason": "complete",
    "iterations": 1,
    "tool_calls": 1,
-   "tool_statuses": [
-    "ok"
-   ]
+   "rejected_queries": 0,
+   "empty_results": 0
   },
   {
    "id": "adv_holdout_delivery_story",
@@ -754,13 +665,12 @@
     4,
     4
    ],
-   "latency_s": 63.2,
+   "latency_s": 62.8,
    "stop_reason": "complete",
    "iterations": 1,
    "tool_calls": 1,
-   "tool_statuses": [
-    "ok"
-   ]
+   "rejected_queries": 0,
+   "empty_results": 0
   },
   {
    "id": "adv_launch_timing",
@@ -772,13 +682,12 @@
     4,
     4
    ],
-   "latency_s": 6.3,
+   "latency_s": 5.3,
    "stop_reason": "complete",
    "iterations": 1,
    "tool_calls": 1,
-   "tool_statuses": [
-    "ok"
-   ]
+   "rejected_queries": 0,
+   "empty_results": 0
   },
   {
    "id": "adv_longest_range",
@@ -790,58 +699,49 @@
    ],
    "judge": [
     1,
-    4,
-    2
+    1,
+    1
    ],
-   "latency_s": 20.4,
+   "latency_s": 13.1,
    "stop_reason": "complete",
    "iterations": 1,
    "tool_calls": 1,
-   "tool_statuses": [
-    "ok"
-   ]
+   "rejected_queries": 0,
+   "empty_results": 0
   },
   {
    "id": "adv_mode_not_available",
    "source": "adversarial",
-   "passed": true,
+   "passed": false,
    "failed_checks": [],
    "judge": [
-    3,
+    2,
     4,
     4
    ],
-   "latency_s": 14.0,
+   "latency_s": 13.8,
    "stop_reason": "complete",
    "iterations": 1,
    "tool_calls": 1,
-   "tool_statuses": [
-    "ok",
-    "ok"
-   ]
+   "rejected_queries": 0,
+   "empty_results": 0
   },
   {
    "id": "adv_south_outperformed",
    "source": "adversarial",
-   "passed": false,
-   "failed_checks": [
-    "facts",
-    "must_contain"
-   ],
+   "passed": true,
+   "failed_checks": [],
    "judge": [
-    1,
     4,
-    2
+    4,
+    4
    ],
-   "latency_s": 120.0,
-   "stop_reason": "timeout",
-   "iterations": 2,
-   "tool_calls": 3,
-   "tool_statuses": [
-    "ok",
-    "ok",
-    "ok"
-   ]
+   "latency_s": 13.7,
+   "stop_reason": "complete",
+   "iterations": 1,
+   "tool_calls": 2,
+   "rejected_queries": 0,
+   "empty_results": 0
   },
   {
    "id": "prm_ride_mode_limits",
@@ -851,20 +751,16 @@
     "facts"
    ],
    "judge": [
-    4,
     1,
+    4,
     4
    ],
-   "latency_s": 68.1,
-   "stop_reason": "complete",
-   "iterations": 2,
-   "tool_calls": 4,
-   "tool_statuses": [
-    "failed",
-    "empty",
-    "ok",
-    "failed"
-   ]
+   "latency_s": 301.8,
+   "stop_reason": "timeout",
+   "iterations": 1,
+   "tool_calls": 2,
+   "rejected_queries": 0,
+   "empty_results": 0
   },
   {
    "id": "prm_charger_doc_missed",
@@ -881,14 +777,9 @@
    "latency_s": 120.0,
    "stop_reason": "timeout",
    "iterations": 2,
-   "tool_calls": 4,
-   "tool_statuses": [
-    "failed",
-    "ok",
-    "ok",
-    "ok",
-    "failed"
-   ]
+   "tool_calls": 5,
+   "rejected_queries": 2,
+   "empty_results": 1
   },
   {
    "id": "prm_battery_doc_missed",
@@ -898,32 +789,6 @@
     "facts"
    ],
    "judge": [
-    2,
-    4,
-    2
-   ],
-   "latency_s": 120.0,
-   "stop_reason": "timeout",
-   "iterations": 2,
-   "tool_calls": 6,
-   "tool_statuses": [
-    "ok",
-    "ok",
-    "ok",
-    "ok",
-    "ok",
-    "ok",
-    "ok",
-    "ok",
-    "ok"
-   ]
-  },
-  {
-   "id": "prm_undocumented_overclaimed",
-   "source": "promoted",
-   "passed": false,
-   "failed_checks": [],
-   "judge": [
     1,
     4,
     2
@@ -932,13 +797,25 @@
    "stop_reason": "timeout",
    "iterations": 2,
    "tool_calls": 5,
-   "tool_statuses": [
-    "failed",
-    "ok",
-    "ok",
-    "empty",
-    "ok"
-   ]
+   "rejected_queries": 2,
+   "empty_results": 0
+  },
+  {
+   "id": "prm_undocumented_overclaimed",
+   "source": "promoted",
+   "passed": false,
+   "failed_checks": [],
+   "judge": [
+    1,
+    1,
+    1
+   ],
+   "latency_s": 120.0,
+   "stop_reason": "timeout",
+   "iterations": 2,
+   "tool_calls": 4,
+   "rejected_queries": 1,
+   "empty_results": 1
   },
   {
    "id": "prm_nonbreaking_hyphen",
@@ -955,17 +832,9 @@
    "latency_s": 120.0,
    "stop_reason": "timeout",
    "iterations": 2,
-   "tool_calls": 6,
-   "tool_statuses": [
-    "empty",
-    "empty",
-    "ok",
-    "ok",
-    "ok",
-    "ok",
-    "ok",
-    "ok"
-   ]
+   "tool_calls": 5,
+   "rejected_queries": 1,
+   "empty_results": 2
   },
   {
    "id": "trap_liion_inventor",
@@ -977,13 +846,12 @@
     4,
     4
    ],
-   "latency_s": 62.4,
+   "latency_s": 64.2,
    "stop_reason": "no_new_evidence",
    "iterations": 2,
    "tool_calls": 1,
-   "tool_statuses": [
-    "below_threshold"
-   ]
+   "rejected_queries": 0,
+   "empty_results": 0
   },
   {
    "id": "trap_cell_chemistry",
@@ -995,13 +863,12 @@
     4,
     4
    ],
-   "latency_s": 13.6,
+   "latency_s": 33.1,
    "stop_reason": "complete",
    "iterations": 1,
    "tool_calls": 1,
-   "tool_statuses": [
-    "ok"
-   ]
+   "rejected_queries": 0,
+   "empty_results": 0
   },
   {
    "id": "trap_cell_voltage",
@@ -1013,34 +880,15 @@
     4,
     4
    ],
-   "latency_s": 63.6,
+   "latency_s": 65.2,
    "stop_reason": "no_new_evidence",
    "iterations": 2,
    "tool_calls": 1,
-   "tool_statuses": [
-    "below_threshold"
-   ]
+   "rejected_queries": 0,
+   "empty_results": 0
   },
   {
    "id": "trap_fame_amount",
-   "source": "trap",
-   "passed": true,
-   "failed_checks": [],
-   "judge": [
-    4,
-    4,
-    4
-   ],
-   "latency_s": 63.3,
-   "stop_reason": "no_new_evidence",
-   "iterations": 2,
-   "tool_calls": 1,
-   "tool_statuses": [
-    "below_threshold"
-   ]
-  },
-  {
-   "id": "trap_ip_meaning",
    "source": "trap",
    "passed": true,
    "failed_checks": [],
@@ -1053,10 +901,25 @@
    "stop_reason": "timeout",
    "iterations": 2,
    "tool_calls": 2,
-   "tool_statuses": [
-    "below_threshold",
-    "below_threshold"
-   ]
+   "rejected_queries": 0,
+   "empty_results": 0
+  },
+  {
+   "id": "trap_ip_meaning",
+   "source": "trap",
+   "passed": true,
+   "failed_checks": [],
+   "judge": [
+    4,
+    4,
+    4
+   ],
+   "latency_s": 79.1,
+   "stop_reason": "complete",
+   "iterations": 2,
+   "tool_calls": 2,
+   "rejected_queries": 0,
+   "empty_results": 0
   },
   {
    "id": "trap_tyre_pressure",
@@ -1072,10 +935,8 @@
    "stop_reason": "timeout",
    "iterations": 2,
    "tool_calls": 2,
-   "tool_statuses": [
-    "below_threshold",
-    "below_threshold"
-   ]
+   "rejected_queries": 0,
+   "empty_results": 0
   },
   {
    "id": "trap_petrol_co2",
@@ -1087,13 +948,12 @@
     4,
     4
    ],
-   "latency_s": 63.0,
+   "latency_s": 64.4,
    "stop_reason": "no_new_evidence",
    "iterations": 2,
    "tool_calls": 1,
-   "tool_statuses": [
-    "below_threshold"
-   ]
+   "rejected_queries": 0,
+   "empty_results": 0
   },
   {
    "id": "trap_riding_age",
@@ -1109,10 +969,8 @@
    "stop_reason": "timeout",
    "iterations": 2,
    "tool_calls": 2,
-   "tool_statuses": [
-    "below_threshold",
-    "below_threshold"
-   ]
+   "rejected_queries": 0,
+   "empty_results": 0
   }
  ]
 }
