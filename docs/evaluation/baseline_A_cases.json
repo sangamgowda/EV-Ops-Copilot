@@ -1,38 +1,69 @@
 {
- "run_id": "20261118-112737",
- "commit": "a21bfb8",
+ "runs": {
+  "full_run": {
+   "run_id": "20261118-112737",
+   "commit": "a21bfb8",
+   "clock": "real"
+  },
+  "pinned_date_run": {
+   "run_id": "20261119-140027",
+   "commit": "ed62219",
+   "as_of": "2026-10-02",
+   "cases": [
+    "adv_ambiguous",
+    "adv_nonexistent_vehicle",
+    "adv_refute_claim",
+    "adv_typo_vehicle",
+    "doc_SB-114_sustained_overload",
+    "doc_SB-135_firmware_top_mode_speed_cap",
+    "doc_SB-140_charger_low_power",
+    "prm_battery_doc_missed",
+    "prm_charger_doc_missed",
+    "prm_nonbreaking_hyphen",
+    "prm_ride_mode_limits",
+    "prm_undocumented_overclaimed",
+    "syn_cell_health_V-042",
+    "syn_cell_wear_V-036",
+    "syn_charger_V-091",
+    "syn_overload_V-007",
+    "syn_overload_V-042",
+    "syn_sales_flagship_avg_price_2026",
+    "syn_speed_cap_V-055",
+    "syn_speed_cap_V-088"
+   ]
+  }
+ },
  "models": {
   "cheap": "openai/gpt-oss-20b",
   "strong": "openai/gpt-oss-120b",
   "judge": "qwen/qwen3.8-27b"
  },
  "judge_version": "f66352838f0f",
- "note": "single commit; resumed twice after the daily token limit; per-case results without answer text",
+ "note": "the 20 cases whose queries used time windows after the data ended were re-run on the pinned date; the other 34 results come from the full run. Per-case results, no answer text.",
  "cases": [
   {
    "id": "syn_overload_V-042",
    "source": "synthetic_data",
-   "passed": false,
-   "failed_checks": [
-    "stop_reason",
-    "facts"
-   ],
+   "passed": true,
+   "measured_in": "pinned-date run",
+   "failed_checks": [],
    "judge": [
-    1,
     4,
-    2
+    4,
+    4
    ],
-   "latency_s": 120.0,
-   "stop_reason": "timeout",
-   "iterations": 2,
-   "tool_calls": 5,
+   "latency_s": 106.6,
+   "stop_reason": "complete",
+   "iterations": 1,
+   "tool_calls": 4,
    "rejected_queries": 0,
-   "empty_results": 1
+   "empty_results": 0
   },
   {
    "id": "syn_overload_V-007",
    "source": "synthetic_data",
    "passed": false,
+   "measured_in": "pinned-date run",
    "failed_checks": [
     "stop_reason",
     "facts",
@@ -48,31 +79,13 @@
    "iterations": 2,
    "tool_calls": 6,
    "rejected_queries": 1,
-   "empty_results": 1
+   "empty_results": 0
   },
   {
    "id": "syn_speed_cap_V-055",
    "source": "synthetic_data",
    "passed": false,
-   "failed_checks": [
-    "facts"
-   ],
-   "judge": [
-    1,
-    1,
-    1
-   ],
-   "latency_s": 19.6,
-   "stop_reason": "complete",
-   "iterations": 1,
-   "tool_calls": 3,
-   "rejected_queries": 0,
-   "empty_results": 1
-  },
-  {
-   "id": "syn_speed_cap_V-088",
-   "source": "synthetic_data",
-   "passed": false,
+   "measured_in": "pinned-date run",
    "failed_checks": [
     "stop_reason",
     "facts"
@@ -85,14 +98,54 @@
    "latency_s": 120.0,
    "stop_reason": "timeout",
    "iterations": 2,
-   "tool_calls": 4,
-   "rejected_queries": 1,
-   "empty_results": 1
+   "tool_calls": 5,
+   "rejected_queries": 2,
+   "empty_results": 0
+  },
+  {
+   "id": "syn_speed_cap_V-088",
+   "source": "synthetic_data",
+   "passed": true,
+   "measured_in": "pinned-date run",
+   "failed_checks": [],
+   "judge": [
+    4,
+    3,
+    4
+   ],
+   "latency_s": 62.2,
+   "stop_reason": "complete",
+   "iterations": 1,
+   "tool_calls": 3,
+   "rejected_queries": 0,
+   "empty_results": 0
   },
   {
    "id": "syn_charger_V-091",
    "source": "synthetic_data",
    "passed": false,
+   "measured_in": "pinned-date run",
+   "failed_checks": [
+    "stop_reason",
+    "must_contain"
+   ],
+   "judge": [
+    1,
+    4,
+    4
+   ],
+   "latency_s": 120.0,
+   "stop_reason": "timeout",
+   "iterations": 2,
+   "tool_calls": 4,
+   "rejected_queries": 1,
+   "empty_results": 0
+  },
+  {
+   "id": "syn_cell_wear_V-036",
+   "source": "synthetic_data",
+   "passed": false,
+   "measured_in": "pinned-date run",
    "failed_checks": [
     "stop_reason",
     "facts"
@@ -105,34 +158,15 @@
    "latency_s": 120.0,
    "stop_reason": "timeout",
    "iterations": 2,
-   "tool_calls": 5,
-   "rejected_queries": 2,
+   "tool_calls": 6,
+   "rejected_queries": 1,
    "empty_results": 0
-  },
-  {
-   "id": "syn_cell_wear_V-036",
-   "source": "synthetic_data",
-   "passed": false,
-   "failed_checks": [
-    "stop_reason",
-    "facts"
-   ],
-   "judge": [
-    2,
-    4,
-    3
-   ],
-   "latency_s": 120.0,
-   "stop_reason": "timeout",
-   "iterations": 2,
-   "tool_calls": 8,
-   "rejected_queries": 3,
-   "empty_results": 1
   },
   {
    "id": "syn_firmware_V-055",
    "source": "synthetic_data",
    "passed": true,
+   "measured_in": "full run",
    "failed_checks": [],
    "judge": [
     4,
@@ -150,6 +184,7 @@
    "id": "syn_firmware_V-009",
    "source": "synthetic_data",
    "passed": true,
+   "measured_in": "full run",
    "failed_checks": [],
    "judge": [
     4,
@@ -166,27 +201,26 @@
   {
    "id": "syn_cell_health_V-042",
    "source": "synthetic_data",
-   "passed": false,
-   "failed_checks": [
-    "stop_reason",
-    "facts"
-   ],
+   "passed": true,
+   "measured_in": "pinned-date run",
+   "failed_checks": [],
    "judge": [
-    1,
     4,
-    2
+    3,
+    4
    ],
-   "latency_s": 120.0,
-   "stop_reason": "timeout",
-   "iterations": 2,
-   "tool_calls": 2,
+   "latency_s": 62.2,
+   "stop_reason": "complete",
+   "iterations": 1,
+   "tool_calls": 1,
    "rejected_queries": 0,
-   "empty_results": 2
+   "empty_results": 0
   },
   {
    "id": "syn_odometer_V-101",
    "source": "synthetic_data",
    "passed": true,
+   "measured_in": "full run",
    "failed_checks": [],
    "judge": [
     4,
@@ -204,6 +238,7 @@
    "id": "syn_city_V-064",
    "source": "synthetic_data",
    "passed": true,
+   "measured_in": "full run",
    "failed_checks": [],
    "judge": [
     4,
@@ -221,6 +256,7 @@
    "id": "syn_code_ERR_205",
    "source": "synthetic_data",
    "passed": true,
+   "measured_in": "full run",
    "failed_checks": [],
    "judge": [
     4,
@@ -238,6 +274,7 @@
    "id": "syn_code_ERR_303",
    "source": "synthetic_data",
    "passed": true,
+   "measured_in": "full run",
    "failed_checks": [],
    "judge": [
     4,
@@ -255,6 +292,7 @@
    "id": "syn_code_ERR_403",
    "source": "synthetic_data",
    "passed": true,
+   "measured_in": "full run",
    "failed_checks": [],
    "judge": [
     4,
@@ -272,6 +310,7 @@
    "id": "syn_sales_top_model_south_q3",
    "source": "synthetic_data",
    "passed": true,
+   "measured_in": "full run",
    "failed_checks": [],
    "judge": [
     4,
@@ -289,6 +328,7 @@
    "id": "syn_sales_top_region_q3",
    "source": "synthetic_data",
    "passed": true,
+   "measured_in": "full run",
    "failed_checks": [],
    "judge": [
     4,
@@ -306,13 +346,14 @@
    "id": "syn_sales_flagship_avg_price_2026",
    "source": "synthetic_data",
    "passed": false,
+   "measured_in": "pinned-date run",
    "failed_checks": [],
    "judge": [
     1,
     1,
     1
    ],
-   "latency_s": 5.1,
+   "latency_s": 5.5,
    "stop_reason": "complete",
    "iterations": 1,
    "tool_calls": 1,
@@ -323,6 +364,7 @@
    "id": "syn_sales_fleet_aug",
    "source": "synthetic_data",
    "passed": true,
+   "measured_in": "full run",
    "failed_checks": [],
    "judge": [
     4,
@@ -340,6 +382,7 @@
    "id": "syn_sales_south_q2_vs_q3",
    "source": "synthetic_data",
    "passed": true,
+   "measured_in": "full run",
    "failed_checks": [],
    "judge": [
     4,
@@ -357,6 +400,7 @@
    "id": "doc_kb_range_shortfall_faq",
    "source": "synthetic_doc",
    "passed": false,
+   "measured_in": "full run",
    "failed_checks": [
     "must_contain"
    ],
@@ -376,6 +420,7 @@
    "id": "doc_manual_ride_modes_range_and_charging",
    "source": "synthetic_doc",
    "passed": true,
+   "measured_in": "full run",
    "failed_checks": [],
    "judge": [
     4,
@@ -393,6 +438,7 @@
    "id": "doc_sales_q2_2026_review",
    "source": "synthetic_doc",
    "passed": true,
+   "measured_in": "full run",
    "failed_checks": [],
    "judge": [
     4,
@@ -410,6 +456,7 @@
    "id": "doc_sales_q3_2026_midquarter",
    "source": "synthetic_doc",
    "passed": true,
+   "measured_in": "full run",
    "failed_checks": [],
    "judge": [
     4,
@@ -427,6 +474,7 @@
    "id": "doc_SB-114_sustained_overload",
    "source": "synthetic_doc",
    "passed": false,
+   "measured_in": "pinned-date run",
    "failed_checks": [
     "facts"
    ],
@@ -446,6 +494,7 @@
    "id": "doc_SB-121_removable_pack_cell_wear",
    "source": "synthetic_doc",
    "passed": true,
+   "measured_in": "full run",
    "failed_checks": [],
    "judge": [
     3,
@@ -463,78 +512,81 @@
    "id": "doc_SB-135_firmware_top_mode_speed_cap",
    "source": "synthetic_doc",
    "passed": false,
+   "measured_in": "pinned-date run",
    "failed_checks": [],
    "judge": [
     2,
     4,
     2
    ],
-   "latency_s": 63.3,
-   "stop_reason": "no_new_evidence",
+   "latency_s": 120.0,
+   "stop_reason": "timeout",
    "iterations": 2,
-   "tool_calls": 2,
-   "rejected_queries": 1,
+   "tool_calls": 5,
+   "rejected_queries": 2,
    "empty_results": 0
   },
   {
    "id": "doc_SB-140_charger_low_power",
    "source": "synthetic_doc",
    "passed": false,
+   "measured_in": "pinned-date run",
    "failed_checks": [
     "facts"
    ],
    "judge": [
     1,
-    4,
+    2,
     1
    ],
    "latency_s": 120.0,
    "stop_reason": "timeout",
    "iterations": 2,
-   "tool_calls": 3,
+   "tool_calls": 4,
    "rejected_queries": 0,
-   "empty_results": 1
+   "empty_results": 0
   },
   {
    "id": "adv_nonexistent_vehicle",
    "source": "adversarial",
-   "passed": false,
-   "failed_checks": [
-    "must_contain"
-   ],
+   "passed": true,
+   "measured_in": "pinned-date run",
+   "failed_checks": [],
    "judge": [
-    1,
-    1,
-    1
+    4,
+    4,
+    4
    ],
-   "latency_s": 120.0,
-   "stop_reason": "timeout",
-   "iterations": 2,
-   "tool_calls": 3,
-   "rejected_queries": 1,
+   "latency_s": 64.6,
+   "stop_reason": "no_new_evidence",
+   "iterations": 1,
+   "tool_calls": 0,
+   "rejected_queries": 0,
    "empty_results": 0
   },
   {
    "id": "adv_typo_vehicle",
    "source": "adversarial",
-   "passed": false,
+   "passed": true,
+   "measured_in": "pinned-date run",
    "failed_checks": [],
    "judge": [
-    2,
     4,
-    2
+    4,
+    4
    ],
-   "latency_s": 419.0,
-   "stop_reason": "cap_reached",
-   "iterations": 3,
-   "tool_calls": 7,
+   "latency_s": 61.6,
+   "stop_reason": "complete",
+   "iterations": 1,
+   "tool_calls": 4,
    "rejected_queries": 0,
-   "empty_results": 2
+   "empty_results": 0
   },
   {
    "id": "adv_nonexistent_model",
    "source": "adversarial",
    "passed": true,
+   "measured_in": "full run",
    "failed_checks": [],
    "judge": [
     4,
@@ -551,24 +603,26 @@
   {
    "id": "adv_refute_claim",
    "source": "adversarial",
-   "passed": false,
+   "passed": true,
+   "measured_in": "pinned-date run",
    "failed_checks": [],
    "judge": [
-    1,
-    1,
-    1
+    4,
+    4,
+    3
    ],
-   "latency_s": 120.0,
-   "stop_reason": "timeout",
+   "latency_s": 67.4,
+   "stop_reason": "complete",
    "iterations": 2,
-   "tool_calls": 5,
-   "rejected_queries": 1,
-   "empty_results": 2
+   "tool_calls": 4,
+   "rejected_queries": 0,
+   "empty_results": 0
   },
   {
    "id": "adv_missing_metric",
    "source": "adversarial",
    "passed": true,
+   "measured_in": "full run",
    "failed_checks": [],
    "judge": [
     4,
@@ -586,6 +640,7 @@
    "id": "adv_ambiguous",
    "source": "adversarial",
    "passed": false,
+   "measured_in": "pinned-date run",
    "failed_checks": [],
    "judge": [
     1,
@@ -596,13 +651,14 @@
    "stop_reason": "timeout",
    "iterations": 2,
    "tool_calls": 3,
-   "rejected_queries": 1,
+   "rejected_queries": 0,
    "empty_results": 0
   },
   {
    "id": "adv_cross_domain",
    "source": "adversarial",
    "passed": false,
+   "measured_in": "full run",
    "failed_checks": [
     "domains"
    ],
@@ -622,6 +678,7 @@
    "id": "adv_holdout_brakes",
    "source": "adversarial",
    "passed": false,
+   "measured_in": "full run",
    "failed_checks": [],
    "judge": [
     1,
@@ -639,6 +696,7 @@
    "id": "adv_holdout_partner_discount",
    "source": "adversarial",
    "passed": false,
+   "measured_in": "full run",
    "failed_checks": [
     "tools",
     "facts"
@@ -659,6 +717,7 @@
    "id": "adv_holdout_delivery_story",
    "source": "adversarial",
    "passed": true,
+   "measured_in": "full run",
    "failed_checks": [],
    "judge": [
     4,
@@ -676,6 +735,7 @@
    "id": "adv_launch_timing",
    "source": "adversarial",
    "passed": true,
+   "measured_in": "full run",
    "failed_checks": [],
    "judge": [
     4,
@@ -693,6 +753,7 @@
    "id": "adv_longest_range",
    "source": "adversarial",
    "passed": false,
+   "measured_in": "full run",
    "failed_checks": [
     "facts",
     "must_contain"
@@ -713,6 +774,7 @@
    "id": "adv_mode_not_available",
    "source": "adversarial",
    "passed": false,
+   "measured_in": "full run",
    "failed_checks": [],
    "judge": [
     2,
@@ -730,6 +792,7 @@
    "id": "adv_south_outperformed",
    "source": "adversarial",
    "passed": true,
+   "measured_in": "full run",
    "failed_checks": [],
    "judge": [
     4,
@@ -747,51 +810,35 @@
    "id": "prm_ride_mode_limits",
    "source": "promoted",
    "passed": false,
+   "measured_in": "pinned-date run",
    "failed_checks": [
     "facts"
    ],
    "judge": [
-    1,
     4,
-    4
+    1,
+    1
    ],
-   "latency_s": 301.8,
-   "stop_reason": "timeout",
-   "iterations": 1,
+   "latency_s": 68.1,
+   "stop_reason": "complete",
+   "iterations": 2,
    "tool_calls": 2,
-   "rejected_queries": 0,
+   "rejected_queries": 1,
    "empty_results": 0
   },
   {
    "id": "prm_charger_doc_missed",
    "source": "promoted",
    "passed": false,
+   "measured_in": "pinned-date run",
    "failed_checks": [
-    "facts"
+    "facts",
+    "must_contain"
    ],
    "judge": [
     1,
     4,
-    2
-   ],
-   "latency_s": 120.0,
-   "stop_reason": "timeout",
-   "iterations": 2,
-   "tool_calls": 5,
-   "rejected_queries": 2,
-   "empty_results": 1
-  },
-  {
-   "id": "prm_battery_doc_missed",
-   "source": "promoted",
-   "passed": false,
-   "failed_checks": [
-    "facts"
-   ],
-   "judge": [
-    1,
-    4,
-    2
+    4
    ],
    "latency_s": 120.0,
    "stop_reason": "timeout",
@@ -801,9 +848,30 @@
    "empty_results": 0
   },
   {
+   "id": "prm_battery_doc_missed",
+   "source": "promoted",
+   "passed": false,
+   "measured_in": "pinned-date run",
+   "failed_checks": [
+    "facts"
+   ],
+   "judge": [
+    1,
+    4,
+    2
+   ],
+   "latency_s": 120.0,
+   "stop_reason": "timeout",
+   "iterations": 2,
+   "tool_calls": 5,
+   "rejected_queries": 0,
+   "empty_results": 0
+  },
+  {
    "id": "prm_undocumented_overclaimed",
    "source": "promoted",
    "passed": false,
+   "measured_in": "pinned-date run",
    "failed_checks": [],
    "judge": [
     1,
@@ -815,31 +883,33 @@
    "iterations": 2,
    "tool_calls": 4,
    "rejected_queries": 1,
-   "empty_results": 1
+   "empty_results": 0
   },
   {
    "id": "prm_nonbreaking_hyphen",
    "source": "promoted",
    "passed": false,
+   "measured_in": "pinned-date run",
    "failed_checks": [
     "grounded"
    ],
    "judge": [
-    1,
     4,
-    2
+    4,
+    4
    ],
    "latency_s": 120.0,
    "stop_reason": "timeout",
    "iterations": 2,
    "tool_calls": 5,
    "rejected_queries": 1,
-   "empty_results": 2
+   "empty_results": 0
   },
   {
    "id": "trap_liion_inventor",
    "source": "trap",
    "passed": true,
+   "measured_in": "full run",
    "failed_checks": [],
    "judge": [
     4,
@@ -857,6 +927,7 @@
    "id": "trap_cell_chemistry",
    "source": "trap",
    "passed": true,
+   "measured_in": "full run",
    "failed_checks": [],
    "judge": [
     4,
@@ -874,6 +945,7 @@
    "id": "trap_cell_voltage",
    "source": "trap",
    "passed": true,
+   "measured_in": "full run",
    "failed_checks": [],
    "judge": [
     4,
@@ -891,6 +963,7 @@
    "id": "trap_fame_amount",
    "source": "trap",
    "passed": true,
+   "measured_in": "full run",
    "failed_checks": [],
    "judge": [
     4,
@@ -908,6 +981,7 @@
    "id": "trap_ip_meaning",
    "source": "trap",
    "passed": true,
+   "measured_in": "full run",
    "failed_checks": [],
    "judge": [
     4,
@@ -925,6 +999,7 @@
    "id": "trap_tyre_pressure",
    "source": "trap",
    "passed": true,
+   "measured_in": "full run",
    "failed_checks": [],
    "judge": [
     4,
@@ -942,6 +1017,7 @@
    "id": "trap_petrol_co2",
    "source": "trap",
    "passed": true,
+   "measured_in": "full run",
    "failed_checks": [],
    "judge": [
     4,
@@ -959,6 +1035,7 @@
    "id": "trap_riding_age",
    "source": "trap",
    "passed": true,
+   "measured_in": "full run",
    "failed_checks": [],
    "judge": [
     4,
