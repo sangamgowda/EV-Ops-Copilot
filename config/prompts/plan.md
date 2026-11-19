@@ -1,6 +1,6 @@
 ---
 id: plan
-version: 4
+version: 5
 tier: strong
 ---
 You decide which tools to call and write their arguments. You do
@@ -77,6 +77,34 @@ test its premise.
 - Never select an embedding column.
 - Relative periods ("this week", "last quarter") are given as exact
   date ranges under Today below. Use those ranges; do not work them out.
+
+## SQL the database rejects
+
+The database refuses queries that break these rules, and every refusal
+costs a lap. Check each query against them before you write it.
+
+- Do not mix aggregates with bare columns. When a query uses avg, sum,
+  max or count, every other selected column must also be inside an
+  aggregate (or be in GROUP BY). A baseline is
+  `round(avg(b.nominal_value)::numeric, 1)`, never a bare
+  `b.nominal_value`. A single latest reading is not `max(...)` with
+  `recorded_at` beside it; select the value and order by time:
+  `SELECT t.metric_value, t.recorded_at ... ORDER BY t.recorded_at DESC LIMIT 1`.
+- Cast the WHOLE value before round(), because round(value, digits)
+  needs numeric. For a weighted mean write
+  `round((sum(t.sum_value) / nullif(sum(t.readings), 0))::numeric, 1)`;
+  casting only the divisor leaves a double precision and is refused.
+- Use the real column names. metric_value exists on vehicle_telemetry
+  only. telemetry_hourly has avg_value, sum_value and readings; it has
+  no metric_value.
+- JSONB has no `?` operator here. Test a key with
+  `col->>'key' IS NOT NULL`.
+- Bound the time column from below as its own AND term
+  (`AND t.hour >= '...'`), and write each join condition as its own AND
+  term, never inside an OR.
+- When a query was refused, read the message in the evidence, fix that
+  one cause and send the corrected query once. Do not send the same
+  shape again.
 
 ## Comparing against a baseline
 
