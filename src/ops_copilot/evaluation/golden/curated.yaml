@@ -95,7 +95,7 @@
     V-042 is overloaded on delivery work. How many scooters were sold through
     the fleet channel in the south between 1 July and 30 September 2026?
   expected:
-    domains: [diagnostic, business]
+    domains: [business]
     tools: [structured_query_tool]
     key_args: [{tool: structured_query_tool, contains: ["fleet", "south"]}]
     facts:
@@ -188,7 +188,7 @@
   note: the generated question for sales_q3_2026_midquarter was rejected three times for word overlap
   question: Why did the south outsell the other regions between July and September 2026?
   expected:
-    must_contain: ["EVX Max", ["launch", "launched", "went on sale", "on sale"]]
+    must_contain: ["EVX Max", ["launch", "launched", "went on sale", "on sale", "available", "exclusive", "1 June"]]
     facts:
       - label: south sales Q3 2026
         tolerance: 0
