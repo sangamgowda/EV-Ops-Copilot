@@ -50,7 +50,7 @@ def build_context(state: AgentState, iteration: int) -> str:
         parts.append("## Entity notes\n" + "\n".join(f"- {n}" for n in state["entity_notes"]))
     if state.get("hypothesis_to_test"):
         parts.append(f"## Claim to test against data\n{state['hypothesis_to_test']}")
-    parts.append(f"## Database schema\n{prompt_block()}")
+    parts.append(f"## Database schema\n{prompt_block(tuple(sorted(state.get('domains', []))))}")
     parts.append(f"## Evidence so far\n{evidence_block(state.get('evidence', []))}")
     if state.get("tool_history"):
         parts.append("## Already run this turn — do not repeat\n"
