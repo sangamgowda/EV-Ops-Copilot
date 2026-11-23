@@ -7,6 +7,7 @@
     python scripts/run_eval.py --promoted         # the merge gate: promoted cases only
     python scripts/run_eval.py --heldout          # the held-out set (never tuned against)
     python scripts/run_eval.py --agreement        # judge vs your labels
+    python scripts/run_eval.py --report 20261123-145910   # rebuild a finished run's report
 
 Needs the running stack (MCP server and database, as for /chat).
 
@@ -31,7 +32,12 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from ops_copilot.evaluation.runner import load_cases, run_eval, runs_dir  # noqa: E402
+from ops_copilot.evaluation.runner import (  # noqa: E402
+    is_measured,
+    load_cases,
+    run_eval,
+    runs_dir,
+)
 from ops_copilot.settings import get_config  # noqa: E402
 
 # One of each kind, for a quick check that fits the free tier easily.
@@ -43,6 +49,8 @@ SMOKE = [
 
 def show(r: dict[str, Any]) -> None:
     mark = {"ok": "PASS" if r["pass"] else "FAIL", "infra": "RATE", "budget": "STOP"}[r["status"]]
+    if r["status"] == "ok" and not is_measured(r):
+        mark = "NOMEAS"      # a trap cut off by the time limit: not a pass, not a fail
     extra = ""
     if r["status"] == "ok" and not r["pass"]:
         extra = "  " + "; ".join(c["name"] for c in r["checks"] if not c["passed"])
@@ -71,7 +79,16 @@ async def main() -> int:
     p.add_argument("--no-traps", action="store_true")
     p.add_argument("--pause", type=float, help="seconds between cases (default from config)")
     p.add_argument("--agreement", action="store_true", help="measure judge-human agreement and exit")
+    p.add_argument("--report", metavar="RUN_ID",
+                   help="write a finished run's report again with the current report code, and exit")
     args = p.parse_args()
+
+    if args.report:
+        from ops_copilot.evaluation.runner import rebuild_report
+
+        rebuild_report(args.report)
+        print((runs_dir() / args.report / "report.md").read_text(encoding="utf-8"))
+        return 0
 
     if args.agreement:
         from ops_copilot.evaluation.agreement import measure

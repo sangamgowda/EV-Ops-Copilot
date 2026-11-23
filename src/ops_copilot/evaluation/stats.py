@@ -31,3 +31,23 @@ def overlaps(a: tuple[float, float] | None, b: tuple[float, float] | None) -> bo
     """Do two intervals overlap? If so, the difference between the rates
     is not evidence of a change on its own."""
     return a is not None and b is not None and a[0] <= b[1] and b[0] <= a[1]
+
+
+def mcnemar(fixed: int, broken: int) -> float:
+    """Exact McNemar test for two runs scored on the same cases.
+
+    Only the cases that changed carry information: `fixed` failed before
+    and pass now, `broken` passed before and fail now. If the change did
+    nothing, a changed case is equally likely to go either way, so the
+    number of fixes among the changed cases is Binomial(fixed + broken, 1/2).
+    Returns the two-sided p-value; 1.0 when nothing changed.
+
+    Two overlapping Wilson intervals say a difference is not proven; this
+    asks the better question for a before/after on the same exam: are the
+    fixes more than the breaks by more than chance?
+    """
+    n = fixed + broken
+    if n == 0:
+        return 1.0
+    tail = sum(math.comb(n, i) for i in range(min(fixed, broken) + 1)) / 2 ** n
+    return round(min(1.0, 2 * tail), 4)

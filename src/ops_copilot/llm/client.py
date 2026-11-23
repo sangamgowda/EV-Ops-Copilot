@@ -111,6 +111,22 @@ def patient(wait_seconds: float) -> Iterator[None]:
         _queue_wait.reset(token)
 
 
+_wait_log: contextvars.ContextVar[list[float] | None] = contextvars.ContextVar("llm_wait_log", default=None)
+
+
+@contextmanager
+def track_queue_wait() -> Iterator[list[float]]:
+    """Collect, for every model call made inside this block, the seconds it
+    waited for room in the token budget (evaluation only). Waiting for the
+    budget is not the agent working: the report separates the two."""
+    waits: list[float] = []
+    token = _wait_log.set(waits)
+    try:
+        yield waits
+    finally:
+        _wait_log.reset(token)
+
+
 @contextmanager
 def primary_only() -> Iterator[None]:
     """No fallback inside this block (evaluation: a score must belong to
@@ -213,9 +229,12 @@ async def _with_failover(node: str, messages: list[dict[str, str]],
         wait = cfg["max_wait_seconds"] if i == len(targets) - 1 else cfg["failover_wait_seconds"]
         if i == len(targets) - 1 and _queue_wait.get() is not None:
             wait = _queue_wait.get()
+        waited_from = time.monotonic()
         try:
             async with queue(target.model).slot(_estimate_tokens(messages, params["max_tokens"]),
                                                 wait) as entry:
+                if (waits := _wait_log.get()) is not None:
+                    waits.append(time.monotonic() - waited_from)
                 result, usage = await call(_client(target.role), params)
                 if usage:
                     entry[1] = float(usage.get("input", 0) + usage.get("output", 0))
@@ -227,6 +246,8 @@ async def _with_failover(node: str, messages: list[dict[str, str]],
                 cb.failure()
             else:
                 cb.release()
+                if (waits := _wait_log.get()) is not None:
+                    waits.append(time.monotonic() - waited_from)   # gave up: the budget would not free up in time
             metrics.LLM_FAILOVERS.labels(target.model, type(exc).__name__).inc()
             metrics.BREAKER_OPEN.labels(target.model).set(1 if cb.state == "open" else 0)
             last = exc

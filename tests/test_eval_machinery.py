@@ -4,11 +4,18 @@ generated-expectation cleanup, and run-to-run diffing."""
 from __future__ import annotations
 
 import importlib.util
+import logging
 import sys
 from pathlib import Path
 
 from ops_copilot.evaluation.judge import agreement, passes, weighted_kappa
-from ops_copilot.evaluation.runner import diff_runs
+from ops_copilot.evaluation.runner import (
+    _RateLimitWatch,
+    _timing,
+    diff_runs,
+    is_measured,
+)
+from ops_copilot.evaluation.stats import mcnemar
 
 _spec = importlib.util.spec_from_file_location(
     "build_golden", Path(__file__).resolve().parents[1] / "scripts" / "build_golden.py")
@@ -77,3 +84,70 @@ class TestDiff:
     def test_rate_limited_cases_are_not_regressions(self):
         d = diff_runs([self.row("a", False, "infra")], [self.row("a", True)])
         assert d["regressions"] == []
+
+
+class TestMcNemar:
+    def test_known_values(self):
+        assert mcnemar(0, 0) == 1.0                  # nothing changed: nothing to show
+        assert mcnemar(5, 5) == 1.0
+        assert mcnemar(8, 4) == 0.3877               # A' run 1 against X+Y+Z: could be chance
+        assert mcnemar(10, 0) == 0.002               # ten fixes, no breaks: not chance
+        assert mcnemar(0, 6) == mcnemar(6, 0)        # two-sided
+
+    def test_diff_reports_it(self):
+        row = TestDiff.row
+        d = diff_runs([row("a", True), row("b", True), row("c", False)],
+                      [row("a", False), row("b", False), row("c", True)])
+        assert (len(d["fixed"]), len(d["regressions"])) == (2, 1)
+        assert d["mcnemar_p"] == mcnemar(2, 1)
+
+
+class TestTimedOutTraps:
+    @staticmethod
+    def trap(stop_reason, abstained=True):
+        return {"id": "t", "source": "trap", "status": "ok", "pass": True, "abstained": abstained,
+                "outcome": {"stop_reason": stop_reason}, "checks": []}
+
+    def test_a_trap_that_timed_out_is_not_measured(self):
+        assert not is_measured(self.trap("timeout"))
+        assert is_measured(self.trap("complete"))
+        # only traps: a case that timed out is a failure, not an unmeasured case
+        assert is_measured({"source": "adversarial", "outcome": {"stop_reason": "timeout"}})
+
+    def test_it_is_neither_fixed_nor_broken(self):
+        prev = {**self.trap("complete"), "pass": True}
+        cur = {**self.trap("timeout"), "pass": False}
+        assert diff_runs([cur], [prev]) == {"regressions": [], "fixed": [], "compared_cases": 1,
+                                           "mcnemar_p": 1.0}
+
+
+class TestTiming:
+    @staticmethod
+    def case(i, passed, latency, wait=None, stop="complete"):
+        r = {"id": i, "pass": passed, "latency_s": latency, "outcome": {"stop_reason": stop}}
+        if wait is not None:
+            r["budget_wait_s"] = wait
+        return r
+
+    def test_pass_rate_at_the_app_limit_needs_the_answer_in_time(self):
+        rows = [self.case("a", True, 20), self.case("b", True, 63), self.case("c", False, 10)]
+        t = _timing(rows, 45)
+        assert t["at_app_limit"]["passed"] == 1            # b passed, but only after 63 s
+        assert t["excluding_budget_waits"] is None         # no wait data in this run
+
+    def test_waiting_for_the_budget_is_not_counted_against_the_agent(self):
+        rows = [self.case("fast", True, 20, wait=0),
+                self.case("slow_pass", True, 63, wait=55),                  # 8 s of work
+                self.case("waited_out", False, 120, wait=100, stop="timeout"),   # 20 s of work
+                self.case("slow_agent", False, 120, wait=10, stop="timeout"),    # 110 s of work
+                self.case("wrong", False, 15, wait=0)]
+        x = _timing(rows, 45)["excluding_budget_waits"]
+        assert x["left_out_waited_for_budget"] == ["waited_out"]    # not measured
+        assert (x["passed"], x["n"]) == (2, 4)                      # slow_agent still counts as a failure
+
+    def test_the_watch_adds_up_the_clients_sleeps(self):
+        w = _RateLimitWatch()
+        for msg in ("Retrying request to /chat/completions in 2.000000 seconds",
+                    "Retrying request to /chat/completions in 12.500000 seconds"):
+            w.emit(logging.LogRecord("openai._base_client", logging.INFO, "", 0, msg, None, None))
+        assert (w.retries, w.retry_wait_s) == (2, 14.5)
