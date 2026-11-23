@@ -96,6 +96,21 @@ class TestFailover:
         with pytest.raises(llm.LLMUnavailable):
             await llm.complete("router", "s", "u")              # cheap tier has no fallback configured
 
+    async def test_seconds_waiting_for_the_token_budget_are_logged(self, provider, monkeypatch):
+        provider.behaviour = {"big": "ok"}
+        cfg = llm.get_config()
+        monkeypatch.setitem(cfg["llm"]["queue"], "tokens_per_minute", 100)
+        # The budget is spent until 0.2 s from now: the call waits for room, then goes through.
+        llm.queue("big")._spent.append([llm.time.monotonic() - 59.8, 100.0])
+        with llm.track_queue_wait() as waits, llm.primary_only(), llm.patient(2):
+            assert await llm.complete("plan", "s", "u") == "ok"
+        assert len(waits) == 1 and 0.15 <= waits[0] < 1
+        # With room in the budget the wait is recorded too, and is about zero.
+        monkeypatch.setattr(llm, "_queues", {})
+        with llm.track_queue_wait() as waits:
+            await llm.complete("plan", "s", "u")
+        assert len(waits) == 1 and waits[0] < 0.1
+
 
 class TestCircuitBreaker:
     def test_half_open_lets_one_trial_through(self, monkeypatch):

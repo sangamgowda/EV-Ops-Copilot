@@ -30,6 +30,7 @@ import asyncio
 import hashlib
 import json
 import logging
+import re
 import subprocess
 import time
 import uuid
@@ -47,7 +48,7 @@ from ops_copilot.evaluation.deterministic import (
     run_checks,
     says_it_cannot_tell,
 )
-from ops_copilot.evaluation.stats import overlaps, wilson
+from ops_copilot.evaluation.stats import mcnemar, overlaps, wilson
 from ops_copilot.settings import get_config
 
 log = logging.getLogger(__name__)
@@ -55,6 +56,17 @@ log = logging.getLogger(__name__)
 ROOT = Path(__file__).resolve().parents[3]
 HANDWRITTEN = ("adversarial", "promoted")
 INFRA_STREAK_LIMIT = 3      # cases in a row decided by the stack before a run stops
+# The openai client logs "Retrying request to /chat/completions in 12.000000 seconds"
+# each time it sleeps after a refusal; that sleep is time spent waiting, not working.
+_RETRY_SLEEP = re.compile(r"Retrying request to \S+ in ([0-9.]+) seconds")
+
+
+def is_measured(r: dict[str, Any]) -> bool:
+    """A trap that ran out of time says "I could not write a full answer",
+    which looks exactly like abstaining. It did not decline the question;
+    it was cut off. Such a trap is reported as not measured, never as a
+    pass. (Derived from the stored outcome, so older runs report the same way.)"""
+    return not (r.get("source") == "trap" and (r.get("outcome") or {}).get("stop_reason") == "timeout")
 
 
 def load_cases(path: str | Path) -> list[dict[str, Any]]:
@@ -101,12 +113,17 @@ class _RateLimitWatch(logging.Handler):
         self.rate_failed = False     # a step gave up on a refusal and fell back
         self.connection_failed = False   # the provider could not be reached at all
         self.per_day = False
+        self.retries = 0             # times the client slept and tried again
+        self.retry_wait_s = 0.0      # ... and how long it slept in total
         self.seen: list[str] = []
 
     def emit(self, record: logging.LogRecord) -> None:
         text = record.getMessage()
         if record.exc_info and record.exc_info[1] is not None:
             text += " " + str(record.exc_info[1])
+        if sleep := _RETRY_SLEEP.search(text):
+            self.retries += 1
+            self.retry_wait_s += float(sleep.group(1))
         if "APIConnectionError" in text:
             self.connection_failed = True
             self.seen.append(text[:200])
@@ -132,7 +149,7 @@ class _RateLimitWatch(logging.Handler):
 async def run_case(case: dict[str, Any], run_id: str, *, use_judge: bool, judge_threshold: int) -> dict[str, Any]:
     from ops_copilot.agent.turn import run_turn
     from ops_copilot.agent.calendar import pinned
-    from ops_copilot.llm.client import patient, primary_only
+    from ops_copilot.llm.client import patient, primary_only, track_queue_wait
 
     watch = _RateLimitWatch()
     root = logging.getLogger()
@@ -145,9 +162,10 @@ async def run_case(case: dict[str, Any], run_id: str, *, use_judge: bool, judge_
         logging.getLogger(name).setLevel(logging.INFO)
     started = time.perf_counter()
     state: dict[str, Any]
+    queue_waits: list[float] = []
     try:
         # No fallback model: the score must belong to the models the report names.
-        with primary_only(), patient(get_config()["evaluation"]["queue_wait_s"]),                 pinned(date.fromisoformat(str(get_config()["evaluation"]["as_of"]))):
+        with primary_only(), patient(get_config()["evaluation"]["queue_wait_s"]),                 track_queue_wait() as queue_waits,                 pinned(date.fromisoformat(str(get_config()["evaluation"]["as_of"]))):
             state = dict(await run_turn(case["question"], f"eval-{run_id}", turn_id=uuid.uuid4().hex,
                                         record=False, timeout_s=get_config()["evaluation"]["turn_timeout_s"]))
     except Exception as exc:     # a crash IS a system failure; score it
@@ -158,6 +176,12 @@ async def run_case(case: dict[str, Any], run_id: str, *, use_judge: bool, judge_
         for name, level in noisy.items():
             logging.getLogger(name).setLevel(level)
     latency = round(time.perf_counter() - started, 1)
+    # Seconds the case spent waiting for the provider's token budget rather
+    # than working: our own queue plus the client's sleeps after refusals.
+    # The report uses it to separate "the agent was wrong" from "the free
+    # tier made it wait".
+    queue_wait = round(sum(queue_waits), 1)
+    retry_wait = round(watch.retry_wait_s, 1)
 
     o = outcome_from_state(state)
     checks = run_checks(o, case["expected"])
@@ -169,6 +193,9 @@ async def run_case(case: dict[str, Any], run_id: str, *, use_judge: bool, judge_
         "outcome": {k: v for k, v in asdict(o).items() if k != "answer"},
         "checks": [asdict(c) for c in checks], "code_pass": code_pass,
         "latency_s": latency, "status": "ok", "throttled": False,
+        "queue_wait_s": queue_wait, "provider_retry_wait_s": retry_wait,
+        "budget_wait_s": min(latency, round(queue_wait + retry_wait, 1)),
+        "provider_retries": watch.retries,
         "prompt_versions": state.get("prompt_versions", {}),
     }
     if case["source"] == "trap":
@@ -379,6 +406,8 @@ def diff_runs(current: list[dict[str, Any]], previous: list[dict[str, Any]]) -> 
         p = prev.get(r["id"])
         if r["status"] != "ok" or p is None:
             continue
+        if not (is_measured(r) and is_measured(p)):
+            continue            # a trap cut off by the time limit is neither fixed nor broken
         if p["pass"] and not r["pass"]:
             failing = [c["name"] for c in r["checks"] if not c["passed"]]
             if r.get("judge_pass") is False:
@@ -386,14 +415,91 @@ def diff_runs(current: list[dict[str, Any]], previous: list[dict[str, Any]]) -> 
             regressions.append({"id": r["id"], "now_failing": failing})
         elif not p["pass"] and r["pass"]:
             fixed.append(r["id"])
-    return {"regressions": regressions, "fixed": fixed, "compared_cases": len(prev)}
+    # Exact McNemar on the cases that changed: are the fixes more than the
+    # breaks by more than chance? Below 0.05 the change is more than noise.
+    return {"regressions": regressions, "fixed": fixed, "compared_cases": len(prev),
+            "mcnemar_p": mcnemar(len(fixed), len(regressions))}
+
+
+def compare_runs(run_a: str, run_b: str) -> dict[str, Any]:
+    """Two runs of the same case set, case by case (not only neighbours: the
+    baseline against the final run). Non-trap cases; a case that did not run
+    to a score in either run is left out."""
+    def load(run: str) -> list[dict[str, Any]]:
+        latest = {r["id"]: r for r in _read(runs_dir() / run / "results.jsonl")}
+        return [r for r in latest.values() if r["source"] != "trap"]
+
+    a, b = load(run_a), load(run_b)
+    both = {r["id"] for r in a if r["status"] == "ok"} & {r["id"] for r in b if r["status"] == "ok"}
+    d = diff_runs([r for r in b if r["id"] in both], [r for r in a if r["id"] in both])
+    return {"before": run_a, "after": run_b, "cases": len(both),
+            "passed_before": sum(r["pass"] for r in a if r["id"] in both),
+            "passed_after": sum(r["pass"] for r in b if r["id"] in both),
+            "fixed": d["fixed"], "broken": [x["id"] for x in d["regressions"]],
+            "mcnemar_p": d["mcnemar_p"]}
+
+
+def rebuild_report(run_id: str) -> dict[str, Any]:
+    """Write report.json and report.md again from a finished run's own results,
+    so a change in how reports are built applies to earlier runs too."""
+    folder = runs_dir() / run_id
+    meta = json.loads((folder / "meta.json").read_text(encoding="utf-8"))
+    latest = {r["id"]: r for r in _read(folder / "results.jsonl")}
+    report = build_report(run_id, [{"id": i} for i in meta["case_ids"]], list(latest.values()), False)
+    (folder / "report.json").write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n",
+                                        encoding="utf-8")
+    (folder / "report.md").write_text(render_markdown(report), encoding="utf-8")
+    return report
+
+
+def _timing(scored: list[dict[str, Any]], limit: float) -> dict[str, Any]:
+    """The pass rate under the two readings of the time limit.
+
+    at_app_limit: the app cuts a question off at `limit` seconds, so a case
+    that passes only after longer is a failure there.
+    excluding_budget_waits: time spent waiting for the provider's token
+    budget (free tier) is not the agent's. A case that ran out of time with
+    less than `limit` seconds of actual work was decided by the wait, so it
+    is left out (not measured); every other case counts, and its time is
+    measured without the waiting. Only runs that logged the waits can say."""
+    n = len(scored)
+    within = sum(bool(r["pass"]) and r["latency_s"] <= limit for r in scored)
+    out: dict[str, Any] = {"app_limit_s": limit, "cases": n,
+                           "at_app_limit": {"passed": within, "rate": _rate_of(within, n),
+                                            "interval": _ci_of(within, n)},
+                           "excluding_budget_waits": None}
+    if not scored or not all("budget_wait_s" in r for r in scored):
+        return out
+    decided = [r for r in scored if r["outcome"]["stop_reason"] == "timeout"
+               and r["latency_s"] - r["budget_wait_s"] < limit]
+    left = [r for r in scored if r not in decided]
+    passed = sum(bool(r["pass"]) and r["latency_s"] - r["budget_wait_s"] <= limit for r in left)
+    out["excluding_budget_waits"] = {
+        "passed": passed, "n": len(left), "rate": _rate_of(passed, len(left)),
+        "interval": _ci_of(passed, len(left)),
+        "left_out_waited_for_budget": [r["id"] for r in decided]}
+    out["mean_budget_wait_s"] = round(sum(r["budget_wait_s"] for r in scored) / n, 1)
+    out["cases_waiting_over_10s"] = sum(r["budget_wait_s"] > 10 for r in scored)
+    return out
+
+
+def _rate_of(passed: int, n: int) -> float | None:
+    return None if n == 0 else round(100 * passed / n, 1)
+
+
+def _ci_of(passed: int, n: int) -> list[float] | None:
+    ci = wilson(passed, n, get_config()["evaluation"].get("confidence_level", 0.95))
+    return list(ci) if ci else None
 
 
 def build_report(run_id: str, cases: list[dict[str, Any]], results: list[dict[str, Any]],
                  stopped_for_budget: bool) -> dict[str, Any]:
     ok = [r for r in results if r["status"] == "ok"]
     scored = [r for r in ok if r["source"] != "trap"]
-    traps = [r for r in ok if r["source"] == "trap"]
+    traps_run = [r for r in ok if r["source"] == "trap"]
+    traps = [r for r in traps_run if is_measured(r)]
+    traps_not_measured = [r["id"] for r in traps_run if not is_measured(r)]
+    app_limit = get_config()["api"]["turn_timeout_seconds"]
     by_source: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for r in scored:
         by_source[r["source"]].append(r)
@@ -445,8 +551,11 @@ def build_report(run_id: str, cases: list[dict[str, Any]], results: list[dict[st
                       # Promoted cases by the failure cluster they guard: a
                       # fix is judged by whether its whole cluster passes.
                       **{k: _rate(v) for k, v in sorted(_by_cluster(scored).items())}},
-        "traps": {"n": len(traps), "abstention_rate": _rate(traps, "abstained"),
+        "traps": {"n": len(traps), "run": len(traps_run), "not_measured": traps_not_measured,
+                  "abstained": sum(bool(r.get("abstained")) for r in traps),
+                  "abstention_rate": _rate(traps, "abstained"),
                   "ungrounded_truth_rate": _rate(traps, "ungrounded_truth")},
+        "timing": _timing(scored, app_limit),
         "check_failures": dict(sorted(check_failures.items(), key=lambda kv: -kv[1])),
         "judge": {"means": judge_means, "versions": judge_versions, "n": len(judged),
                   "agreement": latest_agreement(judge_versions)},
@@ -491,6 +600,24 @@ def _with_ci(v: float | None, ci: list[float] | None) -> str:
     return _pct(v) + (f" ({ci[0]:g} to {ci[1]:g})" if ci and v is not None else "")
 
 
+def _timing_lines(t: dict[str, Any]) -> list[str]:
+    a = t["at_app_limit"]
+    lines = ["| Pass rate, non-trap cases, under the time limit | |", "|---|---|",
+             f"| as the app runs (cut off at {t['app_limit_s']} s) | "
+             f"{_with_ci(a['rate'], a['interval'])}, {a['passed']} of {t['cases']} |"]
+    x = t.get("excluding_budget_waits")
+    if x:
+        lines.append(f"| waiting for the provider's token budget not counted | "
+                     f"{_with_ci(x['rate'], x['interval'])}, {x['passed']} of {x['n']} "
+                     f"({len(x['left_out_waited_for_budget'])} left out: ran out of time waiting) |")
+        lines.append(f"| mean wait for budget per case | {t['mean_budget_wait_s']} s; "
+                     f"{t['cases_waiting_over_10s']} cases waited over 10 s |")
+    else:
+        lines.append("| waiting for the provider's token budget not counted | "
+                     "not available: this run did not log the waits |")
+    return [*lines, ""]
+
+
 def render_markdown(rep: dict[str, Any]) -> str:
     pr, tr, jd = rep["pass_rate"], rep["traps"], rep["judge"]
     lines = [
@@ -505,8 +632,12 @@ def render_markdown(rep: dict[str, Any]) -> str:
         f"| Pass rate (lower of synthetic / hand-written) | "
         f"**{_with_ci(rep['headline_pass_rate'], rep.get('headline_interval'))}** |",
         f"| Ungrounded-truth rate on traps (lower is better) | **{_pct(tr['ungrounded_truth_rate'])}** |",
-        f"| Trap abstention rate | {_pct(tr['abstention_rate'])} |",
+        f"| Trap abstention rate | {_pct(tr['abstention_rate'])} "
+        f"({tr['abstained']} of {tr['n']} measured traps"
+        + (f"; {len(tr['not_measured'])} not measured, timed out: {', '.join(tr['not_measured'])}"
+           if tr["not_measured"] else "") + ") |",
         "",
+        *_timing_lines(rep["timing"]),
         f"Evaluation date: {rep['as_of']} (the day the golden set was built; the seeded data ends the day before), "
         f"so \"this week\" has data. Time limit per question: {rep['turn_timeout_s']} s in this evaluation "
         f"(the app uses {rep['app_turn_timeout_s']} s). {rep['throttled_cases']} of "
@@ -548,6 +679,10 @@ def render_markdown(rep: dict[str, Any]) -> str:
         lines += [f"- fixed: {x}" for x in d["fixed"]]
         if not d["regressions"] and not d["fixed"]:
             lines.append("- no case changed from pass to fail or back")
+        elif "mcnemar_p" in d:
+            lines.append(f"- {len(d['fixed'])} fixed, {len(d['regressions'])} broken: exact McNemar p = "
+                         f"{d['mcnemar_p']:g} ("
+                         + ("more than chance" if d["mcnemar_p"] < 0.05 else "could be chance") + ")")
         lines.append("")
     if rep["failures"]:
         lines += ["## Failing cases", ""]
