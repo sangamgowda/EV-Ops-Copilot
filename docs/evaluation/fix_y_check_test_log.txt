@@ -1,0 +1,84 @@
+##### Y_check
+Running 18 cases through the real system, judged …
+  FAIL  syn_overload_V-042                   120.1s  key_args; stop_reason; facts; must_contain  judge 1/4/4
+  FAIL  syn_overload_V-007                    19.6s  must_contain  judge 2/1/1
+  PASS  syn_speed_cap_V-055                   63.3s
+  PASS  syn_speed_cap_V-088                   19.6s
+  STOP  syn_charger_V-091                      1.7s
+##### Y_check_resume
+Running 18 cases through the real system, judged …
+  FAIL  syn_charger_V-091                    120.1s  stop_reason; must_contain  judge 2/2/3
+  PASS  syn_cell_health_V-042                 63.3s
+  FAIL  syn_sales_flagship_avg_price_2026     12.8s    judge 2/3/4
+  FAIL  syn_sales_south_q2_vs_q3              63.8s    judge 2/4/2
+  FAIL  doc_kb_range_shortfall_faq            46.1s  must_contain  judge 1/2/2
+  FAIL  doc_sales_q3_2026_midquarter           7.2s  tools; must_contain  judge 1/4/2
+  FAIL  adv_typo_vehicle                     120.0s  must_contain  judge 1/2/2
+  PASS  adv_holdout_partner_discount          15.6s
+  PASS  adv_holdout_delivery_story            66.6s
+  FAIL  adv_longest_range                     16.7s  facts  judge 1/4/2
+  PASS  prm_ride_mode_limits                  62.4s
+  RATE  prm_charger_doc_missed               120.0s
+  STOP  prm_undocumented_overclaimed           1.9s
+##### Y_check_resume2
+Running 18 cases through the real system, judged …
+  FAIL  prm_charger_doc_missed               120.0s  must_contain  judge 1/2/2
+  FAIL  prm_undocumented_overclaimed          62.5s  abstain  judge 1/1/1
+  FAIL  prm_nonbreaking_hyphen               120.0s  must_contain; grounded  judge 1/4/2
+
+##### final report (run 20261123-113104)
+# Evaluation run 20261123-113104 — golden set
+
+Commit 43d2cfd · models {'cheap': 'openai/gpt-oss-20b', 'strong': 'openai/gpt-oss-120b', 'judge': 'qwen/qwen3.8-27b'} · 18 of 18 cases scored
+
+| Headline | |
+|---|---|
+| Pass rate (lower of synthetic / hand-written) | **30% (10.8 to 60.3)** |
+| Ungrounded-truth rate on traps (lower is better) | **—** |
+| Trap abstention rate | — |
+
+Evaluation date: 2026-10-02 (the day the golden set was built; the seeded data ends the day before), so "this week" has data. Time limit per question: 120 s in this evaluation (the app uses 45 s). 0 of 18 scored cases were slowed by the provider's rate limit.
+
+| Pass rate by source (95% interval) | |
+|---|---|
+| synthetic | 30% (10.8 to 60.3) |
+| handwritten | 37.5% (13.7 to 69.4) |
+| all | 33.3% (16.3 to 56.3) |
+| code_checks | 44.4% |
+| source:adversarial | 50% (15 to 85) |
+| source:promoted | 25% (4.6 to 69.9) |
+| source:synthetic_data | 37.5% (13.7 to 69.4) |
+| source:synthetic_doc | 0% (0 to 65.8) |
+| cluster:empty_retrieval | 0% |
+| cluster:grounding_failure | 0% |
+| cluster:no_signal | 50% |
+
+Previous headline interval 23.1 to 63.7: overlaps this one, so the change is within noise at this sample size.
+
+Judge f66352838f0f: completeness 2.06, correctness 3.0, hedging 2.78 (1-4, n=18)
+
+Judge-human agreement: not measured yet — label answers, then run --agreement
+
+Failed checks: must_contain x8, stop_reason x2, facts x2, key_args x1, tools x1, abstain x1, grounded x1
+
+## Compared with 20261123-005044
+
+- **REGRESSION** syn_sales_south_q2_vs_q3: now failing judge
+- fixed: syn_speed_cap_V-055
+- fixed: adv_holdout_partner_discount
+- fixed: prm_ride_mode_limits
+
+## Failing cases
+
+- `syn_overload_V-042` (synthetic_data): key_args: structured_query_tool∋['V-042', 'current_draw']; stop_reason: 'timeout', allowed ['complete', 'no_new_evidence']; facts: current draw above baseline pct≈33.5±6; must_contain: overload | overloaded | above the rated | exceeds the rated | over the rated; judge: {'completeness': 1, 'correctness': 4, 'hedging': 4, 'notes': "The generated answer correctly declines to provide a cause due to lack of documentation, aligning with the reference's implication that the specific cause (overload) is not in the available docs, but it misses the specific diagnostic facts (payload, current draw) present in the reference.", 'judge_version': 'f66352838f0f'}
+- `syn_overload_V-007` (synthetic_data): must_contain: overload | overloaded | above the rated | exceeds the rated | over the rated; judge: {'completeness': 2, 'correctness': 1, 'hedging': 1, 'notes': 'Contradicts reference by attributing range drop to battery degradation (ruled out in ref) and missing the specific overload cause (188kg vs 150kg rating) and SB-114 action.', 'judge_version': 'f66352838f0f'}
+- `syn_charger_V-091` (synthetic_data): stop_reason: 'timeout', allowed ['complete', 'no_new_evidence']; must_contain: charger; judge: {'completeness': 2, 'correctness': 2, 'hedging': 3, 'notes': 'Missing the specific recommendation to replace the charger and the note that battery health is normal; charge power values are slightly off from the reference (0.4 vs 0.35 kW).', 'judge_version': 'f66352838f0f'}
+- `syn_sales_flagship_avg_price_2026` (synthetic_data): judge: {'completeness': 2, 'correctness': 3, 'hedging': 4, 'notes': 'Missing the specific average price (136,961) and the list price/discount context; provided a rounded figure.', 'judge_version': 'f66352838f0f'}
+- `syn_sales_south_q2_vs_q3` (synthetic_data): judge: {'completeness': 2, 'correctness': 4, 'hedging': 2, 'notes': 'Refuses to answer the specific regional question despite the reference providing the exact figures for the south.', 'judge_version': 'f66352838f0f'}
+- `doc_kb_range_shortfall_faq` (synthetic_doc): must_contain: field report; judge: {'completeness': 1, 'correctness': 2, 'hedging': 2, 'notes': 'Fails to mention raising a field report or attaching telemetry; instead suggests contacting service, which contradicts the specific procedure in the reference.', 'judge_version': 'f66352838f0f'}
+- `doc_sales_q3_2026_midquarter` (synthetic_doc): tools: used ['structured_query_tool']; missing ['rag_retrieval_tool']; must_contain: ten weeks; judge: {'completeness': 1, 'correctness': 4, 'hedging': 2, 'notes': 'Fails to calculate the 10-week duration from the provided dates, incorrectly claiming it cannot be determined.', 'judge_version': 'f66352838f0f'}
+- `adv_typo_vehicle` (adversarial): must_contain: overload | overloaded | payload; judge: {'completeness': 1, 'correctness': 2, 'hedging': 2, 'notes': 'Missing the key fact of overload/payload; incorrectly attributes range drop to cell wear (SB-121) instead of overload (SB-114).', 'judge_version': 'f66352838f0f'}
+- `adv_longest_range` (adversarial): facts: top model range km≈240±0; judge: {'completeness': 1, 'correctness': 4, 'hedging': 2, 'notes': 'Refuses to answer a question the reference answers, claiming lack of evidence.', 'judge_version': 'f66352838f0f'}
+- `prm_charger_doc_missed` (promoted): must_contain: charger; judge: {'completeness': 1, 'correctness': 2, 'hedging': 2, 'notes': 'Missing the specific cause (charger fault) and recommendation; provides raw data with incorrect baseline (0.8 vs 0.75) and no clear conclusion.', 'judge_version': 'f66352838f0f'}
+- `prm_undocumented_overclaimed` (promoted): abstain: answered as if it knew; judge: {'completeness': 1, 'correctness': 1, 'hedging': 1, 'notes': 'Generated answer incorrectly identifies overload as the cause, contradicting the reference which rules out overload and states the cause cannot be determined.', 'judge_version': 'f66352838f0f'}
+- `prm_nonbreaking_hyphen` (promoted): must_contain: overload | overloaded | payload; grounded: grounding None; judge: {'completeness': 1, 'correctness': 4, 'hedging': 2, 'notes': "Missing the cause (overload/payload) and specific details (190kg vs 150kg, 36% current draw); failed to answer the 'why' despite having data.", 'judge_version': 'f66352838f0f'}

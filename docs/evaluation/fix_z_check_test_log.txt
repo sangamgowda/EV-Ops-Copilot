@@ -1,0 +1,76 @@
+##### Z_check
+Running 18 cases through the real system, judged …
+  PASS  syn_overload_V-042                    77.0s
+  FAIL  syn_overload_V-007                    67.7s    judge 3/2/4
+  PASS  syn_speed_cap_V-055                   64.4s
+  PASS  syn_speed_cap_V-088                   62.1s
+  FAIL  syn_charger_V-091                     64.2s    judge 2/2/3
+  PASS  syn_cell_health_V-042                 62.7s
+  FAIL  syn_sales_flagship_avg_price_2026      5.8s    judge 2/3/4
+  PASS  syn_sales_south_q2_vs_q3              63.2s
+  STOP  doc_kb_range_shortfall_faq            61.7s
+##### Z_check_resume
+Running 18 cases through the real system, judged …
+  FAIL  doc_kb_range_shortfall_faq            29.7s  must_contain  judge 1/2/2
+  FAIL  doc_sales_q3_2026_midquarter           7.6s  tools; must_contain  judge 1/4/2
+  PASS  adv_typo_vehicle                      73.8s
+  PASS  adv_holdout_partner_discount          17.2s
+  PASS  adv_holdout_delivery_story            63.1s
+  FAIL  adv_longest_range                    120.0s  facts  judge 1/4/2
+  PASS  prm_ride_mode_limits                  62.4s
+  FAIL  prm_charger_doc_missed               120.0s    judge 2/2/2
+  FAIL  prm_undocumented_overclaimed          63.1s  abstain  judge 2/1/1
+  FAIL  prm_nonbreaking_hyphen                63.3s    judge 4/2/4
+
+##### final report (run 20261123-141245)
+# Evaluation run 20261123-141245 — golden set
+
+Commit e86b0e8 · models {'cheap': 'openai/gpt-oss-20b', 'strong': 'openai/gpt-oss-120b', 'judge': 'qwen/qwen3.8-27b'} · 18 of 18 cases scored
+
+| Headline | |
+|---|---|
+| Pass rate (lower of synthetic / hand-written) | **50% (23.7 to 76.3)** |
+| Ungrounded-truth rate on traps (lower is better) | **—** |
+| Trap abstention rate | — |
+
+Evaluation date: 2026-10-02 (the day the golden set was built; the seeded data ends the day before), so "this week" has data. Time limit per question: 120 s in this evaluation (the app uses 45 s). 0 of 18 scored cases were slowed by the provider's rate limit.
+
+| Pass rate by source (95% interval) | |
+|---|---|
+| synthetic | 50% (23.7 to 76.3) |
+| handwritten | 50% (21.5 to 78.5) |
+| all | 50% (29 to 71) |
+| code_checks | 77.8% |
+| source:adversarial | 75% (30.1 to 95.4) |
+| source:promoted | 25% (4.6 to 69.9) |
+| source:synthetic_data | 62.5% (30.6 to 86.3) |
+| source:synthetic_doc | 0% (0 to 65.8) |
+| cluster:empty_retrieval | 0% |
+| cluster:grounding_failure | 0% |
+| cluster:no_signal | 50% |
+
+Previous headline interval 10.8 to 60.3: overlaps this one, so the change is within noise at this sample size.
+
+Judge f66352838f0f: completeness 2.83, correctness 3.06, hedging 3.28 (1-4, n=18)
+
+Judge-human agreement: not measured yet — label answers, then run --agreement
+
+Failed checks: must_contain x2, tools x1, facts x1, abstain x1
+
+## Compared with 20261123-113104
+
+- fixed: syn_overload_V-042
+- fixed: syn_sales_south_q2_vs_q3
+- fixed: adv_typo_vehicle
+
+## Failing cases
+
+- `syn_overload_V-007` (synthetic_data): judge: {'completeness': 3, 'correctness': 2, 'hedging': 4, 'notes': 'Incorrectly states the rated payload is 95 kg (reference says 150 kg) and baseline current is 20.9 A (reference says 21.6 A).', 'judge_version': 'f66352838f0f'}
+- `syn_charger_V-091` (synthetic_data): judge: {'completeness': 2, 'correctness': 2, 'hedging': 3, 'notes': 'Missing the specific vehicle ID (V-091), the correct baseline power (0.75 kW vs 0.8 kW), and the recommended action (replace charger).', 'judge_version': 'f66352838f0f'}
+- `syn_sales_flagship_avg_price_2026` (synthetic_data): judge: {'completeness': 2, 'correctness': 3, 'hedging': 4, 'notes': 'Missing the specific average price (136,961) and the list price/discount context; provided a rounded figure.', 'judge_version': 'f66352838f0f'}
+- `doc_kb_range_shortfall_faq` (synthetic_doc): must_contain: field report; judge: {'completeness': 1, 'correctness': 2, 'hedging': 2, 'notes': 'Fails to mention raising a field report or attaching telemetry; instead suggests contacting service, which contradicts the specific procedure in the reference.', 'judge_version': 'f66352838f0f'}
+- `doc_sales_q3_2026_midquarter` (synthetic_doc): tools: used ['structured_query_tool']; missing ['rag_retrieval_tool']; must_contain: ten weeks; judge: {'completeness': 1, 'correctness': 4, 'hedging': 2, 'notes': 'Fails to calculate the 10-week duration from the provided dates and incorrectly claims it cannot be determined.', 'judge_version': 'f66352838f0f'}
+- `adv_longest_range` (adversarial): facts: top model range km≈240±0; judge: {'completeness': 1, 'correctness': 4, 'hedging': 2, 'notes': 'Fails to provide the model name (EVX Max) or the range (240 km), instead claiming no usable documentation was found.', 'judge_version': 'f66352838f0f'}
+- `prm_charger_doc_missed` (promoted): judge: {'completeness': 2, 'correctness': 2, 'hedging': 2, 'notes': 'Incorrect power values (0.3 vs 0.34, 0.8 vs 0.75) and missing specific diagnosis (charger fault) and action (replace under warranty).', 'judge_version': 'f66352838f0f'}
+- `prm_undocumented_overclaimed` (promoted): abstain: answered as if it knew; judge: {'completeness': 2, 'correctness': 1, 'hedging': 1, 'notes': "Generated answer incorrectly identifies 'sustained overload' as the cause, whereas the reference explicitly rules out overload and states the cause cannot be determined.", 'judge_version': 'f66352838f0f'}
+- `prm_nonbreaking_hyphen` (promoted): judge: {'completeness': 4, 'correctness': 2, 'hedging': 4, 'notes': "The generated answer incorrectly states the payload is 98.8% above a 95 kg baseline, whereas the reference specifies a 150 kg rating (implying ~27% overload); the 95 kg figure is a factual error regarding the vehicle's rating.", 'judge_version': 'f66352838f0f'}
