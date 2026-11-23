@@ -1,0 +1,125 @@
+# X+Y+Z full run 20261123-145910 (commit 334ea51), one log of all sessions
+  PASS  syn_overload_V-042                    63.7s
+  PASS  syn_overload_V-007                    63.0s
+  PASS  syn_speed_cap_V-055                   64.1s
+  STOP  syn_speed_cap_V-088                   63.7s   <- daily token limit of the key, resumed on another key
+  FAIL  syn_speed_cap_V-088                   64.0s  facts  judge 2/4/4
+  PASS  syn_charger_V-091                     64.0s
+  PASS  syn_cell_wear_V-036                   68.2s
+  PASS  syn_firmware_V-055                    53.2s
+  STOP  syn_firmware_V-009                    62.4s   <- daily token limit of the key, resumed on another key
+  PASS  syn_firmware_V-009                     5.9s
+  PASS  syn_cell_health_V-042                 63.2s
+  PASS  syn_odometer_V-101                     5.5s
+  PASS  syn_city_V-064                         5.8s
+  PASS  syn_code_ERR_205                       6.3s
+  FAIL  syn_code_ERR_303                       9.9s    judge 2/4/4
+  PASS  syn_code_ERR_403                       5.9s
+  PASS  syn_sales_top_model_south_q3           7.4s
+  PASS  syn_sales_top_region_q3                5.2s
+  FAIL  syn_sales_flagship_avg_price_2026      6.6s    judge 2/3/4
+  PASS  syn_sales_fleet_aug                    5.5s
+  PASS  syn_sales_south_q2_vs_q3              63.1s
+  FAIL  doc_kb_range_shortfall_faq            14.3s  must_contain  judge 1/2/2
+  PASS  doc_manual_ride_modes_range_and_charging  14.7s
+  FAIL  doc_sales_q2_2026_review               7.4s  tools; facts  judge 1/1/1
+  PASS  doc_sales_q3_2026_midquarter          63.2s
+  FAIL  doc_SB-114_sustained_overload        120.0s  facts  judge 1/4/2
+  FAIL  doc_SB-121_removable_pack_cell_wear   13.7s  facts  judge 2/2/2
+  PASS  doc_SB-135_firmware_top_mode_speed_cap  62.2s
+  FAIL  doc_SB-140_charger_low_power         120.0s  facts  judge 1/2/2
+  PASS  adv_nonexistent_vehicle                2.8s
+  PASS  adv_typo_vehicle                      62.6s
+  PASS  adv_nonexistent_model                 18.0s
+  FAIL  adv_refute_claim                     120.0s  must_contain  judge 1/1/1
+  PASS  adv_missing_metric                     3.0s
+  FAIL  adv_ambiguous                        120.0s    judge 1/4/2
+  PASS  adv_cross_domain                       7.1s
+  FAIL  adv_holdout_brakes                    18.1s    judge 2/4/4
+  PASS  adv_holdout_partner_discount          13.7s
+  PASS  adv_holdout_delivery_story            63.1s
+  PASS  adv_launch_timing                      7.0s
+  FAIL  adv_longest_range                    120.0s  facts  judge 1/4/2
+  PASS  adv_mode_not_available                17.4s
+  PASS  adv_south_outperformed                63.8s
+  FAIL  prm_ride_mode_limits                  10.3s  facts  judge 4/1/1
+  STOP  prm_charger_doc_missed                61.5s   <- daily token limit of the key, resumed on another key
+  FAIL  prm_charger_doc_missed               120.0s    judge 2/2/2
+  FAIL  prm_battery_doc_missed               120.0s  facts  judge 1/4/2
+  FAIL  prm_undocumented_overclaimed          62.8s    judge 2/2/2
+  PASS  prm_nonbreaking_hyphen                63.4s
+  STOP  trap_liion_inventor                  120.0s   <- daily token limit of the key, resumed on another key
+  PASS  trap_liion_inventor                  120.1s
+  FAIL  trap_cell_chemistry                   18.1s  abstain
+  PASS  trap_cell_voltage                     62.9s
+  STOP  trap_fame_amount                      61.8s   <- daily token limit of the key, resumed on another key
+  PASS  trap_fame_amount                     120.0s
+  PASS  trap_ip_meaning                       62.7s
+  STOP  trap_tyre_pressure                   120.0s   <- daily token limit of the key, resumed on another key
+  PASS  trap_tyre_pressure                   120.0s
+  STOP  trap_petrol_co2                       76.7s   <- daily token limit of the key, resumed on another key
+  PASS  trap_petrol_co2                       62.4s
+  PASS  trap_riding_age                      120.0s
+
+##### final report
+# Evaluation run 20261123-145910 — golden set
+
+Commit 334ea51 · models {'cheap': 'openai/gpt-oss-20b', 'strong': 'openai/gpt-oss-120b', 'judge': 'qwen/qwen3.8-27b'} · 54 of 54 cases scored
+
+| Headline | |
+|---|---|
+| Pass rate (lower of synthetic / hand-written) | **57.9% (36.3 to 76.9)** |
+| Ungrounded-truth rate on traps (lower is better) | **0%** |
+| Trap abstention rate | 87.5% |
+
+Evaluation date: 2026-10-02 (the day the golden set was built; the seeded data ends the day before), so "this week" has data. Time limit per question: 120 s in this evaluation (the app uses 45 s). 1 of 54 scored cases were slowed by the provider's rate limit and would likely have hit the app's 45 s limit.
+
+| Pass rate by source (95% interval) | |
+|---|---|
+| synthetic | 70.4% (51.5 to 84.1) |
+| handwritten | 57.9% (36.3 to 76.9) |
+| all | 65.2% (50.8 to 77.3) |
+| code_checks | 78.3% |
+| source:adversarial | 71.4% (45.4 to 88.3) |
+| source:promoted | 20% (3.6 to 62.4) |
+| source:synthetic_data | 84.2% (62.4 to 94.5) |
+| source:synthetic_doc | 37.5% (13.7 to 69.4) |
+| cluster:empty_retrieval | 0% |
+| cluster:grounding_failure | 100% |
+| cluster:no_signal | 0% |
+
+Previous headline interval 23.7 to 76.3: overlaps this one, so the change is within noise at this sample size.
+
+Judge f66352838f0f: completeness 3.09, correctness 3.46, hedging 3.39 (1-4, n=46)
+
+Judge-human agreement: not measured yet — label answers, then run --agreement
+
+Failed checks: facts x8, must_contain x2, tools x1
+
+## Compared with 20261123-141245
+
+- **REGRESSION** syn_speed_cap_V-088: now failing facts, judge
+- **REGRESSION** prm_ride_mode_limits: now failing facts, judge
+- fixed: syn_overload_V-007
+- fixed: syn_charger_V-091
+- fixed: doc_sales_q3_2026_midquarter
+- fixed: prm_nonbreaking_hyphen
+
+## Failing cases
+
+- `syn_speed_cap_V-088` (synthetic_data): facts: top modes speed kmh≈42.0±2; judge: {'completeness': 2, 'correctness': 4, 'hedging': 4, 'notes': 'Missing the specific average speed of 42 km/h and the baseline of 66 km/h mentioned in the reference.', 'judge_version': 'f66352838f0f'}
+- `syn_code_ERR_303` (synthetic_data): judge: {'completeness': 2, 'correctness': 4, 'hedging': 4, 'notes': 'Missing the recommended action (test/replace) and reference to SB-140.', 'judge_version': 'f66352838f0f'}
+- `syn_sales_flagship_avg_price_2026` (synthetic_data): judge: {'completeness': 2, 'correctness': 3, 'hedging': 4, 'notes': 'Missing the specific average price (136,961) and the list price/discount context; provided a rounded figure.', 'judge_version': 'f66352838f0f'}
+- `doc_kb_range_shortfall_faq` (synthetic_doc): must_contain: field report; judge: {'completeness': 1, 'correctness': 2, 'hedging': 2, 'notes': 'Missing the specific instruction to raise a field report and attach telemetry; suggests generic service contact instead.', 'judge_version': 'f66352838f0f'}
+- `doc_sales_q2_2026_review` (synthetic_doc): tools: used ['structured_query_tool']; missing ['rag_retrieval_tool']; facts: outlets before≈38±0; outlets after≈52±0; judge: {'completeness': 1, 'correctness': 1, 'hedging': 1, 'notes': 'The generated answer provides an incorrect number (36) and omits the specific before/after counts (38 to 52) required by the reference.', 'judge_version': 'f66352838f0f'}
+- `doc_SB-114_sustained_overload` (synthetic_doc): facts: 25≈25±0; 40≈40±0; 20≈20±0; 30≈30±0; judge: {'completeness': 1, 'correctness': 4, 'hedging': 2, 'notes': 'Missing all specific numerical values (25-40% current, 20-30% range); contains irrelevant error logs.', 'judge_version': 'f66352838f0f'}
+- `doc_SB-121_removable_pack_cell_wear` (synthetic_doc): facts: wait hours≈48±0; judge: {'completeness': 2, 'correctness': 2, 'hedging': 2, 'notes': 'Missing the 48-hour wait and full balance charge steps; incorrectly asserts an error code (ERR_403) and skips the initial diagnostic phase.', 'judge_version': 'f66352838f0f'}
+- `doc_SB-140_charger_low_power` (synthetic_doc): facts: 750≈750±0; 300≈300±0; 400≈400±0; judge: {'completeness': 1, 'correctness': 2, 'hedging': 2, 'notes': 'Fails to identify the specific 750W rating or the 300-400W range; cites incorrect baseline (0.8kW) and lacks the required confirmation step (testing on another scooter).', 'judge_version': 'f66352838f0f'}
+- `adv_refute_claim` (adversarial): must_contain: battery | cell health | cell wear | degradation; judge: {'completeness': 1, 'correctness': 1, 'hedging': 1, 'notes': 'Fails to identify battery wear as the cause and incorrectly implies overload is the issue based on irrelevant search results.', 'judge_version': 'f66352838f0f'}
+- `adv_ambiguous` (adversarial): judge: {'completeness': 1, 'correctness': 4, 'hedging': 2, 'notes': 'Missing all key facts (modes, specific overload limit, firmware issue); incomplete output.', 'judge_version': 'f66352838f0f'}
+- `adv_holdout_brakes` (adversarial): judge: {'completeness': 2, 'correctness': 4, 'hedging': 4, 'notes': 'Missing the specific revised compound part number (SB-130) and the mention of regenerative braking.', 'judge_version': 'f66352838f0f'}
+- `adv_longest_range` (adversarial): facts: top model range km≈240±0; judge: {'completeness': 1, 'correctness': 4, 'hedging': 2, 'notes': 'Fails to provide the model name (EVX Max) or the range (240 km), instead claiming no usable documentation was found.', 'judge_version': 'f66352838f0f'}
+- `prm_ride_mode_limits` (promoted): facts: Saver≈45±0; Eco≈50±0; Sport≈90±0; Sport+≈100±0; Ultra≈115±0; judge: {'completeness': 4, 'correctness': 1, 'hedging': 1, 'notes': 'All speed values are factually incorrect compared to the reference.', 'judge_version': 'f66352838f0f'}
+- `prm_charger_doc_missed` (promoted): judge: {'completeness': 2, 'correctness': 2, 'hedging': 2, 'notes': 'Incorrect baseline (0.8 vs 0.75) and power (0.3 vs 0.34); missing specific SB-140 action (test/replace) and normal health status.', 'judge_version': 'f66352838f0f'}
+- `prm_battery_doc_missed` (promoted): facts: latest cell health pct≈84±1.5; judge: {'completeness': 1, 'correctness': 4, 'hedging': 2, 'notes': 'Fails to state the specific cell health percentage (84%) or explicitly conclude that battery wear is the cause, instead listing raw data and citing a timeout.', 'judge_version': 'f66352838f0f'}
+- `prm_undocumented_overclaimed` (promoted): judge: {'completeness': 2, 'correctness': 2, 'hedging': 2, 'notes': "Generated answer incorrectly identifies 'sustained overload' as the likely cause, whereas the reference explicitly rules out overload and states the cause cannot be determined.", 'judge_version': 'f66352838f0f'}
