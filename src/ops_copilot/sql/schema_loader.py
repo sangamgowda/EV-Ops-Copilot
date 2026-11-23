@@ -89,13 +89,24 @@ def _column_line(name: str, col: dict[str, Any]) -> str:
     return line
 
 
-def to_prompt_block(schema: dict[str, Any] | None = None) -> str:
-    """The schema as the Plan prompt sees it: meaning, not just names."""
+# Tables a question about vehicles never needs. Hidden from Plan only when
+# the router found no business domain: every Plan call re-sends the whole
+# schema, and on the free tier the per-minute token budget is what limits
+# how many laps fit in a turn. The SQL validator still knows every table.
+HIDDEN_WITHOUT_BUSINESS = {"sales_transactions"}
+
+
+def to_prompt_block(schema: dict[str, Any] | None = None, domains: tuple[str, ...] = ()) -> str:
+    """The schema as the Plan prompt sees it: meaning, not just names.
+    With no domains (or a business one) every table is shown."""
     schema = schema or load()
     denied = set(schema.get("denied_columns", []))
+    hidden = set(HIDDEN_FROM_PLAN)
+    if domains and "business" not in domains:
+        hidden |= HIDDEN_WITHOUT_BUSINESS
     lines: list[str] = []
     for tname, table in schema.get("tables", {}).items():
-        if tname in HIDDEN_FROM_PLAN:
+        if tname in hidden:
             continue
         desc = " ".join(str(table.get("description", "")).split())
         lines.append(f"{tname}: {desc}" if desc else tname)
@@ -103,13 +114,14 @@ def to_prompt_block(schema: dict[str, Any] | None = None) -> str:
             if f"{tname}.{cname}" not in denied:
                 lines.append(_column_line(cname, col))
         lines.append("")
-    keys = [f"  {a} = {b}" for a, b in schema.get("join_keys", [])]
+    keys = [f"  {a} = {b}" for a, b in schema.get("join_keys", [])
+            if a.split(".")[0] not in hidden and b.split(".")[0] not in hidden]
     if keys:
         lines.append("Join keys (every JOIN must use one of these in its ON clause):")
         lines.extend(keys)
     return "\n".join(lines).strip()
 
 
-@functools.lru_cache(maxsize=1)
-def prompt_block() -> str:
-    return to_prompt_block()
+@functools.lru_cache(maxsize=4)
+def prompt_block(domains: tuple[str, ...] = ()) -> str:
+    return to_prompt_block(domains=domains)
