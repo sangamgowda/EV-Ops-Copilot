@@ -66,4 +66,4 @@ With the waits removed the two versions are equal. The 45 s gap is the waiting i
 
 Step 5, speed: make a question fit in the per-minute token allowance, judged at the 45 s limit with the pass rate without waits as a counter-metric. Start from A' and keep only the changes that fix a bug checkable without the model (fix Y1, the weighted baseline), not the prompt rules that did not pay off. Rules for Step 5 are written before its runs.
 
-Test logs: `heldout_Aprime_test_log.txt`, `heldout_XYZ_test_log.txt`, `result_XYZ_run2_test_log.txt`.
+Test logs: `logs/heldout_Aprime_test_log.txt`, `logs/heldout_XYZ_test_log.txt`, `logs/result_XYZ_run2_test_log.txt`.
