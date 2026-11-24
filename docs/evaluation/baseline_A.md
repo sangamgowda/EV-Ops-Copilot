@@ -52,7 +52,7 @@ Each question has a reference answer and checks: the right tools with the right 
 
 ## Files
 
-- `baseline_A_cases.json`: per-case result without answer text. `baseline_A_test_log.txt`: the console logs combined, in order.
+- `logs/baseline_A_cases.json`: per-case result without answer text. `logs/baseline_A_test_log.txt`: the console logs combined, in order.
 
 ## Per-case results
 

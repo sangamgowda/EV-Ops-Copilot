@@ -1,6 +1,6 @@
 # X + Y + Z - evaluation record (full run)
 
-Run `20261123-145910`, commit `334ea51` (fix X `2ccf3bc` + fix Y `43d2cfd` + fix Z `e86b0e8`; later commits only add records). One full run of all 54 cases, free Groq keys (stopped seven times by the daily token limit and resumed on another key; one log in `result_XYZ_test_log.txt`), same exam, date (2026-10-02), 120 s limit and models as A' and B.
+Run `20261123-145910`, commit `334ea51` (fix X `2ccf3bc` + fix Y `43d2cfd` + fix Z `e86b0e8`; later commits only add records). One full run of all 54 cases, free Groq keys (stopped seven times by the daily token limit and resumed on another key; one log in `logs/result_XYZ_test_log.txt`), same exam, date (2026-10-02), 120 s limit and models as A' and B.
 
 ## Result against A' and B
 

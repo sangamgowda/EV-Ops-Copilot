@@ -147,8 +147,8 @@ class _RateLimitWatch(logging.Handler):
 # ── one case ─────────────────────────────────────────────────
 
 async def run_case(case: dict[str, Any], run_id: str, *, use_judge: bool, judge_threshold: int) -> dict[str, Any]:
-    from ops_copilot.agent.turn import run_turn
     from ops_copilot.agent.calendar import pinned
+    from ops_copilot.agent.turn import run_turn
     from ops_copilot.llm.client import patient, primary_only, track_queue_wait
 
     watch = _RateLimitWatch()

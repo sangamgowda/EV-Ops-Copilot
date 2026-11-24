@@ -28,6 +28,14 @@ source.
 - **Plugs into any EV company's data** through configuration, and runs
   with one command.
 
+### Built, tested, validated
+
+| Stage | What was done | Where to read |
+|---|---|---|
+| **Build** | An agent that plans, looks up data and documents, reviews what it found, and answers with sources | [How it works](#how-it-works), [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) |
+| **Test** | Unit and integration tests for every part (query safety, search, agent loop, API), run in CI on every push | [`tests/`](tests/), [`.github/workflows/`](.github/workflows/) |
+| **Validate** | Answer quality measured on 46 practice, 48 unseen and 8 trap questions, with a checked AI judge and significance tests | [Measuring quality](#measuring-quality), [`docs/evaluation/`](docs/evaluation/README.md) |
+
 ---
 
 ## What you can ask it
@@ -228,7 +236,7 @@ nobody optimised for.
 
 ```bash
 python scripts/run_eval.py --smoke        # 8 varied questions, ~10 minutes
-python scripts/run_eval.py                # all 53; resumes with --resume <run id>
+python scripts/run_eval.py                # all 54; resumes with --resume <run id>
 python scripts/label_eval.py              # score answers yourself (aim for 30)
 python scripts/run_eval.py --agreement    # how often the AI judge agrees with you
 python scripts/run_eval.py --heldout      # the held-out set
@@ -251,6 +259,29 @@ now fails is listed. Details: [`src/ops_copilot/evaluation/golden/README.md`](sr
 
 On the free tier a full run needs about two days' allowance; it stops
 cleanly when the allowance runs out and `--resume` finishes it.
+
+### Results so far
+
+| Version | Practice questions (46) | Unseen questions (48) |
+|---|---|---|
+| A' (baseline) | 56.5% and 60.9% (two runs) | 75.0% |
+| X+Y+Z (three prompt fixes) | 65.2% and 60.9% (two runs) | 75.0% |
+
+- **The fixes did not make answers better overall.** On 94 paired
+  questions they fixed 8 answers and broke 8 (McNemar p = 1). Each fix
+  did solve its own target: rejected SQL queries fell from about 21 to
+  4 per run.
+- **The AI judge can be trusted.** It agreed with hand labels on 90% of
+  answers (κ = 0.80).
+- **The biggest remaining problem is speed, not accuracy.** On the free
+  tier a question often uses more than the 8,000 tokens a minute
+  allowed, so it waits mid-answer. At the app's 45 s limit only about
+  40% of practice questions pass in time.
+- **Next:** making each question fit in that allowance. What counts as
+  success was written down before the work began.
+
+Every run, plan and result is recorded in
+[`docs/evaluation/`](docs/evaluation/README.md).
 
 A sample of live answers (10%) is also judged in the background
 against the evidence each was built on; low scores join the feedback
@@ -402,23 +433,28 @@ buffering off (for nginx, `proxy_buffering off;` — the API also sends
 ## Project layout
 
 ```
-config/            settings, database descriptions, AI instructions
+config/            settings, database descriptions, AI instructions (prompts)
 src/ops_copilot/
   agent/           the question-answering workflow
   sql/             database query checking
   rag/             document processing and search
   mcp_server/      tool service
   mcp_client/      connects the agent to the tool service
-  llm/             AI model access
-  db/              database setup
+  llm/             AI model access, rate-limit queue, fallback model
+  db/              database setup and migrations
   api/             web endpoints
-  observability/   tracing
-  evaluation/      quality testing
+  observability/   tracing and metrics
+  evaluation/      quality testing; golden/ holds the question sets
   feedback/        user ratings
+ui/                web interface (React)
 data/              reference figures, sample documents, sample dataset
-scripts/           data generation, web collection, setup and test scripts
-tests/             automated tests
-docs/              architecture and the sample dataset
+scripts/           data generation, evaluation and setup scripts
+tests/             automated tests (run in CI on every push)
+monitoring/        Prometheus and Grafana configuration
+docker/            database image (PostgreSQL with pgvector and TimescaleDB)
+docs/              architecture, sample dataset
+  evaluation/      every evaluation plan, result and run log
+.github/workflows/ continuous integration
 ```
 
 Design decisions and their reasons: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).

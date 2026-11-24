@@ -1,6 +1,6 @@
 # Fix Y - check record (18 cases)
 
-Run `20261123-113104`, commit `43d2cfd` (B code `2ccf3bc` + fix Y). A check on 18 cases only, not a full run: 9 baseline-number targets, 5 document/currency targets, 4 guards. Free Groq keys, same exam, date (2026-10-02), 120 s limit and models as A' and B. The run was stopped twice by the free-tier daily limit and resumed on another key; the three logs are joined in `fix_y_check_test_log.txt`.
+Run `20261123-113104`, commit `43d2cfd` (B code `2ccf3bc` + fix Y). A check on 18 cases only, not a full run: 9 baseline-number targets, 5 document/currency targets, 4 guards. Free Groq keys, same exam, date (2026-10-02), 120 s limit and models as A' and B. The run was stopped twice by the free-tier daily limit and resumed on another key; the three logs are joined in `logs/fix_y_check_test_log.txt`.
 
 Fix Y1: the SQL template computes the baseline as a reading-weighted average instead of `max(b.nominal_value)`, and the planner prompt says baselines differ by ride mode (prompt v7).
 Fix Y2: terms, limits and instructions go to documents, and prices are in rupees with an `_inr` alias; the writer says rupees (prompt v7, synthesize v4).

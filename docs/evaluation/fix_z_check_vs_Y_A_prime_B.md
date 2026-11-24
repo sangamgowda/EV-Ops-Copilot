@@ -1,6 +1,6 @@
 # Fix Z - check record (18 cases)
 
-Run `20261123-141245`, commit `e86b0e8` (fix Y `43d2cfd` + fix Z, plan prompt v8). Same 18 cases as the fix Y check, same exam, date (2026-10-02), 120 s limit and models; free Groq keys, stopped once by the daily limit and resumed (logs joined in `fix_z_check_test_log.txt`).
+Run `20261123-141245`, commit `e86b0e8` (fix Y `43d2cfd` + fix Z, plan prompt v8). Same 18 cases as the fix Y check, same exam, date (2026-10-02), 120 s limit and models; free Groq keys, stopped once by the daily limit and resumed (logs joined in `logs/fix_z_check_test_log.txt`).
 
 Fix Z: the retrieval query names the cause. Lap 1: the symptom plus the causes the documents may give, as possibilities. Lap 2+: the symptom plus what was measured. Specification questions name the table. Prompt only, no code change.
 

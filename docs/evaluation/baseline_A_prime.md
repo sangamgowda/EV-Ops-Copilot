@@ -1,6 +1,6 @@
 # Baseline A' - evaluation record
 
-The fair "before" number for the plan in `evaluation_runs/eval_A_to_B_plan.md`. Same code, exam, date and time limit as B; the only later difference is fix X.
+The fair "before" number for the plan in `plan_A_to_B.md`. Same code, exam, date and time limit as B; the only later difference is fix X.
 
 Code: commit `c5cedee` (`1dcc428` plus the two exam fixes; no SQL rules). Evaluation date 2026-10-02, 120 s per question, free Groq keys (8K tokens a minute, 200K a day per organization).
 Models: cheap `openai/gpt-oss-20b`, strong `openai/gpt-oss-120b`, judge `qwen/qwen3.8-27b`.
